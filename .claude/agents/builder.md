@@ -30,6 +30,9 @@ and you are in that slice's git worktree on branch `slice/<id>-*`.
 
 ## Finishing
 
+To see what the gates will say before you stop, run `harness/gates.sh </dev/null` from the
+worktree root. It runs every gate (fmt, vet, lint, tests, security scans) and prints any failures.
+
 When you think you're done, just stop. The Stop hook runs every gate. If any fail, you get the
 output back: fix the cause, not the test. After 5 failed attempts the slice is escalated to the
 human and you should stop and wait for `hx wait <id>`.

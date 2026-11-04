@@ -42,7 +42,15 @@
       "Bash(kubectl -n two-feet rollout status:*)",
       "Bash(curl -s http://localhost:*)",
       "Bash(gh pr create:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "Bash(cd:*)",
+      "Bash(go version)",
+      "Bash(go env:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)"
     ],
     "deny": [
       "Bash(git push --force:*)",

@@ -341,7 +341,8 @@ function reduce(evs){
       case 'agent.usage': {const u=s.usage.get(e.agent)||{cost:0,tokens:0};u.cost+=+e.cost_usd||0;u.tokens+=(e.tokens_in||0)+(e.tokens_out||0);s.usage.set(e.agent,u);s.total+=+e.cost_usd||0;s.spend.push([t,s.total]);break;}
       case 'demo.check': s.demo.push({t,status:e.status,flow:e.flow,detail:e.detail}); break;
     }
-    if(e.type!=='agent.usage'&&!(e.type==='gate.result'&&e.status==='pass'))s.feed.push(e);
+    // The tape skips spend, passing gates and the move into "gates" (the result line says it all).
+    if(e.type!=='agent.usage'&&!(e.type==='gate.result'&&e.status==='pass')&&!(e.type==='slice.state'&&e.to==='gates'))s.feed.push(e);
   }
   return s;
 }

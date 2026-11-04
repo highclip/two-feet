@@ -22,7 +22,8 @@ infra/local/          docker compose: Postgres, Elasticsearch, OTel collector
 infra/cluster/        DOKS cluster creation
 infra/layers/         Numbered skaffold/Helm layers: operators, platform, app
 infra/smoke/          Throwaway service that proves the whole pipeline before Monday
-docs/RUNBOOK.md       Before-Monday checklist and the day-of timeline
+scripts/              agent.sh (run any agent), spawn-builder.sh, review.sh, shoot.sh (screenshots), setup-tools.sh
+docs/RUNBOOK.md       Before-Monday checklist, how the loop runs, and the day-of timeline
 app/                  Empty until the event starts
 ```
 

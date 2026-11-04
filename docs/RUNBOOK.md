@@ -46,19 +46,34 @@ Pin the Dash0 and Radar chart versions in `00-operators/skaffold.yaml` once they
 4. Open Radar: `kubectl -n radar port-forward svc/radar <port>` (check the port with
    `kubectl -n radar get svc`) and look at the two-feet namespace.
 
-### Harness dry run (Sunday)
+### Harness
 
-Run the whole loop on a throwaway spec in a scratch branch, with one or two tiny slices:
+A full dry run (three slices, real headless agents) ran on 2026-11-04 and cost $2.33 on the default
+model. It drove the fixes in `git log` titled "Dry run findings". What's left to check on your Mac:
 
-- [ ] `scripts/setup-tools.sh` succeeds; every gate command runs.
-- [ ] `scripts/spawn-builder.sh S1` opens a builder in its own worktree. **Check that
-      `claude --agent builder "<prompt>"` starts a session as the builder agent in your Claude Code
-      version**; if not, start `claude` in the worktree and paste the prompt from the script.
-- [ ] A deliberately failing test makes the Stop hook block "done" and the builder fixes it.
-- [ ] `hx ask` shows up on the board and your click unblocks the builder.
-- [ ] The sec-review and design-critic subagents record verdicts; the integrator merges and pushes;
-      CI deploys; the tester records a demo check.
-- [ ] Delete the scratch branch and reset the log: `rm -rf .harness`.
+- [ ] `scripts/setup-tools.sh` succeeds; every gate command runs (gosec, gitleaks, govulncheck and
+      Playwright weren't available in the dry run's sandbox).
+- [ ] Run `claude` once in `~/csync/two-feet` and accept the trust prompt. Worktrees inherit that
+      trust. `scripts/agent.sh` passes the allow list on the command line, so it works without it too.
+- [ ] One builder in a tmux window (`scripts/spawn-builder.sh S1` inside tmux) to see the interactive
+      flow; the dry run only used `HEADLESS=1`.
+- [ ] The tester agent against a real deploy. The dry run had no deploy, so the demo-path light was
+      never exercised.
+
+### How the loop runs (what the dry run settled)
+
+| Step | Command |
+|---|---|
+| Plan | `HEADLESS=1 scripts/agent.sh planner "Plan the run from spec/spec.yaml."` (or the planner subagent) |
+| Build | `scripts/spawn-builder.sh S1` (tmux window) or `HEADLESS=1 scripts/spawn-builder.sh S1` |
+| Gates | automatic on every builder stop; `harness/gates.sh S1 </dev/null` by hand |
+| Review | `scripts/review.sh S1 --design` (runs inside the slice's worktree) |
+| Fix findings | `scripts/spawn-builder.sh S1 --fix` |
+| Merge | the integrator subagent, or `HEADLESS=1 scripts/agent.sh integrator "Merge slice S1."` |
+| Look | `hx serve`; `hx findings S1`; `hx decisions` |
+
+Budget: the dry run's three small slices cost about $0.75 each end to end (build, review, merge).
+Two Feet's slices are bigger; plan on $3-5 a slice, so roughly $40-60 for the day.
 
 ### Night before
 

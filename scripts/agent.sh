@@ -29,10 +29,33 @@ if [[ -n ${HEADLESS:-} ]]; then
   mkdir -p "$logdir"
   log="$logdir/${HX_AGENT:-$agent}-$(date +%H%M%S).log"
   echo "$agent running headless; log: $log"
-  # --allowedTools takes a variable number of values, so it goes last.
-  claude -p --agent "$agent" --permission-mode acceptEdits "$prompt" --allowedTools "${allow[@]}" \
-    < /dev/null > "$log" 2>&1
+  # --allowedTools takes a variable number of values, so it goes last. JSON output carries the run's
+  # cost, which goes on the board's burn panel (it read $0 all through the dry run without this).
+  set +e
+  claude -p --agent "$agent" --permission-mode acceptEdits --output-format json "$prompt" \
+    --allowedTools "${allow[@]}" < /dev/null > "$log.json" 2> "$log"
   status=$?
+  set -e
+  python3 - "$log.json" "$log" "${HX_AGENT:-$agent}" "$root/harness/hx.py" <<'PY' || true
+import json, subprocess, sys
+raw, log, who, hx = sys.argv[1:]
+try:
+    r = json.load(open(raw))
+except Exception:
+    r = {}
+with open(log, "a") as f:
+    f.write((r.get("result") or open(raw).read()) + "\n")
+cost = r.get("total_cost_usd")
+if cost:
+    u = r.get("usage") or {}
+    args = ["python3", hx, "--agent", who, "usage", "--cost", f"{cost:.4f}"]
+    if u.get("input_tokens") is not None:
+        args += ["--tokens-in", str(u["input_tokens"] + u.get("cache_read_input_tokens", 0) + u.get("cache_creation_input_tokens", 0))]
+    if u.get("output_tokens") is not None:
+        args += ["--tokens-out", str(u["output_tokens"])]
+    subprocess.run(args, check=False)
+PY
+  rm -f "$log.json"
   tail -n 25 "$log"
   exit $status
 fi

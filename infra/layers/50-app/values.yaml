@@ -1,0 +1,21 @@
+# One replica on purpose: the SSE hub lives in memory (spec.stack.replicas_note).
+# During a rollout two pods overlap for a few seconds; clients refetch on reconnect (spec.live).
+replicas: 1
+
+port: 8080
+
+# Run `<binary> migrate` as a Helm pre-install/pre-upgrade hook. Off for the smoke service,
+# which has no database schema; turn it on when the app's first migration merges.
+migrate:
+  enabled: false
+
+eventSlug: cnh
+
+resources:
+  requests: {cpu: 100m, memory: 128Mi}
+  limits: {memory: 512Mi}
+
+# Dash0 operator watches this namespace (cluster metrics, logs, events). The app's own traces go
+# straight to Dash0 over OTLP using DASH0_AUTH_TOKEN from the two-feet-env secret.
+dash0Monitoring:
+  enabled: true

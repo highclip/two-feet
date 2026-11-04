@@ -1,0 +1,9 @@
+cloudflared:
+  replicas: 2
+  image: cloudflare/cloudflared:2026.5.0
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+
+# Where the tunnel sends public traffic.
+appService: http://two-feet.two-feet.svc.cluster.local

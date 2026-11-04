@@ -1,0 +1,5 @@
+apiVersion: v2
+name: two-feet
+description: Two Feet app (or the smoke service before the event)
+type: application
+version: 0.1.0

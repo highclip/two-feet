@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: two-feet
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: two-feet
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: two-feet
+  template:
+    metadata:
+      labels:
+        app: two-feet
+        version: {{ .Values.image.tag | quote }}
+    spec:
+      # Give open SSE connections time to see the shutdown and reconnect to the new pod.
+      terminationGracePeriodSeconds: 20
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: app
+          image: {{ include "twofeet.image" . }}
+          ports:
+            - {name: http, containerPort: {{ .Values.port }}}
+          env:
+            {{- include "twofeet.env" . | nindent 12 }}
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 1
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: two-feet
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: two-feet
+  ports:
+    - {name: http, port: 80, targetPort: http}
+{{- if .Values.migrate.enabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: two-feet-migrate
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: migrate
+          image: {{ include "twofeet.image" . }}
+          args: [migrate]
+          env:
+            {{- include "twofeet.env" . | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+{{- end }}
+{{- if .Values.dash0Monitoring.enabled }}
+---
+apiVersion: operator.dash0.com/v1beta1
+kind: Dash0Monitoring
+metadata:
+  name: dash0-monitoring-resource
+  namespace: {{ .Release.Namespace }}
+spec:
+  # Don't restart the app when monitoring is enabled; only workloads created or updated later.
+  instrumentWorkloads: created-and-updated
+{{- end }}

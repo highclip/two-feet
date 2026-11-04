@@ -1,0 +1,484 @@
+# spec.yaml: the contract every agent reads.
+# The planner turns `slices` into `hx plan` calls and slice/S<n>-* branches.
+# The tester turns each `acceptance` entry into a test before the code exists.
+# The security reviewer checks every diff against `permissions` and `security`.
+# Anything not written here is out of scope. Agents escalate with `hx ask` instead of guessing.
+
+version: 1
+working_name: Two Feet            # after the open-space "law of two feet". Rename freely.
+
+pitch: >
+  Open spaces used to happen once a day, on a wall of sticky notes. Two Feet makes them happen
+  all day, from what people are stuck on right now. Post a problem in one line, and it points
+  you at the people, the hallway conversations and the sponsor booths that can help, close to
+  where you are standing.
+
+event:
+  name: Cloud Native Hackathon with Kelsey Hightower
+  date: 2026-11-09
+  venue: The Shop Workspace, Salt Lake City
+  build_window: "09:00-17:30 America/Denver"
+  tracks:
+    primary: elasticsearch        # matching engine. Must be genuine, central use.
+    secondary: [dash0, sonar]     # OTel telemetry to Dash0; Sonar/Gitar in the gates
+    optional: [radar]             # only if we deploy to Kubernetes anyway
+
+users:
+  - attendee: Wants help with a specific problem, or wants to share what they know, without filling out a profile.
+  - host: An attendee who starts a space. Same person, different moment.
+  - sponsor_rep: Staffs a booth. Wants to meet people with problems their product solves.
+  - organizer: Sets up zones and spots in the morning. Puts the Wall on the projector.
+
+# ── stack ──────────────────────────────────────────────────────────────────
+stack:
+  language: Go 1.23+
+  http: net/http (stdlib router, Go 1.22 patterns)
+  frontend: server-rendered HTML with templ + htmx; htmx SSE extension for live updates   # confirm
+  db: Postgres 16 via pgx; migrations with goose
+  db_host: PlanetScale Postgres in production; Postgres in docker compose for dev
+  search: Elasticsearch 8.17+ on Elastic Cloud (local trial-license ES in compose); semantic_text with ELSER
+  auth: Clerk passwordless (email code). Clerk's prebuilt sign-in UI on the page; clerk-sdk-go v2 middleware verifies the session server-side.
+  live: Server-Sent Events from one Go process with an in-memory broadcast hub
+  telemetry: OpenTelemetry Go SDK, OTLP straight to Dash0; the Dash0 operator adds cluster metrics, logs and events
+  tests: go test -race; Playwright for end-to-end flows on a phone-sized viewport
+  deploy: one container, one replica, on DOKS (two-feet-sfo3), public through a Cloudflare tunnel; Radar in-cluster. See infra/ and docs/RUNBOOK.md
+  replicas_note: >
+    One replica keeps the SSE hub in memory. If we ever run two, fan out through Postgres
+    LISTEN/NOTIFY on a direct (non-pooled) connection.
+
+# ── the venue as data ──────────────────────────────────────────────────────
+# Placeholder layout. The organizer edits zones and spots at 9:00 once we see the room.
+venue_seed:
+  zones:
+    - { id: main, name: Main room }
+    - { id: kitchen, name: Kitchen }
+    - { id: lounge, name: Lounge }
+    - { id: patio, name: Patio }
+    - { id: booths, name: Sponsor row }
+  walks:                        # undirected edges, minutes on foot
+    - [main, kitchen, 1]
+    - [main, lounge, 1]
+    - [main, booths, 1]
+    - [kitchen, patio, 2]
+    - [lounge, booths, 2]
+  spots:                        # a table, a couch, a booth. Each gets a QR code.
+    - { name: Long table, zone: main, capacity: 10 }
+    - { name: Window table, zone: main, capacity: 6 }
+    - { name: Kitchen island, zone: kitchen, capacity: 6 }
+    - { name: Couches, zone: lounge, capacity: 8 }
+    - { name: Picnic table, zone: patio, capacity: 8 }
+
+sponsors_seed:                  # confirm wording with each sponsor rep on the day
+  - { name: Dash0, solves: "OpenTelemetry-native observability: traces, metrics and logs" }
+  - { name: Elastic, solves: "Search, vector search and log analytics with Elasticsearch" }
+  - { name: Radar, solves: "Kubernetes UI with an AI SRE for troubleshooting clusters" }
+  - { name: Sonar, solves: "Code quality and AI code verification (Gitar)" }
+  - { name: Tailscale, solves: "Private networking between machines, clusters and people" }
+  - { name: Temporal, solves: "Durable workflows that survive failures and retries" }
+
+# ── data model ─────────────────────────────────────────────────────────────
+entities:
+  event:
+    fields: { id: uuid, slug: text, name: text, timezone: text, starts_at: timestamptz, ends_at: timestamptz }
+
+  zone:
+    fields: { id: text, event_id: uuid, name: text }
+  zone_walk:
+    fields: { a: text, b: text, minutes: int }
+    notes: Undirected. "Near me" uses shortest walk time over this graph.
+
+  spot:
+    fields:
+      id: uuid
+      zone_id: text
+      name: "text, e.g. Kitchen whiteboard"
+      where: "text, up to 80 chars, how to find it, e.g. 'the wall left of the coffee machine'"
+      capacity: int
+      qr_slug: "text, 16+ random chars, never changes once printed"
+    notes: >
+      A spot is wherever a QR code is taped: a table, a wall, a pillar. The organizer can rename it,
+      move it to another zone or change `where` at any time; the printed code keeps working.
+
+  person:
+    fields:
+      id: uuid
+      clerk_user_id: text unique
+      display_name: "text, 1-40 chars"
+      handle: "text, optional (GitHub or Bluesky)"
+      role: "attendee | sponsor_rep | organizer"
+      sponsor_id: "uuid, null unless sponsor_rep"
+      tags: "text[], up to 8"
+      discoverable: "bool, default true. False hides them from person matches."
+      zone_id: "text, null until first check-in"
+      zone_seen_at: timestamptz
+
+  post:
+    fields:
+      id: uuid
+      author_id: uuid
+      kind: "stuck | curious | offer"     # "offer" covers mentoring and show-and-tell
+      text: "text, 10-280 chars, plain text only"
+      tags: "text[], extracted from text plus any the author adds"
+      created_at: timestamptz
+      expires_at: "timestamptz, default created_at + 3h"
+      status: "open | resolved | expired"
+
+  space:
+    fields:
+      id: uuid
+      slug: "text, unguessable"
+      host_id: uuid
+      from_post_id: "uuid, optional"
+      title: "text, 5-80 chars"
+      blurb: "text, up to 280 chars"
+      spot_id: uuid
+      starts_at: timestamptz
+      minutes: "15 | 30 | 45"
+      capacity: "int, 2 to spot.capacity"
+      status: "open | cancelled"           # full / happening / done are derived from time and signups
+
+  signup:
+    fields: { space_id: uuid, person_id: uuid, status: "going | waitlist | left", created_at: timestamptz, position: "int, waitlist order" }
+    constraints:
+      - unique (space_id, person_id)
+      - "count(going) <= space.capacity, enforced in one transaction with SELECT ... FOR UPDATE on the space"
+
+  sponsor:
+    fields: { id: uuid, name: text, solves: text, booth_spot_id: uuid }
+
+  match:                                 # derived on request, never stored
+    fields: { kind: "space | person | sponsor", target_id: uuid, score: float, reasons: "text[], 1-3 short phrases", walk_minutes: int, starts_in_minutes: "int, spaces only" }
+
+search_index:
+  name: twofeet
+  documents: "one per open post, upcoming space and sponsor: {type, id, text (semantic_text), tags (keyword), zone_id, starts_at, expires_at}"
+  sync: write to Postgres first, then index. A failed index call retries 3 times and logs; it never fails the user's request.
+  query: >
+    Hybrid retrieval: semantic match on text, plus tag overlap, combined with reciprocal rank fusion.
+    Filters: spaces start within the next 90 minutes or are happening now; posts are open and not the
+    asker's own; people are discoverable. Top 3 of each type.
+  reasons: >
+    Built without an LLM: shared tags ("both mention otel-collector"), the strongest highlighted
+    phrase from the matched text, and logistics ("2 min walk", "starts in 6 min", "3 of 8 spots left").
+
+# ── live updates ───────────────────────────────────────────────────────────
+# One mechanism for the whole app. S4 builds the hub; every other slice reuses it.
+live:
+  transport: >
+    One SSE connection per open page at /e/<slug>/live?topics=..., read by the htmx SSE extension.
+    The server pushes rendered HTML fragments, so a client swaps a card or a count and runs no
+    client-side state.
+  topics:
+    event: "new or cancelled spaces, for the near-me feed and the Wall"
+    spot:<id>: "now and next at one spot"
+    space:<id>: "count, waitlist and status of one space"
+    person:<id>: "only to that person: 'You're in' after a waitlist move, 'Cancelled by host'"
+  what_updates_live: [signup counts, waitlist moves, new and cancelled spaces, spot now and next, near-me feed, the Wall]
+  what_does_not: >
+    Match results. They stay put while you read them; new ones show as "2 new matches" to tap,
+    so the list never jumps under someone's thumb.
+  flaky_wifi:
+    - A heartbeat comment every 15 seconds so proxies and phones keep the connection open.
+    - Responses set Cache-Control no-cache and X-Accel-Buffering no so nothing buffers the stream.
+    - On reconnect, or when a phone tab comes back to the foreground, the page refetches its fragments once, so missed events don't matter.
+    - A small "Reconnecting" note shows after 5 seconds without a heartbeat, and goes away on its own.
+  acceptance:
+    - given a phone puts the tab in the background for 10 minutes, when it comes back, then counts are current within 2 seconds
+    - given the server restarts, then every open page reconnects and shows current data within 10 seconds, without a reload
+    - given an attendee subscribes to person:<id> for someone else, then the server refuses it
+    - given 300 open connections, then a signup reaches every subscriber in under 500 ms
+
+# ── who can do what ────────────────────────────────────────────────────────
+roles: [visitor, attendee, host, sponsor_rep, organizer]   # host = attendee who owns that space
+permissions:
+  view_landing:            [visitor, attendee, sponsor_rep, organizer]
+  view_wall:               [visitor, attendee, sponsor_rep, organizer]   # projector view, counts only, no names
+  view_spot_page:          [visitor, attendee, sponsor_rep, organizer]   # visitors see titles and counts, no names
+  sign_in:                 [visitor]
+  check_in_at_spot:        [attendee, sponsor_rep, organizer]
+  create_post:             [attendee, sponsor_rep]
+  resolve_own_post:        [attendee, sponsor_rep]
+  see_matches:             [attendee, sponsor_rep]
+  create_space:            [attendee, sponsor_rep]
+  edit_or_cancel_space:    [host, organizer]
+  join_or_leave_space:     [attendee, sponsor_rep]
+  see_space_attendee_names: [attendee, sponsor_rep, organizer]           # signed in only
+  see_zone_counts:         [attendee, sponsor_rep, organizer]
+  see_anyone_exact_zone:   []                                            # nobody, ever
+  edit_own_sponsor:        [sponsor_rep]
+  manage_zones_and_spots:  [organizer]
+  print_spot_qr_codes:     [organizer]
+
+# ── how people get in ──────────────────────────────────────────────────────
+entry:
+  badge_scan: >
+    The way in is a QR code: a sticker on each badge, the poster at the door, or the code on any
+    table. Every code opens /e/<event-slug>, optionally with ?spot=<qr_slug>.
+    A table code also checks you in to that spot once you're signed in.
+  sign_in: Clerk passwordless email code. First sign-in asks for a display name and up to 3 tags, nothing else.
+  open_question: What is on the real badges? If they carry a Luma ticket QR, we can't read it; print our own stickers.
+
+# ── slices ─────────────────────────────────────────────────────────────────
+# Acceptance criteria are given/when/then. The tester writes these as tests first.
+slices:
+  - id: S1
+    title: Foundations and sign-in
+    depends_on: []
+    scope: Go server skeleton, config, migrations, seed loader for venue_seed and sponsors_seed, Clerk sign-in, person onboarding, layout and design tokens.
+    acceptance:
+      - given a visitor opens /e/cnh, when they sign in with an emailed code, then they land on onboarding and a person row exists for their Clerk user
+      - given a new person, when they submit a display name of 1-40 chars and up to 3 tags, then they land on the home screen
+      - given a request with no valid Clerk session, when it hits any attendee route, then it gets 401 for htmx/API calls or a redirect to sign-in for pages
+      - given an empty database, when the seed runs twice, then zones, walks, spots and sponsors exist exactly once
+
+  - id: S2
+    title: Spot pages and check-in
+    depends_on: [S1, S3, S4]
+    scope: >
+      Every QR opens that spot's page, like the tablet outside a meeting room: what's happening here
+      now and next, with one button to start a space here. Opening it signed in also checks you in.
+      Manual "I'm in" zone picker, presence staleness, zone counts.
+    acceptance:
+      - given a signed-in attendee, when they open a spot QR link, then their zone is set to that spot's zone and the page says "You're at <spot>, <zone>"
+      - given any spot page, then it shows the spot's name and `where`, the space happening now (if any) and the next two today, each with "N of M going" and a Join button
+      - given a spot page, when the attendee taps "Start a space here", then the create form opens with this spot and the next free 15-minute slot filled in
+      - given a spot page is open, when someone joins or a space is created at this spot, then the page updates within 2 seconds
+      - given a visitor who isn't signed in, when they open a spot QR, then they see the spot's now and next without names, and signing in returns them to the same spot page and checks them in
+      - given an unknown qr_slug, when it is opened, then the attendee sees "That code isn't from this event" and their zone does not change
+      - given a check-in older than 45 minutes, when the attendee opens the app, then they are asked where they are and are not counted in any zone
+      - given zone counts are shown, when a zone has fewer than 3 people, then it shows "a few" instead of a number
+      - given any API response, then it never contains another person's zone
+
+  - id: S3
+    title: Spaces
+    depends_on: [S1]
+    scope: Create, edit, cancel a space at a spot and time. Create from a post with title prefilled.
+    acceptance:
+      - given an attendee, when they create a space with title, spot, start time and 15/30/45 minutes, then it appears with them as host and first "going"
+      - given a spot already has a space overlapping that time, when another is created there, then it is refused with "Long table is taken until 2:30. Try Couches."
+      - given a capacity larger than the spot's capacity, when saved, then it is refused
+      - given a space, when someone other than its host or an organizer edits or cancels it, then they get 403
+      - given a space is cancelled, then everyone going sees "Cancelled by host" within 2 seconds
+
+  - id: S4
+    title: Live signups
+    depends_on: [S3]
+    scope: Join, leave, waitlist and auto-promotion. Builds the shared live hub described in `live`; other slices reuse it.
+    acceptance:
+      - given a space with 8 spots, when 20 attendees join at the same instant, then exactly 8 are going and 12 are waitlisted in join order
+      - given a full space, when someone going leaves, then the first waitlisted person becomes going and sees "You're in" within 2 seconds
+      - given two browsers on the same space, when one joins, then the other's count updates within 2 seconds without a reload
+      - given an attendee is going to a space, when they join another that overlaps in time, then they are asked to leave the first
+      - given 100 open SSE connections, then the server holds under 50 MB extra memory and each event fans out in under 200 ms
+
+  - id: S5
+    title: Posts and indexing
+    depends_on: [S1]
+    scope: Post a one-line problem, curiosity or offer. Tag extraction. Index posts, spaces and sponsors in Elasticsearch.
+    acceptance:
+      - given an attendee, when they post 10-280 chars of plain text, then it is saved and searchable within 3 seconds
+      - given a post containing HTML or script, when rendered anywhere, then it shows as text
+      - given an attendee, when they post more than 5 times in 10 minutes, then the 6th is refused with when they can post again
+      - given Elasticsearch is unreachable, when an attendee posts, then the post still saves and the attendee sees no error
+      - given a post past its expires_at, then it no longer appears in matches
+
+  - id: S6
+    title: Matching with reasons
+    depends_on: [S3, S5, S7]
+    scope: For a post, return top spaces, people and sponsors with reasons and logistics. Actions to join, start a space, or visit a booth.
+    acceptance:
+      - given the seeded demo data, when an attendee posts "our OTel collector drops spans under load on k8s", then the top results include the collector space, a person who posted about collector pipelines, and Dash0
+      - given any match, then it shows 1-3 reasons and at least one is not a raw score
+      - given a person with discoverable = false, then they never appear as a match
+      - given an attendee's own posts and spaces, then they never appear in their own matches
+      - given a match request, then results return in under 800 ms at p95 with 300 indexed documents
+
+  - id: S7
+    title: Sponsors
+    depends_on: [S1]
+    scope: Seeded sponsor profiles with booth spots. Sponsor reps edit their own "solves" text.
+    acceptance:
+      - given a sponsor rep, when they edit their sponsor's solves text, then the change is reindexed and shows in matches within 5 seconds
+      - given a sponsor rep, when they try to edit another sponsor, then they get 403
+      - given a sponsor match, then it shows the booth spot and walk time
+
+  - id: S8
+    title: What's happening near me
+    depends_on: [S2, S4]
+    scope: Home feed of spaces happening now or starting within 30 minutes, sorted by walk time then start time.
+    acceptance:
+      - given an attendee in Kitchen, when the feed loads, then a space at Kitchen island starting in 10 minutes ranks above one in Lounge starting in 5
+      - given a space started more than 10 minutes ago, then it shows as "happening" but is no longer joinable unless the host left it open
+      - given each card, then it shows title, spot, walk time, "starts in N min" or "happening now", and "N of M going"
+      - given a new space nearby, when it is created, then it appears in open feeds within 2 seconds
+      - given no check-in, then the feed sorts by start time and offers "Scan a table code to see what's close"
+
+  - id: S9
+    title: The Wall
+    depends_on: [S3, S4]
+    scope: Projector view at /e/<slug>/wall. A grid of zones by 15-minute slots, like the open-space marketplace wall. Live.
+    acceptance:
+      - given a 1920x1080 screen, then the next 2 hours of every zone fit without scrolling and titles are readable from 5 meters (at least 28px)
+      - given a signup anywhere, then the wall's count changes within 2 seconds
+      - given the wall, then it shows no person names, only titles, spots and counts
+      - given the wall has been open for 4 hours, then memory stays flat and the SSE connection reconnects on its own after a drop
+
+  - id: S10
+    title: Telemetry to Dash0
+    depends_on: [S1]
+    scope: OTel traces for HTTP, Postgres and Elasticsearch calls; spans around matching and signup; a few business metrics.
+    acceptance:
+      - given a match request, then one trace in Dash0 shows the handler, the Elasticsearch query and the Postgres reads as child spans
+      - given the app runs, then Dash0 shows metrics spaces_open, signups_total and posts_total by kind
+      - given any span or log, then it contains no email address and no post text beyond 40 chars
+
+  - id: S11
+    title: Landing and QR codes
+    depends_on: [S1, S2]
+    scope: Public landing page with the pitch. Organizer page that renders a printable sign for each spot and the badge sticker.
+    acceptance:
+      - given an organizer, when they open /e/<slug>/codes, then each spot prints as one letter-size page with a QR at least 12 cm wide, the spot name, and "Open space here. Scan to see what's on or start one."
+      - given a printed sign, then its QR encodes the spot URL with no session or personal data in it
+      - given a non-organizer, when they open the codes page, then they get 403
+
+# ── the one flow that must always work ─────────────────────────────────────
+demo_path:
+  flow: "Scan table → sign in → post a problem → see a space, a person and a sponsor with reasons → join → Wall updates"
+  steps:
+    - Scan the Kitchen island QR on a phone and sign in with an email code.
+    - Post "our OTel collector drops spans under load on k8s".
+    - See the "Collector tuning" space (1 min walk, starts in 6 min, 5 of 8 going), a person who posted about collector pipelines, and Dash0's booth.
+    - Tap Join. The Wall on the projector shows 6 of 8 within 2 seconds.
+  live_moment: >
+    At lunch, put a QR on the screen and invite the room to post and start spaces. Present with the
+    room's real posts and spaces on the Wall.
+
+demo_seed:                                # loaded before presenting, marked as sample data
+  people: 12
+  posts: 20
+  spaces: 6
+  must_include:
+    - { kind: space, title: "Collector tuning: dropping spans under load", spot: Kitchen island, starts_in_minutes: 6, going: 5, capacity: 8 }
+    - { kind: post, author: "Priya (sample)", text: "Rebuilding our OTel collector pipelines with tail sampling, happy to compare notes" }
+
+# ── the order we cut when the clock says freeze ────────────────────────────
+cut_order:                                # first to go at the top
+  - delight.after "Swap handles"
+  - S11 QR page (print codes from a script instead)
+  - S7 sponsor editing (keep seeded sponsors)
+  - S4 auto-promotion from waitlist (a full space just says "Full")
+  - S10 metrics (keep traces)
+  - S2 staleness prompt
+never_cut: [S1, S3, S4 core signups, S5, S6, S8, S9]
+
+non_goals:
+  - chat or direct messages; people meet in person
+  - push notifications, calendars, native apps
+  - GPS or Bluetooth location; zones come from QR check-ins only
+  - organizer analytics, exports, sponsor lead lists
+  - passwords or accounts beyond Clerk email codes
+
+# ── security and privacy ───────────────────────────────────────────────────
+security:
+  - Nobody can learn where a specific person is. Only zone counts, with fewer than 3 shown as "a few".
+  - Space, spot and QR identifiers are unguessable. Sequential ids never appear in URLs.
+  - Clerk session verified server-side on every attendee route. Role checks happen in handlers, not templates.
+  - State-changing requests require a POST with a CSRF token or a same-origin check.
+  - All user text is plain text, length-limited and escaped on output. No markdown, no HTML.
+  - Rate limits on posts, space creation and signups per person.
+  - Secrets (Clerk, Elastic, Dash0, database) come from the environment. Nothing in the repo.
+  - Telemetry never contains email addresses or full post text.
+
+# ── design and delight ─────────────────────────────────────────────────────
+# The design critic reviews every UI slice against this section, with screenshots at 390px and on the Wall.
+design:
+  references:
+    - "devopsdays open-space marketplace wall: topics on sticky notes in a grid of rooms by time"
+  idea: >
+    The open-space wall in your pocket, made crisp and digital rather than papery. Warmth comes
+    from people: names, initials, and each host's own words. A post's kind has one color everywhere:
+    phone, spot page, Wall.
+  tokens:                                  # proposal, tune before Monday
+    color:
+      board: "#F3F5F4"                     # cool whiteboard, not cream
+      ink: "#16191C"
+      ink_soft: "#5E666D"
+      note_stuck: "#FFE15A"                # yellow: I'm stuck on this (tint #FFF3BF)
+      note_curious: "#9CD2FF"              # blue: I want to talk about this (tint #DDF0FF)
+      note_offer: "#A6E3A0"                # green: I can help with this (tint #E2F5DF)
+      action: "#C93A22"                    # marker red, for Join and Start only; white text on it is 5.1:1
+      dark_board: "#121518"
+      dark_note_tint: "notes keep their hue at 85% lightness with ink text; never white text on a note"
+      on_notes: "all text on notes uses ink (11:1 or better); ink_soft fails on blue and green notes, so never use it there"
+    type:
+      titles: "Archivo, semi-condensed, 700 (note titles, the Wall)"
+      body: "Atkinson Hyperlegible (built for reading at a glance)"
+      numbers: "Atkinson Hyperlegible with tabular figures for times and counts"
+    shape: "Flat cards with 12-16px corners and a hairline border. No tilt, tape, paper texture or handwriting. Kind shows as a colored pill; the featured card takes a light tint of its kind."
+  principles:
+    - Phone first. One thumb, 44px tap targets, readable in a bright room.
+    - The Wall is a projector view, readable from the back of the room.
+    - Contrast at least 4.5:1 in light and dark, including text on every note color.
+
+delight:
+  moments:
+    post: >
+      Posting feels like writing a note. One line, a kind toggle (stuck / curious / can help) that
+      recolors the note as you type, and a placeholder that rotates through real posts from the room.
+    matches: >
+      Matches arrive as three notes dealt onto the screen, 80 ms apart: a space, a person, a sponsor.
+      Each carries its reason chips and one line of logistics: "1 min walk · starts in 6 min".
+    seats: >
+      Capacity is drawn as seat dots, not a number. 8 dots, 5 filled. When you join, your initial
+      drops into the next dot and the count rolls up. On the Wall, the same dot fills at the same moment.
+    time: >
+      "Starts in N min" counts down live. Under 5 minutes the chip turns marker red; once started it
+      reads "Happening now" with a slow pulse.
+    wall: >
+      New spaces stick onto the Wall with a short drop and settle. A ticker along the bottom shows
+      the latest post titles, never names.
+    after: >
+      When a space ends, the people who went see "Swap handles?" for two hours. Only those who tap
+      yes see each other's handles. This is the "after the conference" part of the theme.
+  copy:
+    voice: Plain and warm, borrowed from open space. Short sentences. No exclamation marks except "You're in!"
+    lines:
+      empty_spot: "Nothing here yet. Whoever comes are the right people. Start one."
+      leave: "Law of two feet. You've left, and your seat went to the next person."
+      full: "Full. You're 2nd on the waitlist; we'll move you in if a seat opens."
+      no_matches: "No one's on this yet. Start a space and let it find people."
+      reconnecting: "Reconnecting…"
+  rules:
+    - No confirmation dialogs. Leaving and cancelling show an Undo toast for 5 seconds instead.
+    - Every empty state names one next action and has a button for it.
+    - Every error says what happened and what to do, in one sentence.
+    - Nothing waits behind a spinner longer than 300 ms; show the note's outline while it loads.
+    - Animations are under 250 ms, and prefers-reduced-motion turns them off.
+  acceptance:
+    - given a phone on 3G-speed wifi, then any page shows usable content within 1.5 seconds and weighs under 150 KB before fonts
+    - given any screen at 390px wide, then no tap target is smaller than 44 by 44 px and nothing scrolls sideways
+    - given any page load or live update, then cumulative layout shift stays under 0.05
+    - given prefers-reduced-motion, then notes don't tilt-animate, drop or pulse, and every state is still visible
+    - given an attendee leaves a space, when they tap Undo within 5 seconds, then they are back in the same seat
+    - given each note color with its text in light and dark, then contrast is at least 4.5:1
+    - given two people who went to the same space, when both tap "Swap handles", then each sees the other's handle, and nobody who declined is shown
+
+# ── harness wiring ─────────────────────────────────────────────────────────
+gates:                                    # copy into .harness/gates.conf
+  order: [fmt, vet, lint, tests, gosec, gitleaks, vulns, e2e]
+  commands:
+    fmt: test -z "$(gofmt -l .)"
+    vet: go vet ./...
+    lint: golangci-lint run
+    tests: go test -race ./...
+    gosec: gosec -quiet ./...
+    gitleaks: gitleaks detect --no-banner --redact
+    vulns: govulncheck ./...
+    e2e: npx playwright test --reporter=line
+  sonar_track: Run Sonar/Gitar on every slice PR as a required review, and show its results in the pitch.
+
+open_questions:                           # answer before Monday
+  - Do the hackathon rules allow code written before 9:00? This spec and the harness are prep; app code may not be.
+  - What is printed on the badges, and can we hand out stickers?
+  - PlanetScale Postgres: confirm pooled connections work with pgx (smoke service checks it).
+  - Team size. Solo with agents, or a teammate who owns design or the demo?

@@ -1,0 +1,49 @@
+{
+  "env": {
+    "HX_RUN": "cnh-2026"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python3 harness/hx.py:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(go vet:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go get:*)",
+      "Bash(go run:*)",
+      "Bash(gofmt:*)",
+      "Bash(templ generate:*)",
+      "Bash(goose:*)",
+      "Bash(golangci-lint run:*)",
+      "Bash(gosec:*)",
+      "Bash(govulncheck:*)",
+      "Bash(gitleaks:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(docker compose -f infra/local/compose.yaml:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Read(./.env)",
+      "Read(./infra/layers/secrets.env)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/harness/gates.sh",
+            "timeout": 900
+          }
+        ]
+      }
+    ]
+  }
+}

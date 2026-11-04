@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "harness/events.schema.json",
+  "title": "Harness event",
+  "description": "One line of events.jsonl. The log is append-only; the board and `hx status` are projections of it.",
+  "type": "object",
+  "required": ["ts", "run", "type"],
+  "properties": {
+    "ts": { "type": "string", "format": "date-time", "description": "UTC, second precision" },
+    "run": { "type": "string", "description": "Run id, e.g. hack-01" },
+    "type": { "enum": ["run.start", "slice.planned", "slice.state", "gate.result", "review.verdict", "decision.request", "decision.resolved", "agent.usage", "demo.check"] },
+    "agent": { "type": "string", "description": "Who wrote the event: planner, builder-2, gates, sec-review, human" },
+    "slice": { "type": "string", "pattern": "^S[0-9]+$" }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "type": { "const": "run.start" },
+        "name": { "type": "string" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "budget_usd": { "type": "number", "minimum": 0 }
+      },
+      "required": ["name", "deadline"]
+    },
+    {
+      "properties": {
+        "type": { "const": "slice.planned" },
+        "title": { "type": "string" },
+        "spec": { "type": "string", "description": "Pointer into the spec file, e.g. spec.yaml#/features/dish-signup" }
+      },
+      "required": ["slice", "title"]
+    },
+    {
+      "properties": {
+        "type": { "const": "slice.state" },
+        "to": { "enum": ["planned", "building", "gates", "review", "blocked", "merged"] },
+        "reason": { "type": "string" },
+        "sha": { "type": "string", "description": "Merge commit, when to = merged" }
+      },
+      "required": ["slice", "to"]
+    },
+    {
+      "properties": {
+        "type": { "const": "gate.result" },
+        "gate": { "type": "string", "examples": ["types", "lint", "tests", "semgrep", "gitleaks", "deps", "e2e"] },
+        "status": { "enum": ["pass", "fail"] },
+        "detail": { "type": "string", "maxLength": 300 }
+      },
+      "required": ["slice", "gate", "status"]
+    },
+    {
+      "properties": {
+        "type": { "const": "review.verdict" },
+        "reviewer": { "enum": ["security", "design", "code"] },
+        "verdict": { "enum": ["approve", "changes"] },
+        "findings": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["slice", "reviewer", "verdict"]
+    },
+    {
+      "properties": {
+        "type": { "const": "decision.request" },
+        "id": { "type": "string", "pattern": "^D[0-9]+$" },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "blocking": { "type": "boolean", "default": true }
+      },
+      "required": ["id", "question", "options"]
+    },
+    {
+      "properties": {
+        "type": { "const": "decision.resolved" },
+        "id": { "type": "string" },
+        "choice": { "type": "string" }
+      },
+      "required": ["id", "choice"]
+    },
+    {
+      "properties": {
+        "type": { "const": "agent.usage" },
+        "cost_usd": { "type": "number", "minimum": 0, "description": "Spend since the agent's previous usage event" },
+        "tokens_in": { "type": "integer" },
+        "tokens_out": { "type": "integer" }
+      },
+      "required": ["agent", "cost_usd"]
+    },
+    {
+      "properties": {
+        "type": { "const": "demo.check" },
+        "status": { "enum": ["pass", "fail"] },
+        "flow": { "type": "string", "description": "The main user flow, e.g. Create event → share → claim dish" },
+        "detail": { "type": "string" }
+      },
+      "required": ["status", "flow"]
+    }
+  ]
+}

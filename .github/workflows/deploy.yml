@@ -1,0 +1,83 @@
+name: Build and deploy
+
+# Every push to main builds one image and deploys it to the two-feet namespace.
+# Before the event that's the smoke service (infra/smoke); once app/Dockerfile exists, it's the app.
+# Gates run locally before the integrator merges, so this workflow only builds and ships.
+on:
+  push:
+    branches: [main]
+    paths:
+      - app/**
+      - infra/smoke/**
+      - infra/layers/cluster.yaml
+      - infra/layers/50-app/**
+      - .github/workflows/deploy.yml
+  workflow_dispatch: {}
+
+# Never cancel a running deploy: an interrupted helm upgrade leaves the release pending.
+# A newer push waits, then deploys the newest main.
+concurrency:
+  group: deploy-two-feet
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick what to build
+        id: pick
+        run: |
+          if [[ -f app/Dockerfile ]]; then echo "context=app" >> "$GITHUB_OUTPUT"
+          else echo "context=infra/smoke" >> "$GITHUB_OUTPUT"; fi
+          echo "tag=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+          echo "repo=$(yq '.image.repository' infra/layers/cluster.yaml)" >> "$GITHUB_OUTPUT"
+          echo "cluster=$(yq '.cluster.name' infra/layers/cluster.yaml)" >> "$GITHUB_OUTPUT"
+
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Log in to the registry
+        run: doctl registry login --expiry-seconds 1200
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.pick.outputs.context }}
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.pick.outputs.repo }}:${{ steps.pick.outputs.tag }}
+          build-args: VERSION=${{ steps.pick.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Deploy
+        run: |
+          doctl kubernetes cluster kubeconfig save "${{ steps.pick.outputs.cluster }}" --expiry-seconds 900
+          helm upgrade --install two-feet infra/layers/50-app/chart \
+            --namespace two-feet --create-namespace \
+            -f infra/layers/cluster.yaml -f infra/layers/50-app/values.yaml \
+            --set image.tag=${{ steps.pick.outputs.tag }} \
+            --wait --timeout 5m
+
+      - name: Check it's live
+        run: |
+          host=$(yq '.publicHost' infra/layers/cluster.yaml)
+          for i in $(seq 1 20); do
+            v=$(curl -fsS --max-time 5 "https://$host/healthz" || true)
+            echo "$v" | grep -q "${{ steps.pick.outputs.tag }}" && { echo "live: $v"; exit 0; }
+            sleep 3
+          done
+          echo "https://$host/healthz never reported ${{ steps.pick.outputs.tag }}" >&2; exit 1

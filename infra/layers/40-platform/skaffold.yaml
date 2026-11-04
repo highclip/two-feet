@@ -1,0 +1,20 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: two-feet-40-platform
+
+# Public traffic: a Cloudflare tunnel, no load balancer or ingress controller. TLS terminates at
+# Cloudflare. Requires the tunnel-credentials secret in cloudflare (bootstrap-secrets.sh).
+deploy:
+  helm:
+    releases:
+      - name: two-feet-platform
+        chartPath: chart
+        namespace: cloudflare
+        createNamespace: true
+        valuesFiles:
+          - ../cluster.yaml
+          - values.yaml
+    flags:
+      install: [--wait, --timeout=5m]
+      upgrade: [--wait, --timeout=5m]

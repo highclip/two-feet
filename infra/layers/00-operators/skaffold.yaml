@@ -1,0 +1,41 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: two-feet-00-operators
+
+# Cluster-wide operators. Requires the dash0-authorization-secret in dash0-system
+# (infra/scripts/bootstrap-secrets.sh).
+deploy:
+  helm:
+    releases:
+      # Dash0 operator: cluster metrics, logs and Kubernetes events to Dash0. The app also sends its
+      # own traces straight to Dash0 over OTLP (see 50-app), so app telemetry doesn't depend on
+      # the operator's auto-instrumentation, which doesn't cover Go.
+      - name: dash0-operator
+        remoteChart: dash0-operator
+        repo: https://dash0hq.github.io/dash0-operator
+        # Pin after the first install: helm search repo dash0-operator/dash0-operator
+        upgradeOnChange: true
+        namespace: dash0-system
+        createNamespace: true
+        # deploy.sh exports these from cluster.yaml.
+        setValueTemplates:
+          operator.dash0Export.enabled: "true"
+          operator.dash0Export.endpoint: "{{.DASH0_ENDPOINT}}"
+          operator.dash0Export.apiEndpoint: "{{.DASH0_API_ENDPOINT}}"
+          operator.dash0Export.secretRef.name: dash0-authorization-secret
+          operator.dash0Export.secretRef.key: token
+          operator.clusterName: "{{.CLUSTER_NAME}}"
+
+      # Radar (skyhook-io/radar): Kubernetes UI with topology and a built-in MCP server, so
+      # agents can inspect the cluster through it. No public exposure; reach it with port-forward.
+      - name: radar
+        remoteChart: radar
+        repo: https://skyhook-io.github.io/helm-charts
+        # Pin after the first install: helm search repo skyhook/radar
+        upgradeOnChange: true
+        namespace: radar
+        createNamespace: true
+    flags:
+      install: [--wait, --timeout=10m]
+      upgrade: [--wait, --timeout=10m]

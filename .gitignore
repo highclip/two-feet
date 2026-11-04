@@ -1,0 +1,29 @@
+# Run state: the event log, attempt counters
+.harness/
+
+# Secrets
+.env
+.env.*
+!.env.example
+infra/layers/secrets.env
+infra/layers/secrets/
+*.pem
+credentials.json
+
+# Build output
+app/bin/
+infra/smoke/smoke
+*.test
+coverage.out
+
+# Playwright
+node_modules/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Generated templ code is committed; editor junk is not
+.DS_Store
+.idea/
+.vscode/
+__pycache__/

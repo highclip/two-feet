@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Wall projector view</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&amp;family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#EEF1F0}a:hover{color:#FFE15A}
+</style>
+</head>
+<body>
+<div style="width: 1920px; height: 1080px; box-sizing: border-box; background: #121518; color: #EEF1F0; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; display: flex; flex-direction: column; gap: 20px; padding: 32px 56px; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; gap: 40px; height: 130px">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 20px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: #A9B2B9">Two Feet · open spaces, all day</span>
+      <h1 style="margin: 0; font-family: Archivo, sans-serif; font-weight: 800; font-size: 64px; line-height: 1; letter-spacing: -0.02em">What's on, and where</h1>
+    </div>
+    <div style="display: flex; align-items: center; gap: 36px">
+      <div style="display: flex; flex-direction: column; align-items: flex-end">
+        <span style="font-family: Archivo, sans-serif; font-weight: 800; font-size: 76px; line-height: 0.95; font-variant-numeric: tabular-nums">2:38</span>
+        <span style="font-size: 20px; color: #A9B2B9">Monday, Nov 9</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 16px">
+        <div style="width: 116px; height: 116px; box-sizing: border-box; border: 2px dashed #A9B2B9; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 16px; color: #A9B2B9">[QR for this event]</div>
+        <div style="display: flex; flex-direction: column; gap: 2px; max-width: 220px">
+          <span style="font-size: 22px; font-weight: 700; line-height: 1.15">Scan to post or start a space</span>
+          <span style="font-size: 18px; color: #A9B2B9">or any code taped up around the room</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div style="display: grid; grid-template-columns: 240px repeat(8, minmax(0, 1fr)); grid-template-rows: 44px repeat(4, 176px)">
+    <span></span>
+    <span style="grid-column: 2; grid-row: 1; padding-left: 10px; font-size: 24px; font-weight: 700; color: #EEF1F0">2:30</span>
+    <span style="grid-column: 3; grid-row: 1; padding-left: 10px; font-size: 24px; color: #A9B2B9">2:45</span>
+    <span style="grid-column: 4; grid-row: 1; padding-left: 10px; font-size: 24px; color: #A9B2B9">3:00</span>
+    <span style="grid-column: 5; grid-row: 1; padding-left: 10px; font-size: 24px; color: #A9B2B9">3:15</span>
+    <span style="grid-column: 6; grid-row: 1; padding-left: 10px; font-size: 24px; color: #A9B2B9">3:30</span>
+    <span style="grid-column: 7; grid-row: 1; padding-left: 10px; font-size: 24px; color: #A9B2B9">3:45</span>
+    <span style="grid-column: 8; grid-row: 1; padding-left: 10px; font-size: 24px; color: #A9B2B9">4:00</span>
+    <span style="grid-column: 9; grid-row: 1; padding-left: 10px; font-size: 24px; color: #A9B2B9">4:15</span>
+
+    <div aria-hidden="true" style="grid-column: 2 / 10; grid-row: 2 / 6; position: relative; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr))">
+      <span style="grid-column: 1; grid-row: 1 / 5; border-left: 1px dashed rgba(238,241,240,0.16)"></span>
+      <span style="grid-column: 2; grid-row: 1 / 5; border-left: 1px dashed rgba(238,241,240,0.16)"></span>
+      <span style="grid-column: 3; grid-row: 1 / 5; border-left: 1px dashed rgba(238,241,240,0.16)"></span>
+      <span style="grid-column: 4; grid-row: 1 / 5; border-left: 1px dashed rgba(238,241,240,0.16)"></span>
+      <span style="grid-column: 5; grid-row: 1 / 5; border-left: 1px dashed rgba(238,241,240,0.16)"></span>
+      <span style="grid-column: 6; grid-row: 1 / 5; border-left: 1px dashed rgba(238,241,240,0.16)"></span>
+      <span style="grid-column: 7; grid-row: 1 / 5; border-left: 1px dashed rgba(238,241,240,0.16)"></span>
+      <span style="grid-column: 8; grid-row: 1 / 5; border-left: 1px dashed rgba(238,241,240,0.16); border-right: 1px dashed rgba(238,241,240,0.16)"></span>
+      <span style="position: absolute; top: -8px; bottom: 0; left: 6.67%; width: 3px; background: #E5482F; z-index: 2"></span>
+      <span style="position: absolute; top: -14px; left: 6.67%; width: 15px; height: 15px; margin-left: -6px; border-radius: 8px; background: #E5482F; z-index: 2"></span>
+    </div>
+
+    <div style="grid-column: 1; grid-row: 2; display: flex; flex-direction: column; justify-content: center; gap: 2px; border-top: 1px solid rgba(238,241,240,0.16)">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Long table</span>
+      <span style="font-size: 20px; color: #A9B2B9">Main room</span>
+    </div>
+    <div style="grid-column: 1; grid-row: 3; display: flex; flex-direction: column; justify-content: center; gap: 2px; border-top: 1px solid rgba(238,241,240,0.16)">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Kitchen island</span>
+      <span style="font-size: 20px; color: #A9B2B9">Kitchen</span>
+    </div>
+    <div style="grid-column: 1; grid-row: 4; display: flex; flex-direction: column; justify-content: center; gap: 2px; border-top: 1px solid rgba(238,241,240,0.16)">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Couches</span>
+      <span style="font-size: 20px; color: #A9B2B9">Lounge</span>
+    </div>
+    <div style="grid-column: 1; grid-row: 5; display: flex; flex-direction: column; justify-content: center; gap: 2px; border-top: 1px solid rgba(238,241,240,0.16); border-bottom: 1px solid rgba(238,241,240,0.16)">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Picnic table</span>
+      <span style="font-size: 20px; color: #A9B2B9">Patio</span>
+    </div>
+
+    <!-- Long table -->
+    <article style="grid-column: 2 / span 3; grid-row: 2; margin: 9px 7px; position: relative; z-index: 1; background: #9CD2FF; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="position: absolute; top: -12px; right: 16px; background: #C93A22; color: #FFFFFF; font-size: 17px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 6px">NOW</span>
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Platform teams vs. golden paths: who owns the YAML?</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Marcus</span>
+        <div style="display: flex; align-items: center; gap: 4px">
+          <span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; box-sizing: border-box; border-radius: 8px; border: 2px dashed #16191C"></span>
+          <span style="margin-left: 8px; font-size: 20px; font-weight: 700">9 of 10</span>
+        </div>
+      </div>
+    </article>
+    <article style="grid-column: 6 / span 2; grid-row: 2; margin: 9px 7px; position: relative; z-index: 1; background: #A6E3A0; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Can help: your first Kubernetes PR</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Ana</span>
+        <span style="font-size: 20px; font-weight: 700">3 of 10</span>
+      </div>
+    </article>
+
+    <!-- Kitchen island -->
+    <article style="grid-column: 2 / span 2; grid-row: 3; margin: 9px 7px; position: relative; z-index: 1; background: #FFE15A; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="position: absolute; top: -12px; right: 16px; background: #C93A22; color: #FFFFFF; font-size: 17px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 6px">NOW</span>
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Collector tuning: dropping spans under load</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Jun</span>
+        <div style="display: flex; align-items: center; gap: 4px">
+          <span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; box-sizing: border-box; border-radius: 8px; border: 2px dashed #16191C"></span><span style="width: 15px; height: 15px; box-sizing: border-box; border-radius: 8px; border: 2px dashed #16191C"></span><span style="width: 15px; height: 15px; box-sizing: border-box; border-radius: 8px; border: 2px dashed #16191C"></span>
+          <span style="margin-left: 8px; font-size: 20px; font-weight: 700">5 of 8</span>
+        </div>
+      </div>
+    </article>
+    <article style="grid-column: 4 / span 2; grid-row: 3; margin: 9px 7px; position: relative; z-index: 1; background: #9CD2FF; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Nomad and k8s side by side</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Dana</span>
+        <span style="font-size: 20px; font-weight: 700">2 of 6</span>
+      </div>
+    </article>
+    <article style="grid-column: 7 / span 2; grid-row: 3; margin: 9px 7px; position: relative; z-index: 1; background: #A6E3A0; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Show and tell: Vault dynamic secrets in CI</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Kofi</span>
+        <span style="font-size: 20px; font-weight: 700">4 of 6</span>
+      </div>
+    </article>
+
+    <!-- Couches -->
+    <article style="grid-column: 4 / span 3; grid-row: 4; margin: 9px 7px; position: relative; z-index: 1; background: #FFE15A; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="position: absolute; top: -12px; right: 16px; background: #EEF1F0; color: #16191C; font-size: 17px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 6px">IN 22 MIN</span>
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Jaeger to OTel: migration war stories</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Priya</span>
+        <div style="display: flex; align-items: center; gap: 4px">
+          <span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; border-radius: 8px; background: #16191C"></span><span style="width: 15px; height: 15px; box-sizing: border-box; border-radius: 8px; border: 2px dashed #16191C"></span><span style="width: 15px; height: 15px; box-sizing: border-box; border-radius: 8px; border: 2px dashed #16191C"></span>
+          <span style="margin-left: 8px; font-size: 20px; font-weight: 700">6 of 8</span>
+        </div>
+      </div>
+    </article>
+    <article style="grid-column: 8 / span 2; grid-row: 4; margin: 9px 7px; position: relative; z-index: 1; background: #9CD2FF; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Would you let an AI SRE page you?</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Sam</span>
+        <span style="font-size: 20px; font-weight: 700">1 of 8</span>
+      </div>
+    </article>
+
+    <!-- Picnic table -->
+    <article style="grid-column: 3 / span 2; grid-row: 5; margin: 9px 7px; position: relative; z-index: 1; background: #FFE15A; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="position: absolute; top: -12px; right: 16px; background: #EEF1F0; color: #16191C; font-size: 17px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 6px">IN 7 MIN</span>
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Our Helm chart is 4,000 lines. Help.</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Theo</span>
+        <span style="font-size: 20px; font-weight: 700">4 of 8</span>
+      </div>
+    </article>
+    <article style="grid-column: 5 / span 3; grid-row: 5; margin: 9px 7px; position: relative; z-index: 1; background: #9CD2FF; color: #16191C; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; border-radius: 12px">
+      <span style="font-family: Archivo, sans-serif; font-weight: 700; font-size: 30px; line-height: 1.05">Rust or Go for the next CLI?</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-size: 21px; font-weight: 700">Leo</span>
+        <span style="font-size: 20px; font-weight: 700">7 of 8</span>
+      </div>
+    </article>
+  </div>
+
+  <footer style="margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 32px; height: 56px; border-top: 1px solid rgba(238,241,240,0.16); padding-top: 14px">
+    <div style="display: flex; align-items: baseline; gap: 20px; min-width: 0; font-size: 22px">
+      <span style="font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; font-size: 18px; color: #FFE15A">Just posted</span>
+      <span>“Anyone migrating off Jaeger this quarter?”</span>
+      <span style="color: #A9B2B9">·</span>
+      <span>“Looking for a Temporal + Go example”</span>
+      <span style="color: #A9B2B9">·</span>
+      <span>Can help: kube-scheduler profiles</span>
+    </div>
+    <span style="font-size: 20px; color: #A9B2B9; white-space: nowrap">Whoever comes are the right people.</span>
+  </footer>
+</div>
+</body>
+</html>

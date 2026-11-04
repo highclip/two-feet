@@ -1,0 +1,594 @@
+<title>Harness Tower</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control-tower board. A summary rail (clock, demo path, decisions, burn) sits above
+   flight-strip lanes, one strip per slice; the event tape runs underneath. */
+:root{
+  --bg:#E8EDF0; --panel:#F6F8F9; --strip:#FFFFFF; --bay:#DCE4EA;
+  --ink:#122029; --muted:#586874; --faint:#8796A1; --rule:#C6D0D7;
+  --accent:#23577F; --accent-soft:#D6E3EE;
+  --ok:#2A7649; --ok-soft:#DCEEE2; --warn:#9C640F; --warn-soft:#F5E7CC; --bad:#B23824; --bad-soft:#F6DAD3;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --panel:#141C22; --strip:#19232A; --bay:#22303A;
+  --ink:#E2E9EE; --muted:#93A3AF; --faint:#66788499; --rule:#2B3944;
+  --accent:#86B6E2; --accent-soft:#1E3346;
+  --ok:#62C48D; --ok-soft:#163324; --warn:#E3AA43; --warn-soft:#3A2C12; --bad:#F27E66; --bad-soft:#3E1F19;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --panel:#141C22; --strip:#19232A; --bay:#22303A;
+  --ink:#E2E9EE; --muted:#93A3AF; --faint:#66788499; --rule:#2B3944;
+  --accent:#86B6E2; --accent-soft:#1E3346;
+  --ok:#62C48D; --ok-soft:#163324; --warn:#E3AA43; --warn-soft:#3A2C12; --bad:#F27E66; --bad-soft:#3E1F19;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1480px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* top bar */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.brand{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:clamp(30px,4.2vw,44px);line-height:1;letter-spacing:.01em;text-wrap:balance}
+.brand .sub{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;color:var(--muted)}
+.badge{font-family:var(--f-mono);font-size:12px;padding:2px 8px;border:1px solid var(--rule);background:var(--panel);white-space:nowrap}
+.badge.live{border-color:var(--ok);color:var(--ok)}
+.badge.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px;vertical-align:1px}
+.clock{text-align:right}
+.clock .num{font-size:clamp(30px,4.2vw,44px);line-height:1;font-weight:500;letter-spacing:-.02em}
+.clock .num.low{color:var(--warn)} .clock .num.over{color:var(--bad)}
+.counts{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-family:var(--f-mono);font-size:12px;padding:3px 8px;background:var(--panel);border:1px solid var(--rule);white-space:nowrap}
+.pill b{font-weight:500}
+.pill.attn{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.pill.bad{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
+
+/* run timeline */
+.timeline{background:var(--panel);border:1px solid var(--rule);padding:14px 16px 12px;display:flex;flex-direction:column;gap:10px}
+.tl-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.track{position:relative;height:30px;margin-top:4px}
+.track .rail{position:absolute;left:0;right:0;top:12px;height:6px;background:var(--bay)}
+.track .fill{position:absolute;left:0;top:12px;height:6px;background:var(--accent)}
+.track .zone{position:absolute;top:8px;height:14px;background:repeating-linear-gradient(135deg,transparent 0 4px,var(--warn-soft) 4px 8px);border-left:1px dashed var(--warn)}
+.track .tick{position:absolute;top:6px;width:2px;height:18px;background:var(--ok);transform:translateX(-1px)}
+.track .now{position:absolute;top:0;width:2px;height:30px;background:var(--ink);transform:translateX(-1px)}
+.track .mark{position:absolute;top:24px;width:1px;height:6px;background:var(--muted)}
+.tl-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted)}
+.tl-legend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
+.replay{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:10px;border-top:1px solid var(--rule)}
+.replay input[type=range]{flex:1 1 220px;min-width:0;accent-color:var(--accent)}
+.btn{border:1px solid var(--rule);background:var(--strip);padding:5px 12px;cursor:pointer;font-size:14px;font-weight:500}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--strip)}
+.btn.primary:hover{opacity:.9;color:var(--strip)}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* summary rail */
+.rail3{display:grid;grid-template-columns:minmax(0,0.85fr) minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+@media (max-width:1060px){.rail3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.inbox{grid-column:1 / -1;order:-1}}
+@media (max-width:640px){.rail3{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--rule);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+
+.lamp-row{display:flex;align-items:center;gap:14px}
+.lamp{width:52px;height:52px;border-radius:50%;flex:none;background:var(--bay);border:3px solid var(--rule)}
+.lamp.pass{background:var(--ok);border-color:var(--ok-soft);box-shadow:0 0 0 6px var(--ok-soft)}
+.lamp.fail{background:var(--bad);border-color:var(--bad-soft);box-shadow:0 0 0 6px var(--bad-soft);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 11px var(--bad-soft)}}
+@media (prefers-reduced-motion:reduce){.lamp.fail{animation:none}}
+.lamp-text strong{display:block;font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1}
+.lamp-text .flow{font-size:13px;color:var(--muted)}
+.history{display:flex;gap:3px;flex-wrap:wrap}
+.history span{width:14px;height:6px;background:var(--ok)}
+.history span.fail{background:var(--bad)}
+.small{font-size:13px;color:var(--muted)}
+
+.asks{display:flex;flex-direction:column;gap:10px}
+.ask{background:var(--strip);border:1px solid var(--rule);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.ask.blocking{border-color:var(--warn);box-shadow:inset 3px 0 0 var(--warn)}
+.ask.aged{border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
+.ask-meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12px;color:var(--muted)}
+.ask .q{margin:0;font-weight:500;font-size:15px;max-width:70ch}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opts .btn{font-size:13px;padding:5px 10px}
+.cs{font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.03em;color:var(--ink)}
+.tag{font-family:var(--f-mono);font-size:11px;padding:1px 6px;text-transform:uppercase;letter-spacing:.04em}
+.tag.block{background:var(--warn-soft);color:var(--warn)}
+.tag.fyi{background:var(--accent-soft);color:var(--accent)}
+.resolved{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted);border-top:1px solid var(--rule);padding-top:8px}
+.resolved b{font-weight:500;color:var(--ink)}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+
+.spend{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.spend .num{font-size:28px;font-weight:500;line-height:1}
+.bar{height:6px;background:var(--bay);position:relative}
+.bar > i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.bar.warn > i{background:var(--warn)} .bar.bad > i{background:var(--bad)}
+.spark{width:100%;height:auto;display:block}
+.spark text{font-family:var(--f-mono);font-size:10px;fill:var(--muted)}
+.agents{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;font-size:13px}
+.agents .bar{height:4px}
+.agents .num{font-size:12px;color:var(--muted)}
+
+/* lanes */
+.board-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+.board-head h2{margin:0;font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:.01em}
+.lanes{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;align-items:start}
+@media (max-width:1200px){.lanes{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:700px){.lanes{grid-template-columns:minmax(0,1fr)}}
+.lane{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lane-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 2px 4px;border-bottom:2px solid var(--ink)}
+.lane-head .label{color:var(--ink)}
+.lane-head .num{font-size:12px;color:var(--muted)}
+.lane.blocked .lane-head{border-color:var(--warn)}
+.lane-empty{font-size:12px;color:var(--faint);padding:8px 2px;font-family:var(--f-mono)}
+
+.strip{display:grid;grid-template-columns:52px minmax(0,1fr) auto;background:var(--strip);border:1px solid var(--rule);min-height:64px}
+.strip .bay{background:var(--bay);border-right:1px solid var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:6px 2px}
+.strip .bay .cs{font-size:19px;line-height:1}
+.strip .main{padding:7px 9px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.strip .title{font-weight:600;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.strip .who{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.strip .fail-note{font-size:12px;color:var(--bad);line-height:1.3;overflow-wrap:anywhere}
+.strip .tclock{border-left:1px dashed var(--rule);padding:7px 8px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;min-width:52px}
+.strip .tclock .num{font-size:15px;font-weight:500;line-height:1}
+.strip .tclock small{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.strip.fail .bay{background:var(--bad-soft)} .strip.fail .bay .cs{color:var(--bad)}
+.strip.stuck{border-color:var(--warn)} .strip.stuck .tclock{background:var(--warn-soft)} .strip.stuck .tclock .num{color:var(--warn)}
+.strip.blocked .bay{background:var(--warn-soft)} .strip.blocked .bay .cs{color:var(--warn)}
+.cells{display:flex;flex-wrap:wrap;gap:2px}
+.cell{font-family:var(--f-mono);font-size:10px;line-height:1;padding:3px 4px;border:1px solid var(--rule);color:var(--faint)}
+.cell.pass{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.cell.fail{background:var(--bad-soft);border-color:transparent;color:var(--bad);font-weight:500}
+.cell.sep{border:0;padding:3px 1px;color:var(--rule)}
+.strip.merged{min-height:0;grid-template-columns:52px minmax(0,1fr)}
+.strip.merged .bay{background:var(--ok-soft)} .strip.merged .bay .cs{color:var(--ok);font-size:15px}
+.strip.merged .main{padding:5px 9px;flex-direction:row;justify-content:space-between;align-items:center;gap:8px}
+.strip.merged .title{font-weight:500;font-size:13px}
+
+/* tape */
+.tape{background:var(--panel);border:1px solid var(--rule);padding:12px 16px}
+.tape ol{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column}
+.tape li{display:grid;grid-template-columns:62px 40px 108px minmax(0,1fr);gap:10px;padding:5px 0;border-top:1px solid var(--rule);font-size:13px;align-items:baseline}
+.tape li:first-child{border-top:0}
+.tape .t{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.tape .k{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.tape .k.fail{color:var(--bad)} .tape .k.ok{color:var(--ok)} .tape .k.ask{color:var(--warn)}
+.tape .d{overflow-wrap:anywhere}
+@media (max-width:640px){.tape li{grid-template-columns:52px 34px minmax(0,1fr)}.tape .k{display:none}}
+.foot{font-size:12px;color:var(--muted)}
+.foot code{font-family:var(--f-mono);background:var(--panel);border:1px solid var(--rule);padding:0 4px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="label">Harness Tower</span>
+      <h1 id="runName">Loading run</h1>
+      <div class="sub"><span id="modeBadge" class="badge">Connecting</span><span id="runClock" class="small mono"></span></div>
+    </div>
+    <div class="clock">
+      <div id="remaining" class="num">0:00:00</div>
+      <div id="remainingLabel" class="small">left</div>
+    </div>
+  </header>
+
+  <div id="counts" class="counts" aria-label="Slice counts"></div>
+
+  <section class="timeline" aria-label="Run timeline">
+    <div class="tl-head">
+      <span class="label">Run clock</span>
+      <div class="tl-legend">
+        <span><i style="background:var(--accent)"></i>Elapsed</span>
+        <span><i style="background:var(--ok)"></i>Slice merged</span>
+        <span><i style="background:repeating-linear-gradient(135deg,transparent 0 3px,var(--warn) 3px 5px)"></i>Feature freeze</span>
+      </div>
+    </div>
+    <div class="track" id="track"></div>
+    <div class="tl-legend mono" id="trackLabels"></div>
+    <div class="replay">
+      <button class="btn" id="playBtn" type="button">Replay</button>
+      <input type="range" id="scrub" step="60000" aria-label="Scrub through the run">
+      <span id="scrubLabel" class="mono small"></span>
+      <button class="btn" id="followBtn" type="button">Jump to now</button>
+      <label class="btn file">Open a log<input type="file" id="fileInput" accept=".jsonl,.json,.ndjson,.txt"></label>
+    </div>
+  </section>
+
+  <section class="rail3">
+    <div class="panel" aria-label="Demo path">
+      <div class="panel-head"><span class="label">Demo path</span><span id="demoAge" class="small mono"></span></div>
+      <div class="lamp-row">
+        <div id="lamp" class="lamp" role="img" aria-label="Demo path status"></div>
+        <div class="lamp-text"><strong id="lampText">No checks yet</strong><span id="lampFlow" class="flow"></span></div>
+      </div>
+      <div id="lampDetail" class="small"></div>
+      <div id="history" class="history" aria-label="Recent demo checks"></div>
+    </div>
+
+    <div class="panel inbox" aria-label="Decisions waiting on you">
+      <div class="panel-head"><span class="label">Waiting on you</span><span id="inboxCount" class="small mono"></span></div>
+      <div id="asks" class="asks"></div>
+      <div id="resolved" class="resolved" hidden></div>
+    </div>
+
+    <div class="panel" aria-label="Spend">
+      <div class="panel-head"><span class="label">Burn</span><span id="pace" class="small mono"></span></div>
+      <div class="spend"><span id="spend" class="num">$0.00</span><span id="budget" class="small"></span></div>
+      <div id="budgetBar" class="bar"><i style="width:0"></i></div>
+      <svg id="spark" class="spark" viewBox="0 0 320 84" role="img" aria-label="Cumulative spend over the run"></svg>
+      <div id="agents" class="agents"></div>
+    </div>
+  </section>
+
+  <section aria-label="Slices">
+    <div class="board-head"><h2>Slices</h2><span class="small">Stuck after 20m building, 10m in gates, 15m in review, 5m blocked</span></div>
+    <div id="lanes" class="lanes" style="margin-top:10px"></div>
+  </section>
+
+  <section class="tape" aria-label="Event tape">
+    <div class="panel-head"><span class="label">Event tape</span><span class="small">Latest first · spend and passing gates hidden</span></div>
+    <ol id="tape"></ol>
+  </section>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+const STATES=['planned','building','gates','review','blocked','merged'];
+const LANE={planned:'Planned',building:'Building',gates:'Gates',review:'Review',blocked:'Blocked',merged:'Merged'};
+const STUCK={building:20,gates:10,review:15,blocked:5};
+const GATES=[['types','TY'],['lint','LI'],['tests','TE'],['semgrep','SG'],['gitleaks','GL'],['deps','DP'],['e2e','E2E']];
+const REVIEWERS=[['security','SEC'],['design','DES'],['code','CODE']];
+const MIN=60000;
+
+/* ── sample run: a 4-hour hackathon, viewed 2h40m in ── */
+const SAMPLE_START=Date.parse('2026-11-07T16:00:00Z');
+const SAMPLE_NOW=SAMPLE_START+160*MIN;
+function buildSample(){
+  const E=[];
+  const iso=m=>new Date(SAMPLE_START+Math.round(m*MIN)).toISOString().replace(/\.\d{3}Z$/,'Z');
+  const ev=(m,type,o)=>E.push({ts:iso(m),run:'hack-01',type,...o});
+  const st=(m,slice,to,agent,x)=>ev(m,'slice.state',{slice,to,agent,...(x||{})});
+  const gates=(m,slice,agent,fail,detail)=>{
+    st(m,slice,'gates','gates');
+    GATES.forEach(([g],i)=>{const f=g===fail;ev(m+0.2+i*0.15,'gate.result',{slice,agent:'gates',gate:g,status:f?'fail':'pass',...(f?{detail}:{})});});
+    if(fail) st(m+1.5,slice,'building',agent,{reason:`${fail} failed`}); else st(m+1.5,slice,'review','gates',{reason:'all gates passed'});
+  };
+  const rv=(m,slice,reviewer,verdict,findings)=>ev(m,'review.verdict',{slice,agent:{security:'sec-review',design:'design-critic',code:'code-review'}[reviewer],reviewer,verdict,...(findings?{findings}:{})});
+
+  ev(0,'run.start',{agent:'human',name:'Potluck',deadline:iso(240),budget_usd:75});
+  [['S1','Sign-in and orgs'],['S2','Events CRUD'],['S3','Dish sign-up'],['S4','Invite links'],['S5','Dietary tags filter'],
+   ['S6','Email reminders'],['S7','Landing page'],['S8','CSV export for hosts'],['S9','Event photo upload']]
+    .forEach(([s,t],i)=>ev(2+i*0.1,'slice.planned',{agent:'planner',slice:s,title:t,spec:`spec.yaml#/slices/${s}`}));
+  st(4,'S1','building','builder-1'); st(4.1,'S2','building','builder-2'); st(4.2,'S3','building','builder-3'); st(4.3,'S7','building','builder-4');
+
+  gates(20,'S1','builder-1'); rv(25,'S1','security','approve'); rv(26,'S1','code','approve'); st(28,'S1','merged','integrator',{sha:'a1c9e02'});
+  ev(30,'demo.check',{agent:'tester',status:'pass',flow:'Sign in → create org'});
+  st(31,'S5','building','builder-1');
+  gates(38,'S2','builder-2','tests','2 failing: events.create accepts dates in the past');
+  ev(44,'decision.request',{agent:'builder-3',id:'D1',slice:'S3',question:'Can a guest claim more than one dish?',options:['One dish per guest','Unlimited','Host sets a limit'],blocking:true});
+  st(44.1,'S3','blocked','builder-3',{reason:'D1'});
+  gates(50,'S2','builder-2');
+  ev(51,'decision.resolved',{agent:'human',id:'D1',choice:'Host sets a limit'}); st(51.2,'S3','building','builder-3',{reason:'D1 answered'});
+  gates(56,'S7','builder-4');
+  rv(58,'S2','security','changes',['Event pages use sequential IDs at /e/:id. Switch to unguessable slugs.']); st(58.5,'S2','building','builder-2',{reason:'security review'});
+  rv(61,'S7','design','changes',['Primary button is 3.1:1 contrast in dark mode; needs 4.5:1']); st(61.5,'S7','building','builder-4',{reason:'design review'});
+  gates(62,'S5','builder-1','semgrep','Raw SQL string built from tag filter input (tags.ts:41)');
+  gates(70,'S7','builder-4'); rv(73,'S7','design','approve'); rv(74,'S7','code','approve'); st(76,'S7','merged','integrator',{sha:'7be410f'});
+  gates(72,'S5','builder-1'); rv(78,'S5','security','approve'); rv(79,'S5','code','approve'); st(81,'S5','merged','integrator',{sha:'3f02d9a'});
+  gates(74,'S2','builder-2'); rv(79.5,'S2','security','approve'); rv(80,'S2','code','approve'); st(82,'S2','merged','integrator',{sha:'c81e5b7'});
+  ev(84,'demo.check',{agent:'tester',status:'pass',flow:'Create event → view event page'});
+  st(85,'S4','building','builder-2'); st(86,'S6','building','builder-4');
+  gates(92,'S3','builder-3','e2e','Claim button hidden below the fold at 390px width');
+  gates(100,'S3','builder-3'); rv(105,'S3','security','approve'); rv(106,'S3','code','approve'); st(108,'S3','merged','integrator',{sha:'94d7a11'});
+  ev(110,'demo.check',{agent:'tester',status:'pass',flow:'Create event → share → claim dish'});
+  st(111,'S8','building','builder-3');
+  gates(118,'S4','builder-2','tests','Invite token still accepted after it expires');
+  gates(128,'S6','builder-4','gitleaks','Resend API key committed in .env.example');
+  gates(140,'S8','builder-3');
+  ev(144,'demo.check',{agent:'tester',status:'fail',flow:'Create event → share → claim dish',detail:'Preview deploy returns 500 on /e/:slug (migration not applied)'});
+  rv(147,'S8','security','changes',['Export route has no host-only check']); st(147.5,'S8','building','builder-3',{reason:'security review'});
+  ev(149,'demo.check',{agent:'tester',status:'pass',flow:'Create event → share → claim dish'});
+  ev(151,'decision.request',{agent:'builder-4',id:'D2',slice:'S6',question:'No email provider key in Vault yet. How should reminders send for the demo?',options:['Wait for a Resend key','Log-only stub','Cut reminders'],blocking:true});
+  st(151.1,'S6','blocked','builder-4',{reason:'D2'});
+  gates(152,'S8','builder-3');
+  ev(155,'decision.request',{agent:'sec-review',id:'D3',slice:'S8',question:'The CSV export includes guest emails. Keep them in the file?',options:['Hosts only, keep emails','Hash emails','Drop emails'],blocking:false});
+  ev(157,'demo.check',{agent:'tester',status:'pass',flow:'Create event → share → claim dish'});
+
+  const rate={planner:.6,'builder-1':.5,'builder-2':.5,'builder-3':.48,'builder-4':.46,tester:.32,'sec-review':.22,'design-critic':.26,'code-review':.18};
+  for(let m=5;m<=155;m+=10) Object.entries(rate).forEach(([a,r],i)=>{
+    let k=r*(.75+.5*Math.abs(Math.sin(m*.37+i*1.7))); if(a==='planner'&&m>30)k*=.2;
+    const c=+k.toFixed(2); ev(m+i*.1,'agent.usage',{agent:a,cost_usd:c,tokens_in:Math.round(c*180000),tokens_out:Math.round(c*24000)});
+  });
+  return E.sort((a,b)=>Date.parse(a.ts)-Date.parse(b.ts));
+}
+
+/* ── projection: the board is a pure function of the log ── */
+function reduce(evs){
+  const s={run:null,slices:new Map(),decisions:new Map(),usage:new Map(),demo:[],merges:[],spend:[],total:0,feed:[]};
+  const slice=(id,t)=>{if(!s.slices.has(id))s.slices.set(id,{id,title:id,owner:'',state:'planned',since:t,gates:{},reviews:{},lastFail:null,sha:null});return s.slices.get(id);};
+  for(const e of evs){
+    const t=Date.parse(e.ts);
+    switch(e.type){
+      case 'run.start': s.run={name:e.name,start:t,deadline:Date.parse(e.deadline),budget:e.budget_usd??null}; break;
+      case 'slice.planned': {const x=slice(e.slice,t);x.title=e.title;x.since=t;break;}
+      case 'slice.state': {
+        const x=slice(e.slice,t);x.state=e.to;x.since=t;
+        if(e.to==='building'&&e.agent&&!['gates','integrator','human'].includes(e.agent))x.owner=e.agent;
+        if(e.to==='gates')x.gates={};
+        if(e.to==='review'){x.reviews={};x.lastFail=null;}
+        if(e.to==='merged'){x.lastFail=null;x.sha=e.sha||null;s.merges.push(t);}
+        break;}
+      case 'gate.result': {const x=slice(e.slice,t);x.gates[e.gate]={status:e.status,detail:e.detail};if(e.status==='fail')x.lastFail=`${e.gate}: ${e.detail||'failed'}`;break;}
+      case 'review.verdict': {const x=slice(e.slice,t);x.reviews[e.reviewer]={verdict:e.verdict,findings:e.findings||[]};if(e.verdict==='changes')x.lastFail=`${e.reviewer} review: ${(e.findings||[])[0]||'changes requested'}`;break;}
+      case 'decision.request': s.decisions.set(e.id,{...e,t,open:true}); break;
+      case 'decision.resolved': {const d=s.decisions.get(e.id);if(d){d.open=false;d.choice=e.choice;d.resolvedAt=t;}break;}
+      case 'agent.usage': {const u=s.usage.get(e.agent)||{cost:0,tokens:0};u.cost+=+e.cost_usd||0;u.tokens+=(e.tokens_in||0)+(e.tokens_out||0);s.usage.set(e.agent,u);s.total+=+e.cost_usd||0;s.spend.push([t,s.total]);break;}
+      case 'demo.check': s.demo.push({t,status:e.status,flow:e.flow,detail:e.detail}); break;
+    }
+    if(e.type!=='agent.usage'&&!(e.type==='gate.result'&&e.status==='pass'))s.feed.push(e);
+  }
+  return s;
+}
+
+/* ── state ── */
+let EVENTS=[], MODE='sample', FILE_NAME='', follow=true, tView=0, playTimer=null, pollTimer=null;
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dur=ms=>{const m=Math.max(0,Math.floor(ms/MIN));return m<60?`${m}m`:`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`;};
+const tplus=(ms)=>{const n=ms<0;ms=Math.abs(ms);return `T${n?'−':'+'}${Math.floor(ms/3600000)}:${String(Math.floor(ms%3600000/MIN)).padStart(2,'0')}`;};
+const hms=ms=>{ms=Math.max(0,ms);return `${Math.floor(ms/3600000)}:${String(Math.floor(ms%3600000/MIN)).padStart(2,'0')}:${String(Math.floor(ms%MIN/1000)).padStart(2,'0')}`;};
+const money=v=>`$${(v||0).toFixed(2)}`;
+
+function bounds(){
+  const ts=EVENTS.map(e=>Date.parse(e.ts)).filter(Number.isFinite);
+  const runEv=EVENTS.find(e=>e.type==='run.start');
+  const lo=runEv?Date.parse(runEv.ts):(ts.length?Math.min(...ts):Date.now());
+  let hi=ts.length?Math.max(...ts):lo;
+  if(MODE==='sample')hi=SAMPLE_NOW; else if(MODE==='live')hi=Math.max(hi,Date.now());
+  return [lo,Math.max(hi,lo+MIN)];
+}
+
+function render(){
+  const [lo,hi]=bounds();
+  const t=follow?hi:Math.min(Math.max(tView,lo),hi);
+  const s=reduce(EVENTS.filter(e=>Date.parse(e.ts)<=t));
+  const run=s.run||{name:EVENTS.length?'Unnamed run':'Waiting for a run',start:lo,deadline:lo+240*MIN,budget:null};
+
+  /* top */
+  $('runName').textContent=run.name;
+  const badge=$('modeBadge');
+  badge.className='badge'+(MODE==='live'?' live':'');
+  badge.textContent=MODE==='live'?'Live · events.jsonl':MODE==='file'?`Log file · ${FILE_NAME}`:'Sample run';
+  $('runClock').textContent=`${tplus(t-run.start)} of ${dur(run.deadline-run.start)}`;
+  const left=run.deadline-t;
+  $('remaining').textContent=left>=0?hms(left):'+'+hms(-left);
+  $('remaining').className='num'+(left<0?' over':left<60*MIN?' low':'');
+  $('remainingLabel').textContent=left>=0?(left<60*MIN?'left · feature freeze':'left'):'over time';
+
+  const by={};STATES.forEach(k=>by[k]=[]);s.slices.forEach(x=>by[x.state]?.push(x));
+  const isStuck=x=>STUCK[x.state]&&(t-x.since)/MIN>STUCK[x.state];
+  const stuck=[...s.slices.values()].filter(isStuck).length;
+  const openD=[...s.decisions.values()].filter(d=>d.open);
+  const failing=[...s.slices.values()].filter(x=>x.state!=='merged'&&x.lastFail).length;
+  $('counts').innerHTML=
+    `<span class="pill"><b>${by.merged.length}</b> of ${s.slices.size} merged</span>`+
+    ['building','gates','review','planned'].map(k=>`<span class="pill"><b>${by[k].length}</b> ${LANE[k].toLowerCase()}</span>`).join('')+
+    (by.blocked.length?`<span class="pill attn"><b>${by.blocked.length}</b> blocked</span>`:'')+
+    (stuck?`<span class="pill attn"><b>${stuck}</b> stuck</span>`:'')+
+    (failing?`<span class="pill bad"><b>${failing}</b> failing</span>`:'')+
+    (openD.length?`<span class="pill attn"><b>${openD.length}</b> waiting on you</span>`:'');
+
+  /* timeline */
+  const span=run.deadline-run.start, pct=v=>Math.min(100,Math.max(0,(v-run.start)/span*100));
+  const freeze=run.deadline-60*MIN;
+  $('track').innerHTML=`<div class="rail"></div><div class="zone" style="left:${pct(freeze)}%;right:0"></div>`+
+    `<div class="fill" style="width:${pct(t)}%"></div>`+
+    s.merges.map(m=>`<div class="tick" style="left:${pct(m)}%"></div>`).join('')+
+    [0,1,2,3,4,5,6,7,8].map(h=>h*3600000<=span?`<div class="mark" style="left:${pct(run.start+h*3600000)}%"></div>`:'').join('')+
+    `<div class="now" style="left:${pct(t)}%"></div>`;
+  $('trackLabels').innerHTML=`<span>Start ${new Date(run.start).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}</span>`+
+    `<span>First slice live by T+1:00 ${s.merges[0]?`· done ${tplus(s.merges[0]-run.start)}`:''}</span>`+
+    `<span>Freeze ${tplus(freeze-run.start)}</span><span>Deadline ${new Date(run.deadline).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}</span>`;
+  const sc=$('scrub');sc.min=lo;sc.max=hi;sc.value=t;
+  $('scrubLabel').textContent=follow?(MODE==='live'?'Following live':'At the latest event'):`Viewing ${tplus(t-run.start)}`;
+  $('followBtn').hidden=follow;
+  $('playBtn').textContent=playTimer?'Pause':'Replay';
+
+  /* demo path */
+  const last=s.demo[s.demo.length-1];
+  $('lamp').className='lamp'+(last?' '+last.status:'');
+  $('lampText').textContent=last?(last.status==='pass'?'Passing':'Failing'):'No checks yet';
+  $('lampFlow').textContent=last?last.flow:'The tester agent records a check after every merge';
+  $('lampDetail').textContent=last&&last.status==='fail'?last.detail||'':'';
+  $('lampDetail').style.color=last&&last.status==='fail'?'var(--bad)':'';
+  $('demoAge').textContent=last?`${dur(t-last.t)} ago`:'';
+  $('history').innerHTML=s.demo.slice(-16).map(d=>`<span class="${d.status}" title="${esc(tplus(d.t-run.start)+' '+d.status+': '+d.flow)}"></span>`).join('');
+
+  /* inbox */
+  openD.sort((a,b)=>(b.blocking!==false)-(a.blocking!==false)||a.t-b.t);
+  $('inboxCount').textContent=openD.length?`${openD.length} open`:'';
+  $('asks').innerHTML=openD.length?openD.map(d=>{
+    const age=(t-d.t)/MIN, blocking=d.blocking!==false;
+    return `<div class="ask ${blocking?(age>STUCK.blocked?'aged':'blocking'):''}">
+      <div class="ask-meta">${d.slice?`<span class="cs">${esc(d.slice)}</span>`:''}<span class="mono">${esc(d.id)}</span><span>${esc(d.agent||'')}</span>
+      <span class="mono">open ${dur(t-d.t)}</span><span class="tag ${blocking?'block':'fyi'}">${blocking?'Blocking':'FYI'}</span></div>
+      <p class="q">${esc(d.question)}</p>
+      <div class="opts">${(d.options||[]).map(o=>`<button class="btn" type="button" data-id="${esc(d.id)}" data-choice="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+    </div>`;}).join(''):`<p class="empty">Nothing needs you. Agents escalate here when the spec is unclear or a slice keeps failing its gates.</p>`;
+  const done=[...s.decisions.values()].filter(d=>!d.open).sort((a,b)=>b.resolvedAt-a.resolvedAt).slice(0,3);
+  $('resolved').hidden=!done.length;
+  $('resolved').innerHTML=done.map(d=>`<span><span class="mono">${esc(d.id)}</span> ${esc(d.question)} <b>${esc(d.choice)}</b></span>`).join('');
+
+  /* burn */
+  const budget=run.budget, total=s.total;
+  $('spend').textContent=money(total);
+  $('budget').textContent=budget?`of ${money(budget).replace('.00','')} budget`:'no budget set';
+  const ratio=budget?total/budget:0;
+  $('budgetBar').className='bar'+(ratio>.9?' bad':ratio>.7?' warn':'');
+  $('budgetBar').firstElementChild.style.width=`${Math.min(100,ratio*100)}%`;
+  const elapsed=Math.max(MIN,t-run.start), proj=total/elapsed*span;
+  $('pace').textContent=total?`On pace for ${money(proj).replace(/\.\d+$/,'')}`:'';
+  $('pace').style.color=budget&&proj>budget?'var(--bad)':'';
+  drawSpark(s,run,t,budget,proj);
+  const agents=[...s.usage.entries()].sort((a,b)=>b[1].cost-a[1].cost).slice(0,6);
+  const maxA=agents[0]?.[1].cost||1;
+  $('agents').innerHTML=agents.map(([a,u])=>`<span class="mono" style="font-size:12px">${esc(a)}</span><div class="bar"><i style="width:${u.cost/maxA*100}%"></i></div><span class="num">${money(u.cost)}</span>`).join('');
+
+  /* lanes */
+  $('lanes').innerHTML=STATES.map(k=>{
+    const list=by[k].sort((a,b)=>k==='merged'?b.since-a.since:a.since-b.since);
+    const nStuck=list.filter(isStuck).length;
+    return `<div class="lane ${k}"><div class="lane-head"><span class="label">${LANE[k]}</span><span class="num">${list.length}${nStuck?` · ${nStuck} stuck`:''}</span></div>
+      ${list.length?list.map(x=>strip(x,t,isStuck(x))).join(''):`<div class="lane-empty">none</div>`}</div>`;
+  }).join('');
+
+  /* tape */
+  $('tape').innerHTML=s.feed.slice(-18).reverse().map(e=>{
+    const [kind,cls]=kindOf(e);
+    return `<li><span class="t">${tplus(Date.parse(e.ts)-run.start)}</span><span class="cs" style="font-size:13px">${esc(e.slice||'')}</span><span class="k ${cls}">${kind}</span><span class="d">${describe(e)}</span></li>`;
+  }).join('')||`<li><span class="t"></span><span></span><span></span><span class="d small">No events yet. Start with <span class="mono">hx run --name …</span></span></li>`;
+
+  $('foot').innerHTML=MODE==='sample'
+    ?`This is a sample run. Serve your own log with <code>python3 hx.py serve</code> and open <code>http://127.0.0.1:4777</code>, or open a log file above.`
+    :MODE==='live'?`Reading <code>events.jsonl</code> every 2 seconds. Answers you click are written back to the log.`
+    :`Replaying a saved log. Answers you click here stay on this page.`;
+}
+
+function strip(x,t,stuck){
+  if(x.state==='merged') return `<article class="strip merged"><div class="bay"><span class="cs">${esc(x.id)}</span></div>
+    <div class="main"><span class="title">${esc(x.title)}</span><span class="who">${esc(x.sha||'')}</span></div></article>`;
+  const fail=!!x.lastFail&&x.state!=='review';
+  const showGates=x.state!=='planned';
+  const gateCells=GATES.map(([g,ab])=>{const r=x.gates[g];return `<span class="cell ${r?r.status:''}" title="${esc(g+(r?': '+r.status+(r.detail?' · '+r.detail:''):': not run'))}">${ab}</span>`;}).join('');
+  const revCells=(x.state==='review'||Object.keys(x.reviews).length)?`<span class="cell sep">|</span>`+REVIEWERS.map(([r,ab])=>{const v=x.reviews[r];return `<span class="cell ${v?(v.verdict==='approve'?'pass':'fail'):''}" title="${esc(r+' review'+(v?': '+v.verdict:''))}">${ab}</span>`;}).join(''):'';
+  return `<article class="strip ${x.state}${fail?' fail':''}${stuck?' stuck':''}">
+    <div class="bay"><span class="cs">${esc(x.id)}</span></div>
+    <div class="main"><span class="title">${esc(x.title)}</span>
+      ${x.owner?`<span class="who">${esc(x.owner)}</span>`:''}
+      ${showGates?`<div class="cells">${gateCells}${revCells}</div>`:''}
+      ${fail?`<span class="fail-note">${esc(x.lastFail)}</span>`:''}</div>
+    <div class="tclock"><span class="num">${dur(t-x.since)}</span><small>${stuck?'stuck':'in '+x.state}</small></div>
+  </article>`;
+}
+
+function kindOf(e){
+  switch(e.type){
+    case 'gate.result': return ['gate fail','fail'];
+    case 'review.verdict': return e.verdict==='approve'?['review ok','ok']:['review','fail'];
+    case 'decision.request': return ['ask','ask'];
+    case 'decision.resolved': return ['answer','ok'];
+    case 'demo.check': return e.status==='pass'?['demo ok','ok']:['demo fail','fail'];
+    case 'slice.state': return e.to==='merged'?['merged','ok']:e.to==='blocked'?['blocked','ask']:['state',''];
+    case 'slice.planned': return ['planned',''];
+    case 'run.start': return ['run',''];
+    default: return [esc(e.type),''];
+  }
+}
+function describe(e){
+  switch(e.type){
+    case 'run.start': return `Run started: ${esc(e.name)}`;
+    case 'slice.planned': return `Planned ${esc(e.title)}`;
+    case 'slice.state': return `${esc(e.agent||'')} moved it to <b>${esc(e.to)}</b>${e.reason?` · ${esc(e.reason)}`:''}${e.sha?` · ${esc(e.sha)}`:''}`;
+    case 'gate.result': return `${esc(e.gate)} failed${e.detail?`: ${esc(e.detail)}`:''}`;
+    case 'review.verdict': return `${esc(e.reviewer)} review ${e.verdict==='approve'?'approved':'asked for changes'}${e.findings?.length?`: ${esc(e.findings[0])}`:''}`;
+    case 'decision.request': return `${esc(e.agent||'')} asked ${esc(e.id)}: ${esc(e.question)}`;
+    case 'decision.resolved': return `${esc(e.id)} answered: ${esc(e.choice)}`;
+    case 'demo.check': return `${esc(e.flow)} ${e.status==='pass'?'passed':'failed'}${e.detail?`: ${esc(e.detail)}`:''}`;
+    default: return esc(JSON.stringify(e));
+  }
+}
+
+function drawSpark(s,run,t,budget,proj){
+  const W=320,H=84,L=4,R=34,T=8,B=16, span=run.deadline-run.start;
+  const top=Math.max(budget||0,proj||0,s.total,1)*1.05;
+  const x=v=>L+(v-run.start)/span*(W-L-R), y=v=>T+(1-v/top)*(H-T-B);
+  const pts=[[run.start,0],...s.spend];
+  const line=pts.map(([a,b],i)=>`${i?'L':'M'}${x(a).toFixed(1)},${y(b).toFixed(1)}`).join('');
+  const lastX=x(pts[pts.length-1][0]);
+  let g=`<line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="var(--rule)"/>`;
+  if(budget) g+=`<line x1="${L}" x2="${W-R}" y1="${y(budget)}" y2="${y(budget)}" stroke="var(--muted)" stroke-dasharray="3 3"/><text x="${W-R+4}" y="${y(budget)+3}">$${budget}</text>`;
+  if(s.total) g+=`<path d="${line}L${lastX.toFixed(1)},${H-B}L${x(run.start)},${H-B}Z" fill="var(--accent-soft)" stroke="none"/>`+
+    `<path d="${line}" fill="none" stroke="var(--accent)" stroke-width="1.6"/>`+
+    `<line x1="${lastX}" y1="${y(s.total)}" x2="${x(run.deadline)}" y2="${y(proj)}" stroke="${budget&&proj>budget?'var(--bad)':'var(--accent)'}" stroke-dasharray="2 3" stroke-width="1.2"/>`+
+    `<circle cx="${lastX}" cy="${y(s.total)}" r="3" fill="var(--accent)"/>`;
+  g+=`<text x="${L}" y="${H-3}">T+0</text><text x="${W-R}" y="${H-3}" text-anchor="end">deadline</text>`;
+  $('spark').innerHTML=g;
+}
+
+/* ── interactions ── */
+$('asks').addEventListener('click',async ev=>{
+  const b=ev.target.closest('button[data-id]'); if(!b)return;
+  const id=b.dataset.id, choice=b.dataset.choice;
+  if(MODE==='live'){
+    b.disabled=true;
+    try{
+      const r=await fetch('events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'decision.resolved',id,choice})});
+      if(!r.ok) throw new Error(await r.text());
+      await load();
+    }catch(err){b.disabled=false;b.title=`Not saved: ${err.message}`;b.textContent=`${choice} (retry)`;}
+    return;
+  }
+  const [,hi]=bounds(); const t=follow?hi:tView;
+  const ts=new Date(t).toISOString().replace(/\.\d{3}Z$/,'Z');
+  EVENTS.push({ts,run:'local',type:'decision.resolved',agent:'human',id,choice});
+  const d=EVENTS.find(e=>e.type==='decision.request'&&e.id===id);
+  if(d?.slice&&d.blocking!==false) EVENTS.push({ts,run:'local',type:'slice.state',slice:d.slice,to:'building',agent:d.agent,reason:`${id} answered`});
+  render();
+});
+$('scrub').addEventListener('input',e=>{stopPlay();follow=false;tView=+e.target.value;const [,hi]=bounds();if(tView>=hi)follow=true;render();});
+$('followBtn').addEventListener('click',()=>{stopPlay();follow=true;render();});
+$('playBtn').addEventListener('click',()=>{
+  if(playTimer){stopPlay();render();return;}
+  const [lo,hi]=bounds();
+  if(follow||tView>=hi)tView=lo;
+  follow=false;
+  playTimer=setInterval(()=>{const [,h]=bounds();tView+=18000;if(tView>=h){stopPlay();follow=true;}render();},100);
+  render();
+});
+function stopPlay(){if(playTimer){clearInterval(playTimer);playTimer=null;}}
+$('fileInput').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const evs=parse(await f.text());
+  if(!evs.length){$('foot').textContent=`${f.name} has no events. Each line should be one JSON event.`;return;}
+  stopPlay(); if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+  EVENTS=evs; MODE='file'; FILE_NAME=f.name; follow=true; render();
+});
+
+function parse(text){
+  return text.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{try{return JSON.parse(l);}catch{return null;}})
+    .filter(e=>e&&e.type&&e.ts).sort((a,b)=>Date.parse(a.ts)-Date.parse(b.ts));
+}
+async function load(){
+  const r=await fetch('events.jsonl',{cache:'no-store'});
+  if(!r.ok) throw new Error(String(r.status));
+  const ct=r.headers.get('content-type')||'';
+  if(ct.includes('text/html')) throw new Error('not a log');
+  EVENTS=parse(await r.text());
+  render();
+}
+(async()=>{
+  MODE='live';
+  try{
+    await load();
+    pollTimer=setInterval(()=>load().catch(()=>{}),2000);
+    setInterval(()=>{if(follow&&MODE==='live')render();},1000);
+  }catch{
+    MODE='sample'; EVENTS=buildSample(); render();
+  }
+})();
+</script>

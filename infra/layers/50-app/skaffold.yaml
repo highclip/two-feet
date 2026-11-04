@@ -1,0 +1,23 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: two-feet-50-app
+
+# The app. CI deploys this with plain helm on every push to main (.github/workflows/deploy.yml);
+# this file is for manual deploys: IMAGE_TAG=<sha> infra/layers/deploy.sh 50-app
+# Requires: 00-operators (Dash0 CRD), the two-feet-env secret (bootstrap-secrets.sh).
+deploy:
+  helm:
+    releases:
+      - name: two-feet
+        chartPath: chart
+        namespace: two-feet
+        createNamespace: true
+        valuesFiles:
+          - ../cluster.yaml
+          - values.yaml
+        setValueTemplates:
+          image.tag: "{{.IMAGE_TAG}}"
+    flags:
+      install: [--wait, --timeout=5m]
+      upgrade: [--wait, --timeout=5m]

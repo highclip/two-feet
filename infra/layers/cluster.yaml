@@ -1,0 +1,22 @@
+# Per-cluster settings shared by every layer (each skaffold.yaml lists this file first in
+# valuesFiles). Everything that changes when the cluster or domain changes lives here.
+cluster:
+  name: two-feet-sfo3
+  region: sfo3
+
+# Public hostname, served through the Cloudflare tunnel in 40-platform.
+publicHost: twofeet.highclip.dev            # confirm the domain before creating the tunnel
+
+image:
+  repository: registry.digitalocean.com/highclip/two-feet
+  # Set by CI (--set image.tag=<git sha>) or by IMAGE_TAG for a manual deploy.sh 50-app.
+  tag: ""
+
+cloudflare:
+  tunnelId: ""                               # from: cloudflared tunnel create two-feet
+
+dash0:
+  # app.dash0.com → Organization settings → Endpoints. Region-specific.
+  endpoint: ingress.us-west-2.aws.dash0.com:4317   # confirm your region
+  apiEndpoint: https://api.us-west-2.aws.dash0.com # confirm your region
+  dataset: two-feet

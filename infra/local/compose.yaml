@@ -1,0 +1,55 @@
+# Local dev stack: Postgres, Elasticsearch and an OpenTelemetry collector.
+#
+#   docker compose -f infra/local/compose.yaml up -d
+#
+# Production uses PlanetScale Postgres and Elastic Cloud instead; the app only sees env vars, so
+# switching is a change to .env. Elasticsearch runs a self-generated trial license so ELSER and
+# semantic_text work locally. That needs about 4 GB of RAM for the ES container.
+name: two-feet
+
+services:
+  postgres:
+    image: postgres:16.6
+    environment:
+      POSTGRES_USER: twofeet
+      POSTGRES_PASSWORD: twofeet
+      POSTGRES_DB: twofeet
+    ports: ["5432:5432"]
+    volumes: [pg:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twofeet"]
+      interval: 2s
+      retries: 30
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.4
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.license.self_generated.type: trial
+      xpack.ml.use_auto_machine_memory_percent: "true"
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+    ports: ["9200:9200"]
+    volumes: [es:/usr/share/elasticsearch/data]
+    mem_limit: 4g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=1s"]
+      interval: 5s
+      retries: 60
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes: ["./otel-collector.yaml:/etc/otelcol/config.yaml:ro"]
+    environment:
+      # Leave DASH0_* empty to keep telemetry local (printed by the debug exporter).
+      DASH0_ENDPOINT: ${DASH0_ENDPOINT:-}
+      DASH0_AUTH_TOKEN: ${DASH0_AUTH_TOKEN:-}
+      DASH0_DATASET: ${DASH0_DATASET:-two-feet-dev}
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+volumes:
+  pg: {}
+  es: {}

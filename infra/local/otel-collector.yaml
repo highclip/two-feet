@@ -1,0 +1,27 @@
+# Local collector. The app sends OTLP here (localhost:4317) and the debug exporter prints it.
+#
+# To also send local telemetry to Dash0, add this exporter and list it in each pipeline:
+#
+#   otlp/dash0:
+#     endpoint: ${env:DASH0_ENDPOINT}
+#     headers:
+#       Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+#       Dash0-Dataset: ${env:DASH0_DATASET}
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: 0.0.0.0:4317 }
+      http: { endpoint: 0.0.0.0:4318 }
+
+processors:
+  batch: {}
+
+exporters:
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:  { receivers: [otlp], processors: [batch], exporters: [debug] }
+    metrics: { receivers: [otlp], processors: [batch], exporters: [debug] }
+    logs:    { receivers: [otlp], processors: [batch], exporters: [debug] }

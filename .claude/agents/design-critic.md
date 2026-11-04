@@ -29,6 +29,8 @@ the builder says they did.
 - **Copy.** Plain and warm, from `spec.delight.copy`. No confirmation dialogs; Undo toasts instead.
 - **Wall.** Titles at least 28px, no names, readable from the back of a room.
 
+Answered decisions (`python3 harness/hx.py decisions --slice <id>`) override the spec; judge against them.
+
 ## Verdict
 
 Record one verdict. Each finding says what's wrong, where, and the fix in one sentence, e.g.

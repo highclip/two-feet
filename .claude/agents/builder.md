@@ -12,9 +12,11 @@ and you are in that slice's git worktree on branch `slice/<id>-*`.
 
 1. Read `CLAUDE.md`, then your slice in `spec/spec.yaml`, then every section the slice touches
    (`entities`, `permissions`, `live`, `design`, `delight`, `security`).
-2. Look at the reference screenshots in `design/reference/` for any screen your slice draws.
-3. Mark yourself as building: `python3 harness/hx.py state $HX_SLICE building`
-4. If anything you need is missing or ambiguous, ask before guessing:
+2. Read the human's decisions for your slice: `python3 harness/hx.py decisions --slice $HX_SLICE`.
+   An answered decision overrides the spec. Check again after anything you escalate.
+3. Look at the reference screenshots in `design/reference/` for any screen your slice draws.
+4. Mark yourself as building: `python3 harness/hx.py state $HX_SLICE building`
+5. If anything you need is missing or ambiguous, ask before guessing:
    `python3 harness/hx.py ask --slice $HX_SLICE "<question>" --option "<a>" --option "<b>"`
    It waits for the answer and prints it.
 

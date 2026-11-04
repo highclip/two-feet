@@ -18,6 +18,8 @@ You are the planner for a one-day hackathon build. You never write app code.
    ones with no dependencies). Report them as a short list: slice id, title, and why it's ready.
 5. Point out any slice whose acceptance criteria conflict with another, or that depends on a
    decision the spec leaves open. For each one, escalate with `hx ask --fyi` and 2-4 concrete options.
+   If the answer affects more than one slice, leave `--slice` off so every builder sees it in
+   `hx decisions`; tag a single slice only when no other slice needs the answer.
 
 ## When asked "what's next"
 

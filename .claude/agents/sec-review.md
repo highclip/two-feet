@@ -31,6 +31,8 @@ The slice id (from your prompt). Get the diff with
    post text beyond 40 characters.
 8. **Concurrency.** Signup capacity is enforced inside one transaction with a row lock.
 
+Answered decisions (`python3 harness/hx.py decisions --slice <id>`) override the spec; judge against them.
+
 ## Verdict
 
 Record exactly one verdict. Each finding names the file and line, what's wrong, and how to fix it.

@@ -223,6 +223,21 @@ def cmd_decide(a):
     emit({"type": "decision.resolved", "id": a.id, "choice": a.choice, "agent": "human"})
 
 
+def cmd_decisions(a):
+    st = reduce(read_events())
+    rows = [d for d in st["decisions"].values()
+            if not a.slice or d.get("slice") in (a.slice, None)]
+    if a.json:
+        print(json.dumps(rows, indent=2))
+        return
+    if not rows:
+        print("No decisions" + (f" for {a.slice}" if a.slice else "") + ".")
+        return
+    for d in rows:
+        answer = f'ANSWERED: {d["choice"]}' if not d["open"] else "OPEN (waiting for the human)"
+        print(f'{d["id"]} [{d.get("slice") or "all slices"}] {d["question"]}\n    {answer}')
+
+
 def cmd_usage(a):
     emit({"type": "agent.usage", "cost_usd": a.cost, "tokens_in": a.tokens_in, "tokens_out": a.tokens_out})
 
@@ -257,6 +272,11 @@ def cmd_status(a):
         stuck = " STUCK" if mins > STUCK_MIN.get(s["state"], 10**9) else ""
         note = f'  ! {s["last_fail"]}' if s["last_fail"] else ""
         print(f'{s["slice"]:<4} {s["state"]:<9} {mins:>4}m{stuck:<6} {s["owner"] or "":<11} {s["title"]}{note}')
+    done_d = [d for d in st["decisions"].values() if not d["open"]]
+    if done_d:
+        print("\nDecided (these override the spec):")
+        for d in done_d[-5:]:
+            print(f'  {d["id"]} [{d.get("slice") or "-"}] {d["question"]}  → {d["choice"]}')
     open_d = [d for d in st["decisions"].values() if d["open"]]
     if open_d:
         print("\nWaiting on you:")
@@ -365,6 +385,11 @@ def main():
 
     s = sub.add_parser("decide", help="Answer a decision"); s.set_defaults(fn=cmd_decide)
     s.add_argument("id"); s.add_argument("choice")
+
+    s = sub.add_parser("decisions", help="List decisions and answers (answers override the spec)")
+    s.set_defaults(fn=cmd_decisions)
+    s.add_argument("--slice", help="Only this slice's decisions, plus ones for all slices")
+    s.add_argument("--json", action="store_true")
 
     s = sub.add_parser("usage", help="Record spend"); s.set_defaults(fn=cmd_usage)
     s.add_argument("--cost", type=float, required=True)

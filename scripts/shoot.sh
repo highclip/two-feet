@@ -18,7 +18,8 @@ cd "$root/app"
 mains=(cmd/*/)
 [[ -d ${mains[0]} ]] || { echo "no main package under app/cmd/" >&2; exit 1; }
 slice=$(git branch --show-current | sed -nE 's#^slice/(S[0-9]+).*#\1#p')
-out="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.harness/shots/${slice:-main}"
+# Inside this worktree (gitignored), so an agent running here can open the PNGs.
+out="$root/.harness/shots/${slice:-main}"
 mkdir -p "$out"
 
 port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')

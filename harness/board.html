@@ -97,7 +97,7 @@ button,input{font:inherit;color:inherit}
 .small{font-size:13px;color:var(--muted)}
 
 .asks{display:flex;flex-direction:column;gap:10px}
-.ask{background:var(--strip);border:1px solid var(--rule);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.asks .ask{background:var(--strip);border:1px solid var(--rule);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .ask.blocking{border-color:var(--warn);box-shadow:inset 3px 0 0 var(--warn)}
 .ask.aged{border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
 .ask-meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12px;color:var(--muted)}
@@ -108,8 +108,6 @@ button,input{font:inherit;color:inherit}
 .tag{font-family:var(--f-mono);font-size:11px;padding:1px 6px;text-transform:uppercase;letter-spacing:.04em}
 .tag.block{background:var(--warn-soft);color:var(--warn)}
 .tag.fyi{background:var(--accent-soft);color:var(--accent)}
-.resolved{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted);border-top:1px solid var(--rule);padding-top:8px}
-.resolved b{font-weight:500;color:var(--ink)}
 .empty{color:var(--muted);font-size:14px;padding:6px 0}
 
 .spend{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -169,6 +167,32 @@ button,input{font:inherit;color:inherit}
 .tape .k.fail{color:var(--bad)} .tape .k.ok{color:var(--ok)} .tape .k.ask{color:var(--warn)}
 .tape .d{overflow-wrap:anywhere}
 @media (max-width:640px){.tape li{grid-template-columns:52px 34px minmax(0,1fr)}.tape .k{display:none}}
+/* agent failures */
+.alerts{background:var(--bad-soft);border:1px solid var(--bad);padding:10px 14px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.alerts .label{color:var(--bad)}
+.alerts .d{overflow-wrap:anywhere}
+
+/* what a slice has to do, on its strip */
+.spec{grid-column:1 / -1;border-top:1px solid var(--rule);padding:4px 9px 6px;font-size:12px;min-width:0}
+.spec summary{cursor:pointer;color:var(--muted);font-family:var(--f-mono);font-size:11px}
+.spec ul{margin:6px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.spec .sub{margin:8px 0 0;color:var(--muted);font-family:var(--f-mono);font-size:11px}
+.dep{font-family:var(--f-mono);font-size:11px;padding:1px 5px;background:var(--warn-soft);color:var(--warn);margin-right:3px}
+.dep.met{background:var(--ok-soft);color:var(--ok)}
+
+/* decisions */
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{border:1px solid var(--rule);background:var(--strip);font-family:var(--f-mono);font-size:12px;padding:2px 8px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--strip)}
+.decs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:340px;overflow-y:auto}
+.decs li{display:grid;grid-template-columns:62px 40px 104px minmax(0,1fr);gap:10px;padding:6px 0;border-top:1px solid var(--rule);font-size:13px;align-items:baseline}
+.decs li:first-child{border-top:0}
+.decs .t{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.decs .why{color:var(--muted)}
+.decs b{font-weight:600}
+.tag.answer{background:var(--ok-soft);color:var(--ok)}
+.tag.agent{background:var(--bay);color:var(--muted)}
+@media (max-width:640px){.decs li{grid-template-columns:40px minmax(0,1fr)}.decs .t,.decs .tag{grid-column:1 / -1}}
 .foot{font-size:12px;color:var(--muted)}
 .foot code{font-family:var(--f-mono);background:var(--panel);border:1px solid var(--rule);padding:0 4px}
 </style>
@@ -208,6 +232,8 @@ button,input{font:inherit;color:inherit}
     </div>
   </section>
 
+  <section id="alerts" class="alerts" aria-label="Agent failures" hidden></section>
+
   <section class="rail3">
     <div class="panel" aria-label="Demo path">
       <div class="panel-head"><span class="label">Demo path</span><span id="demoAge" class="small mono"></span></div>
@@ -222,7 +248,6 @@ button,input{font:inherit;color:inherit}
     <div class="panel inbox" aria-label="Decisions waiting on you">
       <div class="panel-head"><span class="label">Waiting on you</span><span id="inboxCount" class="small mono"></span></div>
       <div id="asks" class="asks"></div>
-      <div id="resolved" class="resolved" hidden></div>
     </div>
 
     <div class="panel" aria-label="Spend">
@@ -234,8 +259,14 @@ button,input{font:inherit;color:inherit}
     </div>
   </section>
 
+  <section class="panel" aria-label="Decisions">
+    <div class="panel-head"><span class="label">Decisions</span><span class="small">Your answers override the spec. Agent choices don't.</span></div>
+    <div id="decChips" class="chips"></div>
+    <ol id="decs" class="decs"></ol>
+  </section>
+
   <section aria-label="Slices">
-    <div class="board-head"><h2>Slices</h2><span class="small">Stuck after 20m building, 10m in gates, 15m in review, 5m blocked</span></div>
+    <div class="board-head"><h2>Slices</h2><span class="small"><span id="specInfo"></span>Stuck after 20m building, 10m in gates, 15m in review, 5m blocked</span></div>
     <div id="lanes" class="lanes" style="margin-top:10px"></div>
   </section>
 
@@ -274,6 +305,10 @@ function buildSample(){
   [['S1','Sign-in and orgs'],['S2','Events CRUD'],['S3','Dish sign-up'],['S4','Invite links'],['S5','Dietary tags filter'],
    ['S6','Email reminders'],['S7','Landing page'],['S8','CSV export for hosts'],['S9','Event photo upload']]
     .forEach(([s,t],i)=>ev(2+i*0.1,'slice.planned',{agent:'planner',slice:s,title:t,spec:`spec.yaml#/slices/${s}`}));
+  ev(2.5,'spec.loaded',{agent:'planner',path:'spec.yaml',sha:'sample0spec1',slices:[
+    {id:'S1',title:'Sign-in and orgs',depends_on:[],acceptance:['given a visitor, when they sign in, then an org exists for them']},
+    {id:'S3',title:'Dish sign-up',depends_on:['S1'],acceptance:['given a guest, when they claim a dish, then it shows as taken','given a taken dish, when another guest claims it, then it is refused']}]});
+  ev(36,'decision.made',{agent:'builder-3',slice:'S3',text:'Claims are stored per guest, not per dish',why:'hosts can change the limit later',source:'commit',sha:'b41e7d2'});
   st(4,'S1','building','builder-1'); st(4.1,'S2','building','builder-2'); st(4.2,'S3','building','builder-3'); st(4.3,'S7','building','builder-4');
 
   gates(20,'S1','builder-1'); rv(25,'S1','security','approve'); rv(26,'S1','code','approve'); st(28,'S1','merged','integrator',{sha:'a1c9e02'});
@@ -319,7 +354,7 @@ function buildSample(){
 
 /* ── projection: the board is a pure function of the log ── */
 function reduce(evs){
-  const s={run:null,slices:new Map(),decisions:new Map(),usage:new Map(),demo:[],merges:[],spend:[],total:0,feed:[]};
+  const s={run:null,slices:new Map(),decisions:new Map(),usage:new Map(),demo:[],merges:[],spend:[],total:0,feed:[],spec:null,choices:[],errors:new Map()};
   const slice=(id,t)=>{if(!s.slices.has(id))s.slices.set(id,{id,title:id,owner:'',state:'planned',since:t,gates:{},reviews:{},lastFail:null,sha:null});return s.slices.get(id);};
   for(const e of evs){
     const t=Date.parse(e.ts);
@@ -338,7 +373,10 @@ function reduce(evs){
       case 'review.verdict': {const x=slice(e.slice,t);x.reviews[e.reviewer]={verdict:e.verdict,findings:e.findings||[]};if(e.verdict==='changes')x.lastFail=`${e.reviewer} review: ${(e.findings||[])[0]||'changes requested'}`;break;}
       case 'decision.request': s.decisions.set(e.id,{...e,t,open:true}); break;
       case 'decision.resolved': {const d=s.decisions.get(e.id);if(d){d.open=false;d.choice=e.choice;d.resolvedAt=t;}break;}
-      case 'agent.usage': {const u=s.usage.get(e.agent)||{cost:0,tokens:0};u.cost+=+e.cost_usd||0;u.tokens+=(e.tokens_in||0)+(e.tokens_out||0);s.usage.set(e.agent,u);s.total+=+e.cost_usd||0;s.spend.push([t,s.total]);break;}
+      case 'agent.usage': {const u=s.usage.get(e.agent)||{cost:0,tokens:0};u.cost+=+e.cost_usd||0;u.tokens+=(e.tokens_in||0)+(e.tokens_out||0);s.usage.set(e.agent,u);s.total+=+e.cost_usd||0;s.spend.push([t,s.total]);s.errors.delete(e.agent);break;}
+      case 'spec.loaded': s.spec=e; break;
+      case 'decision.made': s.choices.push({...e,t}); break;
+      case 'agent.error': s.errors.set(e.agent,{...e,t}); break;
       case 'demo.check': s.demo.push({t,status:e.status,flow:e.flow,detail:e.detail}); break;
     }
     // The tape skips spend, passing gates and the move into "gates" (the result line says it all).
@@ -348,7 +386,8 @@ function reduce(evs){
 }
 
 /* ── state ── */
-let EVENTS=[], MODE='sample', FILE_NAME='', follow=true, tView=0, playTimer=null, pollTimer=null;
+let EVENTS=[], MODE='sample', FILE_NAME='', follow=true, tView=0, playTimer=null, pollTimer=null, decFilter='all';
+const openSpecs=new Set();  // render() rebuilds the strips every second, so open details are kept here
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dur=ms=>{const m=Math.max(0,Math.floor(ms/MIN));return m<60?`${m}m`:`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`;};
@@ -432,9 +471,27 @@ function render(){
       <p class="q">${esc(d.question)}</p>
       <div class="opts">${(d.options||[]).map(o=>`<button class="btn" type="button" data-id="${esc(d.id)}" data-choice="${esc(o)}">${esc(o)}</button>`).join('')}</div>
     </div>`;}).join(''):`<p class="empty">Nothing needs you. Agents escalate here when the spec is unclear or a slice keeps failing its gates.</p>`;
-  const done=[...s.decisions.values()].filter(d=>!d.open).sort((a,b)=>b.resolvedAt-a.resolvedAt).slice(0,3);
-  $('resolved').hidden=!done.length;
-  $('resolved').innerHTML=done.map(d=>`<span><span class="mono">${esc(d.id)}</span> ${esc(d.question)} <b>${esc(d.choice)}</b></span>`).join('');
+
+  /* agent failures */
+  const errs=[...s.errors.values()];
+  $('alerts').hidden=!errs.length;
+  $('alerts').innerHTML=errs.length?`<span class="label">Agent failed</span>`+errs.map(e=>`<span class="d"><span class="mono">${esc(e.agent)}</span>${e.slice?` on ${esc(e.slice)}`:''} · ${dur(t-e.t)} ago · ${esc(e.detail)}</span>`).join(''):'';
+
+  /* decisions */
+  const decSlices=[...new Set([...s.decisions.values(),...s.choices].map(d=>d.slice).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  if(decFilter!=='all'&&!decSlices.includes(decFilter))decFilter='all';
+  $('decChips').innerHTML=decSlices.length?['all',...decSlices].map(f=>`<button class="chip" type="button" data-filter="${esc(f)}" aria-pressed="${f===decFilter}">${f==='all'?'All':esc(f)}</button>`).join(''):'';
+  const decRows=[
+    ...[...s.decisions.values()].map(d=>({t:d.open?d.t:d.resolvedAt,slice:d.slice,tag:d.open?['block','Open']:['answer','Answered'],
+      body:d.open?esc(d.question):`${esc(d.question)} <b>${esc(d.choice)}</b>`})),
+    ...s.choices.map(c=>({t:c.t,slice:c.slice,tag:['agent','Agent choice'],
+      body:`${esc(c.text)}${c.why?` <span class="why">Why: ${esc(c.why)}</span>`:''}`})),
+  ].filter(r=>decFilter==='all'||!r.slice||r.slice===decFilter).sort((a,b)=>b.t-a.t);
+  $('decs').innerHTML=decRows.length?decRows.map(r=>`<li><span class="t">${tplus(r.t-run.start)}</span><span class="cs" style="font-size:13px">${esc(r.slice||'All')}</span><span class="tag ${r.tag[0]}">${r.tag[1]}</span><span>${r.body}</span></li>`).join(''):`<li><span class="small" style="grid-column:1 / -1">No decisions yet. Questions agents ask and choices they record show up here.</span></li>`;
+
+  /* spec */
+  const nCriteria=s.spec?s.spec.slices.reduce((n,c)=>n+(c.acceptance||[]).length,0):0;
+  $('specInfo').textContent=s.spec?`Spec ${s.spec.sha} · ${s.spec.slices.length} slices · ${nCriteria} criteria · `:'Spec not loaded (hx spec) · ';
 
   /* burn */
   const budget=run.budget, total=s.total;
@@ -456,7 +513,7 @@ function render(){
     const list=by[k].sort((a,b)=>k==='merged'?b.since-a.since:a.since-b.since);
     const nStuck=list.filter(isStuck).length;
     return `<div class="lane ${k}"><div class="lane-head"><span class="label">${LANE[k]}</span><span class="num">${list.length}${nStuck?` · ${nStuck} stuck`:''}</span></div>
-      ${list.length?list.map(x=>strip(x,t,isStuck(x))).join(''):`<div class="lane-empty">none</div>`}</div>`;
+      ${list.length?list.map(x=>strip(x,t,isStuck(x),s)).join(''):`<div class="lane-empty">none</div>`}</div>`;
   }).join('');
 
   /* tape */
@@ -471,12 +528,28 @@ function render(){
     :`Replaying a saved log. Answers you click here stay on this page.`;
 }
 
-function strip(x,t,stuck){
+function specBlock(x,s){
+  const c=s.spec?.slices?.find(v=>v.id===x.id);
+  const answers=[...s.decisions.values()].filter(d=>d.slice===x.id&&!d.open);
+  const made=s.choices.filter(d=>d.slice===x.id);
+  if(!c&&!answers.length&&!made.length) return '';
+  const crit=c?.acceptance||[], n=answers.length+made.length;
+  const deps=(c?.depends_on||[]).map(d=>`<span class="dep ${s.slices.get(d)?.state==='merged'?'met':''}" title="${esc(d)}: ${esc(s.slices.get(d)?.state||'not planned')}">${esc(d)}</span>`).join('');
+  return `<details class="spec" ${openSpecs.has(x.id)?'open':''}><summary data-spec="${esc(x.id)}">${c?`${crit.length} criteria`:'not in the spec'}${n?` · ${n} decision${n>1?'s':''}`:''}</summary>
+    ${deps?`<p class="sub">Needs ${deps}</p>`:''}
+    ${crit.length?`<ul>${crit.map(k=>`<li>${esc(k)}</li>`).join('')}</ul>`:''}
+    ${answers.length?`<p class="sub">Answers that override the spec</p><ul>${answers.map(d=>`<li>${esc(d.question)} <b>${esc(d.choice)}</b></li>`).join('')}</ul>`:''}
+    ${made.length?`<p class="sub">Agent choices</p><ul>${made.map(d=>`<li>${esc(d.text)}</li>`).join('')}</ul>`:''}
+  </details>`;
+}
+
+function strip(x,t,stuck,s){
   if(x.state==='merged') return `<article class="strip merged"><div class="bay"><span class="cs">${esc(x.id)}</span></div>
-    <div class="main"><span class="title">${esc(x.title)}</span><span class="who">${esc(x.sha||'')}</span></div></article>`;
+    <div class="main"><span class="title">${esc(x.title)}</span><span class="who">${esc(x.sha||'')}</span></div>${specBlock(x,s)}</article>`;
   const fail=!!x.lastFail&&x.state!=='review';
   const showGates=x.state!=='planned';
-  const gateCells=GATES.map(([g,ab])=>{const r=x.gates[g];return `<span class="cell ${r?r.status:''}" title="${esc(g+(r?': '+r.status+(r.detail?' · '+r.detail:''):': not run'))}">${ab}</span>`;}).join('');
+  // The gates that actually ran, from the log: gates.conf decides what they are, not this page.
+  const gateCells=Object.entries(x.gates).map(([g,r])=>`<span class="cell ${r.status}" title="${esc(g+': '+r.status+(r.detail?' · '+r.detail:''))}">${esc(g.slice(0,3).toUpperCase())}</span>`).join('');
   const revCells=(x.state==='review'||Object.keys(x.reviews).length)?`<span class="cell sep">|</span>`+REVIEWERS.map(([r,ab])=>{const v=x.reviews[r];return `<span class="cell ${v?(v.verdict==='approve'?'pass':'fail'):''}" title="${esc(r+' review'+(v?': '+v.verdict:''))}">${ab}</span>`;}).join(''):'';
   return `<article class="strip ${x.state}${fail?' fail':''}${stuck?' stuck':''}">
     <div class="bay"><span class="cs">${esc(x.id)}</span></div>
@@ -485,6 +558,7 @@ function strip(x,t,stuck){
       ${showGates?`<div class="cells">${gateCells}${revCells}</div>`:''}
       ${fail?`<span class="fail-note">${esc(x.lastFail)}</span>`:''}</div>
     <div class="tclock"><span class="num">${dur(t-x.since)}</span><small>${stuck?'stuck':'in '+x.state}</small></div>
+    ${specBlock(x,s)}
   </article>`;
 }
 
@@ -498,6 +572,9 @@ function kindOf(e){
     case 'slice.state': return e.to==='merged'?['merged','ok']:e.to==='blocked'?['blocked','ask']:['state',''];
     case 'slice.planned': return ['planned',''];
     case 'run.start': return ['run',''];
+    case 'spec.loaded': return ['spec',''];
+    case 'decision.made': return ['choice',''];
+    case 'agent.error': return ['agent fail','fail'];
     default: return [esc(e.type),''];
   }
 }
@@ -511,6 +588,9 @@ function describe(e){
     case 'decision.request': return `${esc(e.agent||'')} asked ${esc(e.id)}: ${esc(e.question)}`;
     case 'decision.resolved': return `${esc(e.id)} answered: ${esc(e.choice)}`;
     case 'demo.check': return `${esc(e.flow)} ${e.status==='pass'?'passed':'failed'}${e.detail?`: ${esc(e.detail)}`:''}`;
+    case 'spec.loaded': return `Spec ${esc(e.sha)} loaded: ${(e.slices||[]).length} slices`;
+    case 'decision.made': return `${esc(e.agent||'')} chose: ${esc(e.text)}`;
+    case 'agent.error': return `${esc(e.agent||'')} failed: ${esc(e.detail)}`;
     default: return esc(JSON.stringify(e));
   }
 }
@@ -552,6 +632,8 @@ $('asks').addEventListener('click',async ev=>{
   if(d?.slice&&d.blocking!==false) EVENTS.push({ts,run:'local',type:'slice.state',slice:d.slice,to:'building',agent:d.agent,reason:`${id} answered`});
   render();
 });
+$('decChips').addEventListener('click',ev=>{const b=ev.target.closest('button[data-filter]');if(!b)return;decFilter=b.dataset.filter;render();});
+$('lanes').addEventListener('click',ev=>{const m=ev.target.closest('summary[data-spec]');if(!m)return;const id=m.dataset.spec;if(openSpecs.has(id))openSpecs.delete(id);else openSpecs.add(id);});
 $('scrub').addEventListener('input',e=>{stopPlay();follow=false;tView=+e.target.value;const [,hi]=bounds();if(tView>=hi)follow=true;render();});
 $('followBtn').addEventListener('click',()=>{stopPlay();follow=true;render();});
 $('playBtn').addEventListener('click',()=>{

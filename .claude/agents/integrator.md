@@ -20,8 +20,8 @@ design if the slice draws UI. Anything else is not ready: leave it.
    finding before merging. Merge locally as below, then the PR closes when main is pushed.
 1. Read the slice's commit messages: `git log main..slice/<id>-* --format=%B`, and handoffs from
    earlier merges: `git log main --grep=Handoff: --format=%B`. Every `Handoff:` note that this slice
-   makes possible is work you must finish in this merge. Answered decisions
-   (`python3 harness/hx.py decisions`) say how slices fit together.
+   makes possible is work you must finish in this merge. Answered decisions and agent choices
+   (`python3 harness/hx.py decisions --choices`) say how slices fit together.
 2. `git checkout main && git pull --ff-only`
 3. `git merge --no-ff slice/<id>-* -m "merge <id>: <title>"`
 4. On a conflict, or a handoff to finish: resolve it keeping both slices' behavior, and do the handoff
@@ -40,4 +40,5 @@ design if the slice draws UI. Anything else is not ready: leave it.
 
 ## After the merge
 
-Remove the worktree with `git worktree remove ../worktrees/two-feet-<id>`, then ask the planner what's unblocked.
+Remove the worktree with `git worktree remove ../worktrees/two-feet-<id>`, drop its database with
+`scripts/slice-db.sh drop <id>`, then ask the planner what's unblocked.

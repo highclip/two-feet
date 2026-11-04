@@ -10,6 +10,7 @@ git's common dir, so builders in separate worktrees all write to the same file.
 import argparse
 import datetime as dt
 import fcntl
+import hashlib
 import http.server
 import json
 import os
@@ -30,6 +31,9 @@ REQUIRED = {
     "decision.resolved": ["id", "choice"],
     "agent.usage": ["agent", "cost_usd"],
     "demo.check": ["status", "flow"],
+    "spec.loaded": ["slices", "sha"],
+    "decision.made": ["text"],
+    "agent.error": ["agent", "detail"],
 }
 ENUMS = {
     ("slice.state", "to"): STATES,
@@ -39,6 +43,17 @@ ENUMS = {
     ("demo.check", "status"): ["pass", "fail"],
 }
 STUCK_MIN = {"building": 20, "gates": 10, "review": 15, "blocked": 5}
+ACTIVE = ("building", "gates", "review", "blocked")
+# Generated or lock files overlap all the time and say nothing about two slices' approaches.
+NOISE = ("_templ.go", "go.sum", "package-lock.json", ".gitkeep")
+SPEC_TO_JSON = r"""
+import json, sys, yaml
+spec = yaml.safe_load(open(sys.argv[1]))
+print(json.dumps([{
+    "id": s["id"], "title": s.get("title"), "depends_on": s.get("depends_on") or [],
+    "scope": s.get("scope"), "acceptance": [str(c) for c in s.get("acceptance") or []],
+} for s in spec["slices"]]))
+"""
 
 
 def default_log() -> pathlib.Path:
@@ -55,6 +70,25 @@ def default_log() -> pathlib.Path:
 
 
 LOG = default_log()
+
+
+def git(*args) -> str:
+    return subprocess.run(["git", *args], capture_output=True, text=True).stdout
+
+
+def repo_root() -> pathlib.Path:
+    return pathlib.Path(git("rev-parse", "--path-format=absolute", "--git-common-dir").strip()).parent
+
+
+def slice_branch(slice_id: str):
+    refs = git("for-each-ref", "--format=%(refname:short)", f"refs/heads/slice/{slice_id}-*").split()
+    return refs[0] if refs else None
+
+
+def changed_files(ref: str) -> list:
+    return [f for f in git("diff", "--name-only", f"main...{ref}").split("\n")
+            if f and not f.endswith(NOISE)]
+
 RUN = os.environ.get("HX_RUN", "hack")
 AGENT = os.environ.get("HX_AGENT", "unknown")
 
@@ -112,6 +146,7 @@ def emit(fields: dict, fill=None) -> dict:
 
 def reduce(events: list) -> dict:
     run, slices, decisions, spend = None, {}, {}, 0.0
+    spec, choices, errors = None, [], {}
 
     def sl(e):
         return slices.setdefault(e["slice"], {"slice": e["slice"], "title": e["slice"], "state": "planned",
@@ -147,11 +182,19 @@ def reduce(events: list) -> dict:
             decisions[e["id"]].update(open=False, choice=e["choice"])
         elif t == "agent.usage":
             spend += float(e["cost_usd"])
+            errors.pop(e.get("agent"), None)  # the same agent ran fine since
+        elif t == "spec.loaded":
+            spec = e
+        elif t == "decision.made":
+            choices.append(e)
+        elif t == "agent.error":
+            errors[e["agent"]] = e
     for s in slices.values():
         changes = [f'{r} review: {(v["findings"] or ["changes requested"])[0]}'
                    for r, v in s["reviews"].items() if v["verdict"] == "changes"]
         s["last_fail"] = changes[0] if changes else s["gate_fail"]
-    return {"run": run, "slices": slices, "decisions": decisions, "spend": round(spend, 2)}
+    return {"run": run, "slices": slices, "decisions": decisions, "spend": round(spend, 2),
+            "spec": spec, "choices": choices, "errors": errors}
 
 
 # ── commands ──────────────────────────────────────────────────────────────
@@ -237,15 +280,20 @@ def cmd_decisions(a):
     st = reduce(read_events())
     rows = [d for d in st["decisions"].values()
             if not a.slice or d.get("slice") in (a.slice, None)]
+    # Reviewers read this command and are meant not to see builders' reasoning, so choices are opt-in.
+    made = [c for c in st["choices"] if not a.slice or c.get("slice") in (a.slice, None)] if a.choices else []
     if a.json:
-        print(json.dumps(rows, indent=2))
+        print(json.dumps(rows + made, indent=2))
         return
-    if not rows:
+    if not rows and not made:
         print("No decisions" + (f" for {a.slice}" if a.slice else "") + ".")
         return
     for d in rows:
         answer = f'ANSWERED: {d["choice"]}' if not d["open"] else "OPEN (waiting for the human)"
         print(f'{d["id"]} [{d.get("slice") or "all slices"}] {d["question"]}\n    {answer}')
+    for c in made:
+        why = f' Why: {c["why"]}' if c.get("why") else ""
+        print(f'AGENT CHOICE [{c.get("slice") or "all slices"}] {c["text"]}{why}')
 
 
 def cmd_findings(a):
@@ -261,6 +309,106 @@ def cmd_findings(a):
         print(f'  {r}: {v["verdict"]}')
         for f in v["findings"]:
             print(f'    - {f}')
+
+
+def cmd_spec(a):
+    """Copy the slices into the log, so the board and replays show the spec as it was at that moment."""
+    path = pathlib.Path(a.file)
+    if not path.exists():
+        raise SystemExit(f"hx: no spec at {path}")
+    sha = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    last = reduce(read_events())["spec"]
+    if last and last["sha"] == sha:
+        print(f"Spec {sha} is already loaded.")
+        return
+    # hx itself stays stdlib only, so the YAML parsing runs in the venv from scripts/setup-tools.sh.
+    python = repo_root() / ".venv" / "bin" / "python"
+    if not python.exists():
+        raise SystemExit(f"hx: missing {python}: run scripts/setup-tools.sh")
+    out = subprocess.run([str(python), "-c", SPEC_TO_JSON, str(path)], capture_output=True, text=True)
+    if out.returncode:
+        raise SystemExit(f"hx: can't read {path}: {out.stderr.strip()}")
+    slices = json.loads(out.stdout)
+    emit({"type": "spec.loaded", "path": str(path), "sha": sha, "slices": slices})
+    print(f"Spec {sha}: {len(slices)} slices.")
+
+
+def record_choice(slice_id, text, why=None, sha=None, source="note", agent=None):
+    fields = {"type": "decision.made", "slice": slice_id, "text": text[:300], "why": why[:300] if why else None,
+              "sha": sha, "source": source}
+    if agent:
+        fields["agent"] = agent
+    emit(fields)
+
+
+def cmd_note(a):
+    record_choice(a.slice, a.text, a.why)
+
+
+def cmd_harvest(a):
+    """Turn `Decision:` lines in a slice's commit messages into events. gates.sh calls this on every run."""
+    seen = {(e.get("slice"), e["text"]) for e in reduce(read_events())["choices"]}
+    log = git("log", "--reverse", f"{a.base}..HEAD", "--format=%h%x00%B%x01")
+    for commit in log.split("\x01"):
+        sha, _, body = commit.strip().partition("\x00")
+        for line in body.splitlines():
+            if not line.startswith("Decision:"):
+                continue
+            text, _, why = line[len("Decision:"):].strip().partition(" Why: ")
+            if text and (a.slice, text[:300]) not in seen:
+                record_choice(a.slice, text, why or None, sha=sha, source="commit", agent=f"builder-{a.slice}")
+                seen.add((a.slice, text[:300]))
+
+
+def overlaps(slice_id: str, st: dict) -> dict:
+    """Files this slice shares with each other active slice, from what's committed on their branches."""
+    mine_ref = slice_branch(slice_id)
+    if not mine_ref:
+        return {}
+    mine, out = set(changed_files(mine_ref)), {}
+    for other in st["slices"].values():
+        if other["slice"] == slice_id or other["state"] not in ACTIVE:
+            continue
+        ref = slice_branch(other["slice"])
+        shared = sorted(mine & set(changed_files(ref))) if ref else []
+        if shared:
+            out[other["slice"]] = shared
+    return out
+
+
+def cmd_peers(a):
+    st = reduce(read_events())
+    shared = overlaps(a.slice, st)
+    if a.overlap:
+        for other, files in sorted(shared.items()):
+            print(f'{other}: {", ".join(files)}')
+        return
+    ref = slice_branch(a.slice)
+    behind = int(git("rev-list", "--count", f"{ref}..main").strip() or 0) if ref else 0
+    if behind:
+        print(f"main has {behind} commit(s) you don't. Bring them in: git merge main\n")
+    others = [s for s in st["slices"].values() if s["slice"] != a.slice and s["state"] in ACTIVE]
+    if not others:
+        print("No other slice is active.")
+    for s in sorted(others, key=lambda s: s["slice"]):
+        print(f'{s["slice"]} {s["title"]} · {s["state"]} · {s["owner"] or "no owner"}')
+        peer_ref = slice_branch(s["slice"])
+        files = changed_files(peer_ref) if peer_ref else []
+        print(f'  changed ({len(files)}): {", ".join(files[:15]) or "nothing committed yet"}')
+        if s["slice"] in shared:
+            print(f'  ALSO CHANGED BY YOU: {", ".join(shared[s["slice"]])}')
+        for c in st["choices"]:
+            if c.get("slice") == s["slice"]:
+                print(f'  chose: {c["text"]}')
+    print("\nThis shows committed work only.")
+
+
+def cmd_error(a):
+    emit({"type": "agent.error", "slice": a.slice, "detail": a.detail[:300]})
+
+
+def cmd_state_of(a):
+    print(reduce(read_events())["slices"].get(a.slice, {}).get("state", ""))
 
 
 def cmd_usage(a):
@@ -302,6 +450,14 @@ def cmd_status(a):
         print("\nDecided (these override the spec):")
         for d in done_d[-5:]:
             print(f'  {d["id"]} [{d.get("slice") or "-"}] {d["question"]}  → {d["choice"]}')
+    if st["choices"]:
+        print("\nAgent choices (these don't override the spec):")
+        for c in st["choices"][-5:]:
+            print(f'  [{c.get("slice") or "-"}] {c["text"]}')
+    if st["errors"]:
+        print("\nAgent failures:")
+        for who, e in st["errors"].items():
+            print(f'  {who}: {e["detail"]}')
     open_d = [d for d in st["decisions"].values() if d["open"]]
     if open_d:
         print("\nWaiting on you:")
@@ -418,7 +574,32 @@ def main():
     s = sub.add_parser("decisions", help="List decisions and answers (answers override the spec)")
     s.set_defaults(fn=cmd_decisions)
     s.add_argument("--slice", help="Only this slice's decisions, plus ones for all slices")
+    s.add_argument("--choices", action="store_true", help="Also list choices agents made on their own")
     s.add_argument("--json", action="store_true")
+
+    s = sub.add_parser("spec", help="Copy the spec's slices into the log for the board")
+    s.set_defaults(fn=cmd_spec)
+    s.add_argument("--file", default="spec/spec.yaml")
+
+    s = sub.add_parser("note", help="Record a choice an agent made on its own; doesn't override the spec")
+    s.set_defaults(fn=cmd_note)
+    s.add_argument("text"); s.add_argument("--slice"); s.add_argument("--why")
+
+    s = sub.add_parser("harvest", help="Record Decision: lines from a slice's commits (gates.sh runs this)")
+    s.set_defaults(fn=cmd_harvest)
+    s.add_argument("slice"); s.add_argument("--base", default="main")
+
+    s = sub.add_parser("peers", help="What other active slices are changing and have chosen")
+    s.set_defaults(fn=cmd_peers)
+    s.add_argument("slice"); s.add_argument("--overlap", action="store_true", help="Only the shared files")
+
+    s = sub.add_parser("error", help="Record that an agent failed")
+    s.set_defaults(fn=cmd_error)
+    s.add_argument("--detail", required=True); s.add_argument("--slice")
+
+    s = sub.add_parser("state-of", help="Print a slice's state")
+    s.set_defaults(fn=cmd_state_of)
+    s.add_argument("slice")
 
     s = sub.add_parser("usage", help="Record spend"); s.set_defaults(fn=cmd_usage)
     s.add_argument("--cost", type=float, required=True)

@@ -26,8 +26,9 @@ and fix every finding before anything else.
 
 1. Read `CLAUDE.md`, then your slice in `spec/spec.yaml`, then every section the slice touches
    (`entities`, `permissions`, `live`, `design`, `delight`, `security`).
-2. Read the human's decisions for your slice: `python3 harness/hx.py decisions --slice <id>`.
-   An answered decision overrides the spec. Check again after anything you escalate.
+2. Read the decisions for your slice: `python3 harness/hx.py decisions --slice <id> --choices`.
+   An answered decision overrides the spec; an agent's choice doesn't, but tells you what others
+   assumed. Check again after anything you escalate.
 3. Look at the reference screenshots in `design/reference/` for any screen your slice draws.
 4. Mark yourself as building: `python3 harness/hx.py state <id> building`
 5. If anything you need is missing or ambiguous, ask before guessing:
@@ -43,6 +44,21 @@ and fix every finding before anything else.
 4. If your slice adds a migration or a live topic, use the `add-migration` or `add-live-topic` skill.
 5. If your slice draws a screen, compare it with the reference: `scripts/shoot.sh <path>` prints a
    390x844 screenshot you can open with the Read tool. Fix anything that doesn't match.
+
+## Other builders are working at the same time
+
+You can't see their sessions, but you can see their commits.
+
+- Before you change anything shared (a signature, `web.go`, a layout, a store or live function), run
+  `python3 harness/hx.py peers <id>`. It lists what other active slices changed and chose, and whether
+  `main` has moved. Fit their approach instead of inventing a parallel one. If two approaches really
+  conflict, ask with `hx ask`.
+- Commit early and often. Others only see what's committed.
+- When `main` moves, bring it in with `git merge main` and keep both behaviors. The gates fail until you do.
+- When you make a choice another slice or the human might disagree with, record it on its own line in
+  the commit message. Only choices like that: not every implementation detail.
+  `Decision: web.New takes its dependencies as a struct. Why: three slices add one each.`
+  The gates copy these lines to the board. Don't use `Decision:` for something the spec already says.
 
 ## Finishing
 
@@ -63,5 +79,6 @@ human and you should stop and wait for `hx wait <id>`.
   (`internal/store`, `internal/live`, `internal/auth`), keep the change small and say so in your
   final message so the integrator can watch for conflicts.
 - Skip, delete or weaken a test to get past a gate.
-- Commit secrets or read `.env`. Config comes from environment variables.
+- Commit secrets or read `.env`. Config comes from environment variables. Your worktree already has its
+  own `DATABASE_URL`, `ELASTIC_INDEX_PREFIX` and `PORT`; use them, and never hardcode a database or port.
 - Push, merge to main, or edit `spec/`, `harness/`, `infra/` or `.claude/`.

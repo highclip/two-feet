@@ -20,6 +20,7 @@ The hook is wired in `.claude/settings.json`.
 alias hx="python3 harness/hx.py"
 
 hx run --name "Two Feet" --hours 8.5 --budget 150
+hx spec             # copy the slices into the log so the board can show them
 hx plan S1 "Foundations and sign-in" --spec spec/spec.yaml#/slices/S1
 hx serve            # board at http://127.0.0.1:4777
 ```
@@ -41,6 +42,9 @@ On event day the `kickoff` skill does this for you.
 
   This marks S3 blocked, shows the question in **Waiting on you**, and prints your answer when you click it. It waits up to 9 minutes so it stays under a tool timeout. If it times out, run `hx wait D1`. Use `--fyi` for questions that shouldn't block.
 
+- **Record choices, not just questions.** A builder puts `Decision: <what>. Why: <why>` on its own line in a commit message, and `gates.sh` copies it to the log on every run. Other agents use `hx note`. These don't override the spec, and `hx decisions` leaves them out unless you pass `--choices`, because reviewers read that command and are meant not to see builders' reasoning.
+- **Parallel slices see each other through git.** `hx peers S3` lists what other active slices have committed and chosen. The gates fail until a slice has merged `main` (`uptodate`), and send a builder back once per new set of files it shares with another active slice.
+- **One database per worktree.** `scripts/slice-env.sh` gives a slice branch its own `DATABASE_URL`, `ELASTIC_INDEX_PREFIX` and `PORT`. `spawn-builder.sh` creates the database and the integrator drops it.
 - **Bounded retries.** After 5 straight gate failures (`HX_MAX_ATTEMPTS`), `gates.sh` blocks the slice and asks you what to do. That also ends the Stop-hook loop. The hook intentionally ignores `stop_hook_active`; see the comment in `gates.sh`.
 
 ## Event types
@@ -56,6 +60,9 @@ On event day the `kickoff` skill does this for you.
 | `decision.resolved` | you (board or `hx decide`) | `id`, `choice` |
 | `agent.usage` | orchestrator | `agent`, `cost_usd` (delta), `tokens_in`, `tokens_out` |
 | `demo.check` | tester | `status`, `flow`, `detail` |
+| `spec.loaded` | `hx spec` | `sha`, `path`, `slices[]` (id, title, depends_on, scope, acceptance) |
+| `decision.made` | gates.sh from commits, or `hx note` | `slice`, `text`, `why`, `sha`, `source` |
+| `agent.error` | scripts/agent.sh | `agent`, `slice`, `detail`; cleared on the board by that agent's next successful run |
 
 Every event also carries `ts` (UTC), `run` and `agent`. See `events.schema.json`.
 

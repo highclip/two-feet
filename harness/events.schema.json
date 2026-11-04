@@ -8,11 +8,37 @@
   "properties": {
     "ts": { "type": "string", "format": "date-time", "description": "UTC, second precision" },
     "run": { "type": "string", "description": "Run id, e.g. hack-01" },
-    "type": { "enum": ["run.start", "slice.planned", "slice.state", "gate.result", "review.verdict", "decision.request", "decision.resolved", "agent.usage", "demo.check"] },
+    "type": { "enum": ["run.start", "slice.planned", "slice.state", "gate.result", "review.verdict", "decision.request", "decision.resolved", "agent.usage", "demo.check", "spec.loaded", "decision.made", "agent.error"] },
     "agent": { "type": "string", "description": "Who wrote the event: planner, builder-2, gates, sec-review, human" },
     "slice": { "type": "string", "pattern": "^S[0-9]+$" }
   },
   "oneOf": [
+    {
+      "properties": {
+        "type": { "const": "spec.loaded" },
+        "path": { "type": "string" },
+        "sha": { "type": "string", "description": "Hash of the spec file; a new event appears only when it changes" },
+        "slices": { "type": "array", "items": { "type": "object", "description": "id, title, depends_on, scope, acceptance" } }
+      },
+      "required": ["slices", "sha"]
+    },
+    {
+      "properties": {
+        "type": { "const": "decision.made" },
+        "text": { "type": "string", "description": "A choice an agent made on its own. It doesn't override the spec." },
+        "why": { "type": "string" },
+        "sha": { "type": "string", "description": "The commit it came from, when source = commit" },
+        "source": { "enum": ["commit", "note"] }
+      },
+      "required": ["text"]
+    },
+    {
+      "properties": {
+        "type": { "const": "agent.error" },
+        "detail": { "type": "string" }
+      },
+      "required": ["agent", "detail"]
+    },
     {
       "properties": {
         "type": { "const": "run.start" },

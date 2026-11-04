@@ -162,7 +162,8 @@ search_index:
     phrase from the matched text, and logistics ("2 min walk", "starts in 6 min", "3 of 8 spots left").
 
 # ── live updates ───────────────────────────────────────────────────────────
-# One mechanism for the whole app. S4 builds the hub; every other slice reuses it.
+# One mechanism for the whole app. S1 builds a minimal working hub, S4 finishes it, and every other
+# slice reuses it. Nobody builds a second one.
 live:
   transport: >
     One SSE connection per open page at /e/<slug>/live?topics=..., read by the htmx SSE extension.
@@ -224,12 +225,14 @@ slices:
   - id: S1
     title: Foundations and sign-in
     depends_on: []
-    scope: Go server skeleton, config, migrations, seed loader for venue_seed and sponsors_seed, Clerk sign-in, person onboarding, layout and design tokens.
+    scope: Go server skeleton, config, migrations, seed loader for venue_seed and sponsors_seed, Clerk sign-in, person onboarding, layout and design tokens. A minimal working live hub in internal/live with Publish and Subscribe, and the /e/<slug>/live endpoint, so slices that fan out after S1 all build on the same one; S4 finishes it.
     acceptance:
       - given a visitor opens /e/cnh, when they sign in with an emailed code, then they land on onboarding and a person row exists for their Clerk user
       - given a new person, when they submit a display name of 1-40 chars and up to 3 tags, then they land on the home screen
       - given a request with no valid Clerk session, when it hits any attendee route, then it gets 401 for htmx/API calls or a redirect to sign-in for pages
       - given an empty database, when the seed runs twice, then zones, walks, spots and sponsors exist exactly once
+      - given a client on /e/<slug>/live?topics=event, when a fragment is published to that topic, then the client receives it within 2 seconds
+      - given a request for a person:<id> topic, then the live endpoint refuses it until S4 adds the check that it's that person's own
 
   - id: S2
     title: Spot pages and check-in
@@ -263,7 +266,7 @@ slices:
   - id: S4
     title: Live signups
     depends_on: [S3]
-    scope: Join, leave, waitlist and auto-promotion. Builds the shared live hub described in `live`; other slices reuse it.
+    scope: Join, leave, waitlist and auto-promotion. Finishes S1's live hub to everything described in `live` (person topics, heartbeats, reconnect behavior, fan-out targets), keeping its Publish and Subscribe signatures; other slices reuse it.
     acceptance:
       - given a space with 8 spots, when 20 attendees join at the same instant, then exactly 8 are going and 12 are waitlisted in join order
       - given a full space, when someone going leaves, then the first waitlisted person becomes going and sees "You're in" within 2 seconds

@@ -12,6 +12,9 @@ isn't in it, it's out of scope: escalate with `hx ask` instead of guessing.
   only the integrator merges.
 - You may move your slice to `building`. Only `harness/gates.sh` moves it to `gates` and `review`.
   Don't write `gate.result` events yourself.
+- Each slice's worktree has its own `DATABASE_URL`, `ELASTIC_INDEX_PREFIX` and `PORT` (`scripts/slice-env.sh`).
+  Use them; never hardcode a database, index name or port.
+- Builders working in parallel see each other through `python3 harness/hx.py peers <id>`, not chat.
 - Stuck on something the spec doesn't answer? Ask, with 2-4 concrete options, and wait:
   `hx ask --slice S3 "Can a guest claim more than one seat?" --option "One" --option "Host sets a limit"`
 - Don't edit `spec/spec.yaml`, `CLAUDE.md`, `.claude/`, `harness/` or `infra/` unless your task says to.
@@ -62,8 +65,10 @@ app/
 
 - Write the acceptance tests for your slice first, from its `acceptance` list in the spec.
   Name them after the criterion: `TestS4_TwentyJoinsAtOnceFillExactlyEight`.
-- Store tests run against the local Postgres from `infra/local/compose.yaml`
-  (`DATABASE_URL` from `.env`). Use a transaction per test and roll it back.
+- Store tests run against the local Postgres from `infra/local/compose.yaml`, using `DATABASE_URL`
+  from the environment. Use a transaction per test and roll it back.
+- Playwright servers read `DATABASE_URL` and `PORT` from the environment too, and `app/e2e` depends
+  only on `@playwright/test`. The e2e gate installs it; commit the `package-lock.json` it creates.
 - Playwright tests live in `app/e2e/`, run at 390x844 unless the test is about the Wall.
 - `go test -race ./...` must pass. No `t.Skip` to get past a gate.
 

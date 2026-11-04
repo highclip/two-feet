@@ -32,6 +32,7 @@ the builder says they did.
 - **Wall.** Titles at least 28px, no names, readable from the back of a room.
 
 Answered decisions (`python3 harness/hx.py decisions --slice <id>`) override the spec; judge against them.
+Judge the screens, not the reasoning: don't read commit messages or pass `--choices`.
 
 Don't run `harness/gates.sh`: it changes the board. Run `go test` or `go vet` directly if you need to.
 

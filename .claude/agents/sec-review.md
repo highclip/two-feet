@@ -32,6 +32,7 @@ you there), so the change to review is `git diff main...HEAD`.
 8. **Concurrency.** Signup capacity is enforced inside one transaction with a row lock.
 
 Answered decisions (`python3 harness/hx.py decisions --slice <id>`) override the spec; judge against them.
+Judge the code, not the reasoning: don't read commit messages or pass `--choices`.
 
 Don't run `harness/gates.sh`: it changes the board. Run `go test` or `go vet` directly if you need to.
 

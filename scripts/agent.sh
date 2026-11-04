@@ -17,6 +17,8 @@ prompt=${2:?usage: agent.sh <agent> "<prompt>"}
 root=$(git rev-parse --show-toplevel)
 common=$(git rev-parse --path-format=absolute --git-common-dir)
 [[ -f $root/.claude/agents/$agent.md ]] || { echo "no agent named $agent in .claude/agents/" >&2; exit 1; }
+# shellcheck disable=SC1091
+source "$root/scripts/slice-env.sh"
 
 mapfile -t allow < <(python3 -c '
 import json, sys
@@ -56,6 +58,12 @@ if cost:
     subprocess.run(args, check=False)
 PY
   rm -f "$log.json"
+  # Without this a failed agent looks like a slice that's just sitting there (a login expired
+  # mid-run in the CLI dry run and the board showed nothing).
+  if [[ $status -ne 0 ]]; then
+    detail=$(grep -v 'permissions.allow' "$log" | grep -v '^[[:space:]]*$' | tail -n 1 | cut -c1-200 || true)
+    python3 "$root/harness/hx.py" --agent "${HX_AGENT:-$agent}" error --detail "exit $status: ${detail:-see $log}" || true
+  fi
   tail -n 25 "$log"
   exit $status
 fi

@@ -34,6 +34,10 @@ SLICE="${1:-${HX_SLICE:-$(git branch --show-current 2>/dev/null | sed -nE 's#^sl
 # Gate commands are written relative to the repo root, so always start there.
 cd "$(git rev-parse --show-toplevel)" || exit 0
 
+# This worktree's own database, index prefix and port, however the gates were started.
+# shellcheck disable=SC1091
+[ -f scripts/slice-env.sh ] && source scripts/slice-env.sh
+
 GATES=(types lint tests semgrep gitleaks deps e2e)
 declare -A CMD=(
   [types]="npx tsc --noEmit"
@@ -48,7 +52,12 @@ CONF="$(pwd)/harness/gates.conf"
 # shellcheck disable=SC1090
 [ -f "$CONF" ] && source "$CONF"
 
-"${HX[@]}" --agent gates state "$SLICE" gates
+# Re-running the gates on a merged slice must not put it back in review (found in the CLI dry run).
+prior="$("${HX[@]}" state-of "$SLICE")"
+move() { [ "$prior" = merged ] || "${HX[@]}" --agent gates state "$SLICE" "$@"; }
+
+move gates
+"${HX[@]}" --agent gates harvest "$SLICE"
 
 failed=()
 report=""
@@ -62,6 +71,16 @@ if [ -n "$dirty" ]; then
   report+=$'\n\n'"--- committed ---"$'\n'"These changes aren't committed. Commit them from the worktree root with plain git (no cd, no -C): git add -A && git commit -m \"$SLICE: ...\""$'\n'"$(printf '%s\n' "$dirty" | head -n 20)"
 else
   "${HX[@]}" --agent gates gate "$SLICE" committed pass
+fi
+
+# Built-in second gate: a slice carries everything already merged, so conflicts land with the
+# builder who has the context instead of on the integrator.
+if git merge-base --is-ancestor main HEAD 2>/dev/null; then
+  "${HX[@]}" --agent gates gate "$SLICE" uptodate pass
+else
+  "${HX[@]}" --agent gates gate "$SLICE" uptodate fail --detail "main has moved"
+  failed+=(uptodate)
+  report+=$'\n\n'"--- uptodate ---"$'\n'"Another slice merged. Bring it in, keeping both behaviors: git merge main. Then read what changed with: python3 harness/hx.py peers $SLICE"
 fi
 
 for g in "${GATES[@]}"; do
@@ -80,10 +99,25 @@ attempts_dir="$(dirname "$("${HX[@]}" path)")/attempts"
 mkdir -p "$attempts_dir"
 counter="$attempts_dir/$SLICE"
 
+overlap="$("${HX[@]}" peers "$SLICE" --overlap)"
+
 if [ "${#failed[@]}" -eq 0 ]; then
   rm -f "$counter"
-  "${HX[@]}" --agent gates state "$SLICE" review --reason "all gates passed"
-  [ "$hook" -eq 1 ] || echo "All gates passed for $SLICE."
+  # Send the builder back once per new set of shared files, so it looks before finishing. This isn't
+  # a failure: stopping again goes through, and it doesn't count toward HX_MAX_ATTEMPTS.
+  seen="$attempts_dir/$SLICE.overlap"
+  if [ "$hook" -eq 1 ] && [ -n "$overlap" ] && [ "$overlap" != "$(cat "$seen" 2>/dev/null)" ]; then
+    printf '%s' "$overlap" > "$seen"
+    move building --reason "shares files with another slice"
+    msg="All gates passed, but another active slice is changing the same files:"$'\n'"$overlap"$'\n\n'"Run: python3 harness/hx.py peers $SLICE"$'\n'"Make sure your approach fits theirs. Record anything they need to know as a Decision: line in a commit, then stop again."
+    python3 -c 'import json, sys; print(json.dumps({"decision": "block", "reason": sys.argv[1]}))' "$msg"
+    exit 0
+  fi
+  move review --reason "all gates passed"
+  if [ "$hook" -eq 0 ]; then
+    echo "All gates passed for $SLICE."
+    [ -z "$overlap" ] || printf 'Shares files with other active slices:\n%s\n' "$overlap"
+  fi
   exit 0
 fi
 
@@ -114,5 +148,5 @@ if [ "$n" -ge "${HX_MAX_ATTEMPTS:-5}" ]; then
   exit 0
 fi
 
-"${HX[@]}" --agent gates state "$SLICE" building --reason "${failed[*]} failed"
+move building --reason "${failed[*]} failed"
 block "Gates failed for $SLICE (attempt $n of ${HX_MAX_ATTEMPTS:-5}): ${failed[*]}. Fix the cause, not the test, then stop again.$report"

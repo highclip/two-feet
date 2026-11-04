@@ -14,6 +14,8 @@ set -euo pipefail
 [[ $# -ge 1 ]] || { echo "usage: shoot.sh <path> [path...]" >&2; exit 1; }
 root=$(git rev-parse --show-toplevel)
 cd "$root/app"
+# shellcheck disable=SC1091
+source "$root/scripts/slice-env.sh"
 
 mains=(cmd/*/)
 [[ -d ${mains[0]} ]] || { echo "no main package under app/cmd/" >&2; exit 1; }
@@ -25,6 +27,8 @@ mkdir -p "$out"
 port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
 bin="$out/app-under-test"
 go build -o "$bin" "./${mains[0]}"
+# The slice's database starts empty; without this the screens the critic needs can't render.
+if [[ -n ${DATABASE_URL:-} ]]; then "$bin" migrate > "$out/migrate.log" 2>&1 || { tail -n 20 "$out/migrate.log" >&2; exit 1; }; fi
 PORT=$port ADDR="127.0.0.1:$port" "$bin" > "$out/app.log" 2>&1 &
 pid=$!
 trap 'kill $pid 2>/dev/null || true' EXIT

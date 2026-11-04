@@ -13,17 +13,19 @@ your subagents; reviewers run through `scripts/review.sh` inside the slice's wor
 
 ```bash
 python3 harness/hx.py --agent human run --name "Two Feet" --hours 8.5 --budget <USD from the human>
+python3 harness/hx.py spec           # copies the spec to the board; run it again after any spec edit
 python3 harness/hx.py serve &        # the board at http://127.0.0.1:4777, if it isn't running
 ```
 
 ## 2. Plan
 
-Use the **planner** subagent: "Plan the run from spec/spec.yaml." It records every slice and
-reports which ones are ready.
+Use the **planner** subagent: "Plan the run from spec/spec.yaml." It records every slice, reports
+which ones are ready, and proposes the shared interfaces parallel slices need.
 
 ## 3. Start builders
 
-For each ready slice, up to 4 at a time, run:
+Don't start a builder on a slice with an open blocking decision. S1 merges before anything fans out,
+so its answers about shared stubs come first. For each ready slice, up to 4 at a time, run:
 
 ```bash
 scripts/spawn-builder.sh S1

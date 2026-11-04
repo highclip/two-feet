@@ -19,7 +19,11 @@ slice=${1:?usage: spawn-builder.sh S<n>}
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 
-title=$(python3 - "$slice" <<'EOF'
+# The venv lives in the main checkout, which this finds even when run from a worktree.
+venv_python="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.venv/bin/python"
+[[ -x $venv_python ]] || { echo "missing $venv_python: run scripts/setup-tools.sh" >&2; exit 1; }
+
+title=$("$venv_python" - "$slice" <<'EOF'
 import sys, yaml
 spec = yaml.safe_load(open("spec/spec.yaml"))
 match = [s for s in spec["slices"] if s["id"] == sys.argv[1]]
@@ -36,9 +40,21 @@ mkdir -p "$(dirname "$wt")"
 if [[ ! -d $wt ]]; then
   git fetch -q origin main 2>/dev/null || true
   git worktree add -q -b "$branch" "$wt" main
-  # .env isn't in git; share the local one so tests can reach Postgres and Elasticsearch.
-  [[ -f .env ]] && ln -sf "$root/.env" "$wt/.env"
+  # .env isn't in git. Each worktree gets its own copy pointing at its own database, index and port.
+  if [[ -f .env ]]; then
+    {
+      grep -v -E '^(DATABASE_URL|ELASTIC_INDEX_PREFIX|PORT|PUBLIC_URL)=' .env || true
+      (cd "$wt" && source scripts/slice-env.sh && printf 'DATABASE_URL=%s\nELASTIC_INDEX_PREFIX=%s\nPORT=%s\nPUBLIC_URL=%s\n' \
+        "$DATABASE_URL" "$ELASTIC_INDEX_PREFIX" "$PORT" "$PUBLIC_URL")
+    } > "$wt/.env"
+    chmod 600 "$wt/.env"
+  fi
+  # Builders can run Playwright themselves only if its package is already there.
+  if [[ -f $wt/app/e2e/package-lock.json ]]; then
+    (cd "$wt/app/e2e" && npm ci --ignore-scripts --silent --no-fund --no-audit)
+  fi
 fi
+scripts/slice-db.sh create "$slice"
 
 agent="builder-$slice"
 prompt="Build slice $slice ($title) from spec/spec.yaml. Follow CLAUDE.md and the builder instructions."

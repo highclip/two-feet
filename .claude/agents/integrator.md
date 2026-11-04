@@ -34,4 +34,4 @@ design if the slice draws UI. Anything else is not ready: leave it.
 
 ## After the merge
 
-Remove the worktree with `git worktree remove ../wt-<id>`, then ask the planner what's unblocked.
+Remove the worktree with `git worktree remove ../worktrees/two-feet-<id>`, then ask the planner what's unblocked.

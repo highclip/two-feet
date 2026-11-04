@@ -4,6 +4,9 @@
 #   scripts/spawn-builder.sh S3            # branch slice/S3-<slug from the spec title>
 #   NO_TMUX=1 scripts/spawn-builder.sh S3  # just create the worktree and print the command
 #
+# Worktrees go in ../worktrees/two-feet-S3 (the ~/csync/worktrees convention); override the
+# parent directory with WORKTREES_DIR.
+#
 # The builder runs as its own top-level Claude Code session, so the Stop hook (harness/gates.sh)
 # gates that slice and nothing else. HX_SLICE tells the hook and hx which slice this is.
 set -euo pipefail
@@ -25,7 +28,8 @@ EOF
 
 slug=$(echo "$title" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g' | cut -c1-32)
 branch="slice/$slice-$slug"
-wt="$root/../wt-$slice"
+wt="${WORKTREES_DIR:-$(cd "$root/.." && pwd)/worktrees}/two-feet-$slice"
+mkdir -p "$(dirname "$wt")"
 
 if [[ ! -d $wt ]]; then
   git fetch -q origin main 2>/dev/null || true

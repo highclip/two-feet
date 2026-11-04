@@ -29,7 +29,7 @@ For each ready slice, up to 4 at a time, run:
 scripts/spawn-builder.sh S1
 ```
 
-That creates `../wt-S1` on `slice/S1-<name>`, and opens a tmux window running a builder session
+That creates `../worktrees/two-feet-S1` on `slice/S1-<name>`, and opens a tmux window running a builder session
 for that slice. Prefer slices on the demo path (`spec.demo_path`) and anything others depend on.
 
 ## 4. Loop until the freeze

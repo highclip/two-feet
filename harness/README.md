@@ -28,7 +28,7 @@ On event day the `kickoff` skill does this for you.
 
 ## Conventions the board relies on
 
-- **One slice, one branch, one worktree.** `scripts/spawn-builder.sh S3` creates `../wt-S3` on `slice/S3-<name>` and starts a builder session there with `HX_SLICE=S3`.
+- **One slice, one branch, one worktree.** `scripts/spawn-builder.sh S3` creates `../worktrees/two-feet-S3` on `slice/S3-<name>` and starts a builder session there with `HX_SLICE=S3`.
 - **One shared log.** `hx` resolves the log through git's common dir, so every worktree writes to the same `<repo>/.harness/events.jsonl`. Override with `HX_LOG`.
 - **Identify the writer.** Set `HX_AGENT=builder-2` in each builder's session, or pass `--agent`.
 - **Only hooks mark gates.** Builders move slices to `building`. `gates.sh` moves them to `gates`, then `review` or back to `building`. An agent can't skip ahead.

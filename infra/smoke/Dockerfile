@@ -1,6 +1,6 @@
 # Same shape the app's Dockerfile should take: static Go binary on distroless, non-root,
 # read-only root filesystem friendly. Version comes from CI (the git sha).
-FROM golang:1.24-bookworm AS build
+FROM golang:1.27-bookworm AS build
 WORKDIR /src
 COPY . .
 # go.sum is generated on the first `go mod tidy` (docs/RUNBOOK.md, rehearsal step 1) and committed.

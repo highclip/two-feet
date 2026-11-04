@@ -329,8 +329,9 @@ function reduce(evs){
       case 'slice.state': {
         const x=slice(e.slice,t);x.state=e.to;x.since=t;
         if(e.to==='building'&&e.agent&&!['gates','integrator','human'].includes(e.agent))x.owner=e.agent;
+        if(e.to==='building'&&e.agent!=='gates')x.reviews={};
         if(e.to==='gates')x.gates={};
-        if(e.to==='review'){x.reviews={};x.lastFail=null;}
+        if(e.to==='review')x.lastFail=Object.entries(x.reviews).filter(([,v])=>v.verdict==='changes').map(([r,v])=>`${r} review: ${v.findings[0]||'changes requested'}`)[0]||null;
         if(e.to==='merged'){x.lastFail=null;x.sha=e.sha||null;s.merges.push(t);}
         break;}
       case 'gate.result': {const x=slice(e.slice,t);x.gates[e.gate]={status:e.status,detail:e.detail};if(e.status==='fail')x.lastFail=`${e.gate}: ${e.detail||'failed'}`;break;}

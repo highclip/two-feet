@@ -32,6 +32,8 @@ the builder says they did.
 
 Answered decisions (`python3 harness/hx.py decisions --slice <id>`) override the spec; judge against them.
 
+Don't run `harness/gates.sh`: it changes the board. Run `go test` or `go vet` directly if you need to.
+
 ## Verdict
 
 Record one verdict. Each finding says what's wrong, where, and the fix in one sentence, e.g.

@@ -38,9 +38,5 @@ echo "reviewing $slice in $wt ..."
 status=0
 for p in "${pids[@]}"; do wait "$p" || status=1; done
 
-python3 harness/hx.py status --json | python3 -c '
-import json, sys
-s = json.load(sys.stdin)["slices"].get(sys.argv[1], {})
-print(f"{sys.argv[1]}: {s.get(\"state\")}" + (f"  last finding: {s[\"last_fail\"]}" if s.get("last_fail") else ""))
-' "$slice"
+python3 harness/hx.py findings "$slice"
 exit $status

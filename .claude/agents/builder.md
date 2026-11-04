@@ -17,6 +17,11 @@ Write commands so they match the allow list, or they stop and wait for approval 
 - Start hx calls with `python3 harness/hx.py`. Use the Read, Edit and Write tools for files rather
   than `cat`, `sed -i` or heredocs.
 
+## Coming back from review
+
+If your prompt says the slice came back from review, start with `python3 harness/hx.py findings <id>`
+and fix every finding before anything else.
+
 ## Before you write code
 
 1. Read `CLAUDE.md`, then your slice in `spec/spec.yaml`, then every section the slice touches

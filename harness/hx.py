@@ -115,7 +115,8 @@ def reduce(events: list) -> dict:
 
     def sl(e):
         return slices.setdefault(e["slice"], {"slice": e["slice"], "title": e["slice"], "state": "planned",
-                                              "since": e["ts"], "owner": None, "last_fail": None})
+                                              "since": e["ts"], "owner": None, "last_fail": None,
+                                              "gate_fail": None, "reviews": {}})
 
     for e in events:
         t = e.get("type")
@@ -129,18 +130,27 @@ def reduce(events: list) -> dict:
             s.update(state=e["to"], since=e["ts"])
             if e["to"] == "building" and e.get("agent") not in (None, "gates", "unknown"):
                 s["owner"] = e["agent"]
+            if e["to"] == "building" and e.get("agent") not in ("gates",):
+                # New work is coming: earlier verdicts no longer describe the code. (A re-run of the
+                # gates on unchanged code must not erase them; found in the dry run.)
+                s["reviews"] = {}
             if e["to"] in ("review", "merged"):
-                s["last_fail"] = None
+                s["gate_fail"] = None
         elif t == "gate.result" and e["status"] == "fail":
-            sl(e)["last_fail"] = f'{e["gate"]}: {e.get("detail") or "failed"}'
-        elif t == "review.verdict" and e["verdict"] == "changes":
-            sl(e)["last_fail"] = f'{e["reviewer"]} review: {(e.get("findings") or ["changes requested"])[0]}'
+            sl(e)["gate_fail"] = f'{e["gate"]}: {e.get("detail") or "failed"}'
+        elif t == "review.verdict":
+            sl(e)["reviews"][e["reviewer"]] = {"verdict": e["verdict"], "findings": e.get("findings") or [],
+                                              "ts": e["ts"]}
         elif t == "decision.request":
             decisions[e["id"]] = {**e, "open": True}
         elif t == "decision.resolved" and e["id"] in decisions:
             decisions[e["id"]].update(open=False, choice=e["choice"])
         elif t == "agent.usage":
             spend += float(e["cost_usd"])
+    for s in slices.values():
+        changes = [f'{r} review: {(v["findings"] or ["changes requested"])[0]}'
+                   for r, v in s["reviews"].items() if v["verdict"] == "changes"]
+        s["last_fail"] = changes[0] if changes else s["gate_fail"]
     return {"run": run, "slices": slices, "decisions": decisions, "spend": round(spend, 2)}
 
 
@@ -236,6 +246,21 @@ def cmd_decisions(a):
     for d in rows:
         answer = f'ANSWERED: {d["choice"]}' if not d["open"] else "OPEN (waiting for the human)"
         print(f'{d["id"]} [{d.get("slice") or "all slices"}] {d["question"]}\n    {answer}')
+
+
+def cmd_findings(a):
+    s = reduce(read_events())["slices"].get(a.slice)
+    if not s:
+        raise SystemExit(f"hx: no slice {a.slice}")
+    print(f'{a.slice} {s["title"]}: {s["state"]}')
+    if s["gate_fail"]:
+        print(f'  gates: {s["gate_fail"]}  (run harness/gates.sh </dev/null for the full report)')
+    if not s["reviews"]:
+        print("  no review verdicts yet")
+    for r, v in s["reviews"].items():
+        print(f'  {r}: {v["verdict"]}')
+        for f in v["findings"]:
+            print(f'    - {f}')
 
 
 def cmd_usage(a):
@@ -385,6 +410,10 @@ def main():
 
     s = sub.add_parser("decide", help="Answer a decision"); s.set_defaults(fn=cmd_decide)
     s.add_argument("id"); s.add_argument("choice")
+
+    s = sub.add_parser("findings", help="Review verdicts and the last gate failure for a slice")
+    s.set_defaults(fn=cmd_findings)
+    s.add_argument("slice")
 
     s = sub.add_parser("decisions", help="List decisions and answers (answers override the spec)")
     s.set_defaults(fn=cmd_decisions)

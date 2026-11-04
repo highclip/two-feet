@@ -4,6 +4,7 @@
 #   scripts/spawn-builder.sh S3            # branch slice/S3-<slug from the spec title>
 #   NO_TMUX=1 scripts/spawn-builder.sh S3  # just create the worktree and print the command
 #   HEADLESS=1 scripts/spawn-builder.sh S3 # run the builder headless in the background; log in .harness/logs/
+#   scripts/spawn-builder.sh S3 --fix      # send the slice back to its builder to fix review findings
 #
 # Worktrees go in ../worktrees/two-feet-S3 (the ~/csync/worktrees convention); override the
 # parent directory with WORKTREES_DIR.
@@ -41,6 +42,10 @@ fi
 
 agent="builder-$slice"
 prompt="Build slice $slice ($title) from spec/spec.yaml. Follow CLAUDE.md and the builder instructions."
+if [[ ${2:-} == --fix ]]; then
+  prompt="Slice $slice ($title) came back from review. Run: python3 harness/hx.py findings $slice
+Fix every finding in your worktree, commit, and stop so the gates and reviewers run again."
+fi
 cmd="cd '$wt' && HX_AGENT=$agent HX_SLICE=$slice scripts/agent.sh builder \"$prompt\""
 
 echo "worktree: $wt"

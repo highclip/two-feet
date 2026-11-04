@@ -33,6 +33,8 @@ you there), so the change to review is `git diff main...HEAD`.
 
 Answered decisions (`python3 harness/hx.py decisions --slice <id>`) override the spec; judge against them.
 
+Don't run `harness/gates.sh`: it changes the board. Run `go test` or `go vet` directly if you need to.
+
 ## Verdict
 
 Record exactly one verdict. Each finding names the file and line, what's wrong, and how to fix it.

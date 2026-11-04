@@ -40,7 +40,9 @@ Every few minutes, or when the human asks:
 2. For each slice in **review** without verdicts: `scripts/review.sh S2` (add `--design` if it draws
    UI). It runs the reviewers headless inside the slice's worktree, in parallel; subagents started
    from the main checkout can't read worktree files.
-3. For each slice with all approvals: run the **integrator** subagent on it, then the **tester**.
+3. For each slice with a `changes` verdict: `scripts/spawn-builder.sh S2 --fix` sends it back to a
+   builder with the findings. For each slice with all approvals: run the **integrator** subagent on
+   it, then the **tester**.
 4. For each slice that's **stuck** (the board marks these): read its last gate failure and tell the
    human in one line what's wrong and what you suggest.
 5. When builders free up, ask the planner what's unblocked and spawn the next builders.

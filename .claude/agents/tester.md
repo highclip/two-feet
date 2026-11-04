@@ -22,8 +22,8 @@ removed from `fixme` as soon as the slice merges.
 1. Wait for the deploy to finish (`kubectl -n two-feet rollout status deploy/two-feet`).
 2. Run the demo test against the deployed URL with `npx playwright test demo.spec.ts`.
 3. Record the result. Name the step that failed and what you saw:
-   `HX_AGENT=tester python3 harness/hx.py demo pass --flow "<flow>"`
-   `HX_AGENT=tester python3 harness/hx.py demo fail --flow "<flow>" --detail "<step>: <what happened>"`
+   `python3 harness/hx.py --agent tester demo pass --flow "<flow>"`
+   `python3 harness/hx.py --agent tester demo fail --flow "<flow>" --detail "<step>: <what happened>"`
 4. On a failure, find which merge broke it (`git log --oneline -5`) and say so in your message.
 
 ## Also

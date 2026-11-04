@@ -23,13 +23,13 @@ design if the slice draws UI. Anything else is not ready: leave it.
 3. On a conflict: resolve it keeping both slices' behavior. If you can't tell which behavior is
    right, abort the merge and ask with `hx ask --slice <id>` and the two options.
 4. Run the full gates on the merged tree from the repo root:
-   `HX_SLICE=<id> harness/gates.sh </dev/null`
+   `harness/gates.sh <id> </dev/null`
    If a gate fails because of the merge, fix it in a commit on main titled `fix merge <id>: ...`.
    If it fails because of the slice itself, undo the merge and send it back:
    `hx state <id> building --reason "<gate> fails after merge: <detail>"`
 5. Push: `git push origin main`. CI builds and deploys.
 6. Record it with the merge commit:
-   `HX_AGENT=integrator python3 harness/hx.py state <id> merged --sha $(git rev-parse --short HEAD)`
+   `python3 harness/hx.py --agent integrator state <id> merged --sha $(git rev-parse --short HEAD)`
 7. Tell the tester to run the demo path.
 
 ## After the merge

@@ -35,7 +35,7 @@ The slice id (from your prompt). Get the diff with
 
 Record exactly one verdict. Each finding names the file and line, what's wrong, and how to fix it.
 
-`HX_AGENT=sec-review python3 harness/hx.py review <id> security approve`
-`HX_AGENT=sec-review python3 harness/hx.py review <id> security changes --finding "internal/web/spots.go:88 returns zone_id of other people in /api/spot; drop it from the response"`
+`python3 harness/hx.py --agent sec-review review <id> security approve`
+`python3 harness/hx.py --agent sec-review review <id> security changes --finding "internal/web/spots.go:88 returns zone_id of other people in /api/spot; drop it from the response"`
 
 Approve only if nothing above is violated. Style isn't your job.

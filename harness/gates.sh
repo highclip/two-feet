@@ -10,14 +10,14 @@
 # The attempt counter below is the loop guard instead. Claude Code also overrides a Stop hook that
 # blocks 8 times in a row with no tool call in between; a builder fixing code always makes tool calls.
 #
-# The slice comes from $HX_SLICE or a branch named slice/S<n>-anything.
+# The slice comes from the first argument, $HX_SLICE, or a branch named slice/S<n>-anything.
 # Gate commands come from <repo>/harness/gates.conf (bash; set GATES=(...) and CMD[name]=...).
 set -uo pipefail
 
 [ -t 0 ] || cat >/dev/null   # drain hook input from stdin
 
 HX=(python3 "$(cd "$(dirname "$0")" && pwd)/hx.py")
-SLICE="${HX_SLICE:-$(git branch --show-current 2>/dev/null | sed -nE 's#^slice/(S[0-9]+).*#\1#p')}"
+SLICE="${1:-${HX_SLICE:-$(git branch --show-current 2>/dev/null | sed -nE 's#^slice/(S[0-9]+).*#\1#p')}}"
 [ -z "$SLICE" ] && exit 0    # not on a slice branch: nothing to gate
 
 GATES=(types lint tests semgrep gitleaks deps e2e)

@@ -3,6 +3,7 @@
 #
 #   scripts/spawn-builder.sh S3            # branch slice/S3-<slug from the spec title>
 #   NO_TMUX=1 scripts/spawn-builder.sh S3  # just create the worktree and print the command
+#   HEADLESS=1 scripts/spawn-builder.sh S3 # run the builder headless in the background; log in .harness/logs/
 #
 # Worktrees go in ../worktrees/two-feet-S3 (the ~/csync/worktrees convention); override the
 # parent directory with WORKTREES_DIR.
@@ -40,10 +41,16 @@ fi
 
 agent="builder-$slice"
 prompt="Build slice $slice ($title) from spec/spec.yaml. Follow CLAUDE.md and the builder instructions."
-cmd="cd '$wt' && HX_AGENT=$agent HX_SLICE=$slice claude --agent builder \"$prompt\""
+cmd="cd '$wt' && HX_AGENT=$agent HX_SLICE=$slice scripts/agent.sh builder \"$prompt\""
 
 echo "worktree: $wt"
 echo "branch:   $branch"
+
+if [[ -n ${HEADLESS:-} ]]; then
+  (cd "$wt" && HX_AGENT=$agent HX_SLICE=$slice HEADLESS=1 nohup scripts/agent.sh builder "$prompt" >/dev/null 2>&1 &)
+  echo "builder started headless; follow it in $(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.harness/logs/"
+  exit 0
+fi
 
 if [[ -n ${NO_TMUX:-} ]] || ! command -v tmux >/dev/null || [[ -z ${TMUX:-} ]]; then
   echo

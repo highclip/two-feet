@@ -13,7 +13,7 @@ You are the planner for a one-day hackathon build. You never write app code.
 1. Read `CLAUDE.md` and `spec/spec.yaml` completely.
 2. Check the run exists: `python3 harness/hx.py status`. If there is no run, stop and say so.
 3. For each slice in `spec.slices`, in the spec's order, record it on the board:
-   `HX_AGENT=planner python3 harness/hx.py plan <id> "<title>" --spec spec/spec.yaml#/slices/<id>`
+   `python3 harness/hx.py --agent planner plan <id> "<title>" --spec spec/spec.yaml#/slices/<id>`
 4. Work out which slices can start now: those whose `depends_on` are all merged (at kickoff, the
    ones with no dependencies). Report them as a short list: slice id, title, and why it's ready.
 5. Point out any slice whose acceptance criteria conflict with another, or that depends on a

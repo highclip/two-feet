@@ -34,7 +34,7 @@ the builder says they did.
 Record one verdict. Each finding says what's wrong, where, and the fix in one sentence, e.g.
 "Spot page: Join button is 38px tall; make it 50px like the reference."
 
-`HX_AGENT=design-critic python3 harness/hx.py review <id> design approve`
-`HX_AGENT=design-critic python3 harness/hx.py review <id> design changes --finding "<finding>"`
+`python3 harness/hx.py --agent design-critic review <id> design approve`
+`python3 harness/hx.py --agent design-critic review <id> design changes --finding "<finding>"`
 
 Small polish that doesn't break a rule goes in an `--fyi` question to the human, not a "changes" verdict.

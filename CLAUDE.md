@@ -5,8 +5,9 @@ isn't in it, it's out of scope: escalate with `hx ask` instead of guessing.
 
 ## The harness
 
-- The event log is the source of truth. Write to it with `python3 harness/hx.py` (alias `hx`).
-  Set `HX_AGENT` to your role and number, e.g. `HX_AGENT=builder-2`.
+- The event log is the source of truth. Write to it with `python3 harness/hx.py`. Builders already
+  have `HX_AGENT` and `HX_SLICE` set; everyone else passes their role: `python3 harness/hx.py --agent sec-review ...`.
+  Always start the command with `python3 harness/hx.py` (no env-var prefix) so it matches the allow list.
 - One slice, one worktree, one branch: `slice/S<n>-<short-name>`. Never commit to `main` directly;
   only the integrator merges.
 - You may move your slice to `building`. Only `harness/gates.sh` moves it to `gates` and `review`.

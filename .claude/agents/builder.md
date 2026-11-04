@@ -41,8 +41,8 @@ and fix every finding before anything else.
 2. Write the smallest code that makes them pass, following the layout in `CLAUDE.md`.
 3. Run `go test -race ./...` from `app/` as you go. Commit small, working steps; uncommitted work fails the gates.
 4. If your slice adds a migration or a live topic, use the `add-migration` or `add-live-topic` skill.
-5. If your slice draws a screen, compare it with the reference: run the app, take a 390x844
-   screenshot with Playwright, and fix anything that doesn't match the tokens.
+5. If your slice draws a screen, compare it with the reference: `scripts/shoot.sh <path>` prints a
+   390x844 screenshot you can open with the Read tool. Fix anything that doesn't match.
 
 ## Finishing
 

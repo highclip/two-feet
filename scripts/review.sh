@@ -19,7 +19,6 @@ wt=$(git worktree list --porcelain | awk -v s="refs/heads/slice/$slice-" '
   /^worktree /{w=substr($0,10)} /^branch /{if (index(substr($0,8), s)==1) print w}' | head -n1)
 [[ -n $wt ]] || { echo "no worktree for $slice (scripts/spawn-builder.sh creates one)" >&2; exit 1; }
 
-port=$((8100 + ${slice#S}))
 pids=()
 
 (cd "$wt" && HX_AGENT=sec-review HEADLESS=1 scripts/agent.sh sec-review \
@@ -29,7 +28,7 @@ pids+=($!)
 
 if [[ $design == --design ]]; then
   (cd "$wt" && HX_AGENT=design-critic HEADLESS=1 scripts/agent.sh design-critic \
-    "Review slice $slice. You are in its worktree. Start the app from app/ on port $port (ADDR=:$port or PORT=$port, whichever the app reads) and stop it when you're done.") \
+    "Review slice $slice. You are in its worktree. Take screenshots with scripts/shoot.sh.") \
     > "/tmp/review-$slice-design.out" 2>&1 &
   pids+=($!)
 fi

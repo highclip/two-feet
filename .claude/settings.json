@@ -52,7 +52,10 @@
       "Bash(tail:*)",
       "Bash(wc:*)",
       "Bash(scripts/review.sh:*)",
-      "Bash(scripts/agent.sh:*)"
+      "Bash(scripts/agent.sh:*)",
+      "Bash(scripts/shoot.sh:*)",
+      "Bash(SIZE=1920x1080 scripts/shoot.sh:*)",
+      "Bash(THEME=dark scripts/shoot.sh:*)"
     ],
     "deny": [
       "Bash(git push --force:*)",

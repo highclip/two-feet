@@ -11,11 +11,12 @@ the builder says they did.
 
 ## Get the screens
 
-1. You run inside the slice's worktree (`scripts/review.sh` starts you there). Start the app from
-   `app/` on the port in your prompt, or use the URL in your prompt.
-2. Screenshot each screen the slice touches with Playwright at 390x844 (1920x1080 for the Wall),
-   in light mode and with `prefers-reduced-motion`.
-3. Open the matching reference in `design/reference/` and look at both.
+1. You run inside the slice's worktree (`scripts/review.sh` starts you there).
+2. Screenshot each screen the slice touches with one command; it builds the app, starts it, shoots
+   and stops it, and prints the PNG paths:
+   `scripts/shoot.sh / /e/cnh/spots/<slug>` (phone, 390x844) · `SIZE=1920x1080 scripts/shoot.sh /e/cnh/wall`
+   · `THEME=dark scripts/shoot.sh /`
+3. Open each PNG with the Read tool, open the matching reference in `design/reference/`, and look at both.
 
 ## Check
 

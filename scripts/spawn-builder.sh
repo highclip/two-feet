@@ -45,6 +45,10 @@ prompt="Build slice $slice ($title) from spec/spec.yaml. Follow CLAUDE.md and th
 if [[ ${2:-} == --fix ]]; then
   prompt="Slice $slice ($title) came back from review. Run: python3 harness/hx.py findings $slice
 Fix every finding in your worktree, commit, and stop so the gates and reviewers run again."
+  # Record it here rather than trusting the agent to: moving to building clears the old verdicts,
+  # which no longer describe the code (the fix builder in the dry run never did it).
+  findings=$(python3 harness/hx.py findings "$slice")
+  python3 harness/hx.py --agent "builder-$slice" state "$slice" building --reason "back from review"
 fi
 cmd="cd '$wt' && HX_AGENT=$agent HX_SLICE=$slice scripts/agent.sh builder \"$prompt\""
 

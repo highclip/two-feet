@@ -1,24 +1,38 @@
 #!/usr/bin/env bash
-# Run every gate for the current slice, record each result, and refuse "done" while any gate fails.
+# Run every gate for a slice, record each result, and refuse "done" while any gate fails.
 #
-# As a Claude Code Stop hook: exit 2 sends the failure output back to the agent,
-# so it keeps fixing instead of finishing. After HX_MAX_ATTEMPTS straight failures (default 5)
-# the slice is marked blocked and escalated to your decisions inbox, which also stops the loop.
+# Two ways to run it:
+#   As the Claude Code Stop hook (.claude/settings.json): on failure it prints
+#     {"decision":"block","reason":"<the gate report>"} and exits 0, so the agent gets the report
+#     and keeps fixing instead of finishing.
+#   By hand or from the integrator: harness/gates.sh S3 </dev/null
+#     prints the report and exits 1 on failure, 0 when every gate passes.
 #
-# This hook deliberately does NOT exit early on `stop_hook_active`. That flag is true on every
-# retry after the first block, and honoring it would end the fix-until-green loop after one try.
-# The attempt counter below is the loop guard instead. Claude Code also overrides a Stop hook that
-# blocks 8 times in a row with no tool call in between; a builder fixing code always makes tool calls.
+# Why JSON and not exit 2: Claude Code treats a Stop hook that exits 2 with "No such file or
+# directory" anywhere in its stderr as a missing hook script, and ignores the block. Gate output
+# contains that phrase whenever a test can't open a file. Found in the dry run on 2026-11-04.
+#
+# After HX_MAX_ATTEMPTS straight failures (default 5) the slice is marked blocked and escalated to
+# the decisions inbox, and the agent is allowed to stop. That counter is the loop guard: the hook
+# deliberately ignores `stop_hook_active`, which is true on every retry after the first block.
 #
 # The slice comes from the first argument, $HX_SLICE, or a branch named slice/S<n>-anything.
 # Gate commands come from <repo>/harness/gates.conf (bash; set GATES=(...) and CMD[name]=...).
 set -uo pipefail
 
-[ -t 0 ] || cat >/dev/null   # drain hook input from stdin
+# Hook mode when Claude Code sends the Stop event on stdin; manual mode otherwise.
+input=""
+[ -t 0 ] || input="$(cat)"
+hook=0
+case $input in *'"hook_event_name"'*) hook=1 ;; esac
 
 HX=(python3 "$(cd "$(dirname "$0")" && pwd)/hx.py")
 SLICE="${1:-${HX_SLICE:-$(git branch --show-current 2>/dev/null | sed -nE 's#^slice/(S[0-9]+).*#\1#p')}}"
 [ -z "$SLICE" ] && exit 0    # not on a slice branch: nothing to gate
+
+# The hook inherits the session's working directory, which moves when the agent runs `cd app`.
+# Gate commands are written relative to the repo root, so always start there.
+cd "$(git rev-parse --show-toplevel)" || exit 0
 
 GATES=(types lint tests semgrep gitleaks deps e2e)
 declare -A CMD=(
@@ -30,7 +44,7 @@ declare -A CMD=(
   [deps]="npm audit --audit-level=high"
   [e2e]="npx playwright test --reporter=line"
 )
-CONF="$(git rev-parse --show-toplevel 2>/dev/null)/harness/gates.conf"
+CONF="$(pwd)/harness/gates.conf"
 # shellcheck disable=SC1090
 [ -f "$CONF" ] && source "$CONF"
 
@@ -57,7 +71,22 @@ counter="$attempts_dir/$SLICE"
 if [ "${#failed[@]}" -eq 0 ]; then
   rm -f "$counter"
   "${HX[@]}" --agent gates state "$SLICE" review --reason "all gates passed"
+  [ "$hook" -eq 1 ] || echo "All gates passed for $SLICE."
   exit 0
+fi
+
+block() { # message: send it back to the agent (hook) or print it and fail (manual)
+  if [ "$hook" -eq 1 ]; then
+    python3 -c 'import json, sys; print(json.dumps({"decision": "block", "reason": sys.argv[1]}))' "$1"
+    exit 0
+  fi
+  printf '%s\n' "$1" >&2
+  exit 1
+}
+
+if [ "$hook" -eq 0 ]; then
+  # A manual run (the integrator, a human) reports without counting toward the builder's attempts.
+  block "Gates failed for $SLICE: ${failed[*]}.$report"
 fi
 
 n=$(( $(cat "$counter" 2>/dev/null || echo 0) + 1 ))
@@ -68,10 +97,10 @@ if [ "$n" -ge "${HX_MAX_ATTEMPTS:-5}" ]; then
   id="$("${HX[@]}" --agent gates ask --slice "$SLICE" --no-wait \
         "$SLICE has failed gates $n times in a row (${failed[*]}). What should happen?" \
         --option "Keep trying" --option "Cut this slice" --option "I'll take it over")"
-  echo "Gates failed $n times in a row. Escalated as $id. Stop work on $SLICE and wait: hx wait $id" >&2
+  # Let the agent stop; it waits for the human from here.
+  echo "Gates failed $n times in a row. Escalated as $id. Stop work on $SLICE and wait: python3 harness/hx.py wait $id" >&2
   exit 0
 fi
 
 "${HX[@]}" --agent gates state "$SLICE" building --reason "${failed[*]} failed"
-echo "Gates failed for $SLICE (attempt $n): ${failed[*]}. Fix these before you finish.$report" >&2
-exit 2
+block "Gates failed for $SLICE (attempt $n of ${HX_MAX_ATTEMPTS:-5}): ${failed[*]}. Fix the cause, not the test, then stop again.$report"

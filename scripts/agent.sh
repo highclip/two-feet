@@ -4,10 +4,11 @@
 #   scripts/agent.sh <agent> "<prompt>"              interactive session
 #   HEADLESS=1 scripts/agent.sh <agent> "<prompt>"   headless; output goes to .harness/logs/
 #
-# Why this exists: Claude Code ignores permissions.allow in .claude/settings.json until you've
-# trusted the directory, trust doesn't carry over from a parent folder, and every builder worktree
-# is a new directory. Passing the same rules with --allowedTools works without trust. Hooks (the
-# gates) run either way.
+# Why this exists: Claude Code ignores permissions.allow in .claude/settings.json until the project
+# is trusted, and trust doesn't carry over from a parent folder. For a worktree, trust is keyed to the
+# main checkout, so trusting ~/csync/two-feet once (run `claude` there and accept) covers the builders.
+# Passing the rules with --allowedTools works either way, so the harness doesn't depend on it.
+# Hooks (the gates) run with or without trust.
 set -euo pipefail
 
 agent=${1:?usage: agent.sh <agent> "<prompt>"}

@@ -24,6 +24,7 @@ design if the slice draws UI. Anything else is not ready: leave it.
    right, abort the merge and ask with `hx ask --slice <id>` and the two options.
 4. Run the full gates on the merged tree from the repo root:
    `harness/gates.sh <id> </dev/null`
+   It exits 1 and prints the report if any gate fails, 0 if all pass.
    If a gate fails because of the merge, fix it in a commit on main titled `fix merge <id>: ...`.
    If it fails because of the slice itself, undo the merge and send it back:
    `hx state <id> building --reason "<gate> fails after merge: <detail>"`

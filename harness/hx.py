@@ -14,6 +14,7 @@ import http.server
 import json
 import os
 import pathlib
+import signal
 import subprocess
 import sys
 import time
@@ -327,6 +328,8 @@ def cmd_serve(a):
 
 def main():
     global AGENT
+    # `hx status | head` should just stop, not print a BrokenPipe traceback.
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     p = argparse.ArgumentParser(prog="hx", description="Harness event log")
     p.add_argument("--agent", help="Who is writing (default $HX_AGENT)")
     sub = p.add_subparsers(dest="cmd", required=True)

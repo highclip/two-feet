@@ -52,6 +52,18 @@ CONF="$(pwd)/harness/gates.conf"
 
 failed=()
 report=""
+
+# Built-in first gate: the gates check the working tree, but the integrator merges commits.
+# Work that passes but isn't committed would merge as nothing (found in the dry run).
+dirty="$(git status --porcelain --untracked-files=normal)"
+if [ -n "$dirty" ]; then
+  "${HX[@]}" --agent gates gate "$SLICE" committed fail --detail "uncommitted changes"
+  failed+=(committed)
+  report+=$'\n\n'"--- committed ---"$'\n'"These changes aren't committed. Commit them from the worktree root with plain git (no cd, no -C): git add -A && git commit -m \"$SLICE: ...\""$'\n'"$(printf '%s\n' "$dirty" | head -n 20)"
+else
+  "${HX[@]}" --agent gates gate "$SLICE" committed pass
+fi
+
 for g in "${GATES[@]}"; do
   out="$(bash -c "${CMD[$g]}" 2>&1)"; code=$?
   if [ "$code" -eq 0 ]; then

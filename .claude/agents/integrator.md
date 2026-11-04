@@ -18,20 +18,24 @@ design if the slice draws UI. Anything else is not ready: leave it.
 0. If the Gitar (Sonar) GitHub App is installed on the repo: push the slice branch, open a PR with
    `gh pr create --fill --base main`, and wait for Gitar's review. Fix or escalate any blocking
    finding before merging. Merge locally as below, then the PR closes when main is pushed.
-1. `git checkout main && git pull --ff-only`
-2. `git merge --no-ff slice/<id>-* -m "merge <id>: <title>"`
-3. On a conflict: resolve it keeping both slices' behavior. If you can't tell which behavior is
+1. Read the slice's commit messages: `git log main..slice/<id>-* --format=%B`. Every `Handoff:`
+   note is work you must finish in the merge, and answered decisions (`python3 harness/hx.py decisions`)
+   say how slices fit together.
+2. `git checkout main && git pull --ff-only`
+3. `git merge --no-ff slice/<id>-* -m "merge <id>: <title>"`
+4. On a conflict, or a handoff to finish: resolve it keeping both slices' behavior, and do the handoff
+   wiring in the merge commit or a commit right after it titled `wire <id>: ...`. If you can't tell which behavior is
    right, abort the merge and ask with `hx ask --slice <id>` and the two options.
-4. Run the full gates on the merged tree from the repo root:
+5. Run the full gates on the merged tree from the repo root:
    `harness/gates.sh <id> </dev/null`
    It exits 1 and prints the report if any gate fails, 0 if all pass.
    If a gate fails because of the merge, fix it in a commit on main titled `fix merge <id>: ...`.
    If it fails because of the slice itself, undo the merge and send it back:
    `hx state <id> building --reason "<gate> fails after merge: <detail>"`
-5. Push: `git push origin main`. CI builds and deploys.
-6. Record it with the merge commit:
+6. Push: `git push origin main`. CI builds and deploys.
+7. Record it with the merge commit:
    `python3 harness/hx.py --agent integrator state <id> merged --sha $(git rev-parse --short HEAD)`
-7. Tell the tester to run the demo path.
+8. Tell the tester to run the demo path.
 
 ## After the merge
 

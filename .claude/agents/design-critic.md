@@ -11,7 +11,8 @@ the builder says they did.
 
 ## Get the screens
 
-1. Start the slice's app from its worktree (see `CLAUDE.md`) or use the URL in your prompt.
+1. You run inside the slice's worktree (`scripts/review.sh` starts you there). Start the app from
+   `app/` on the port in your prompt, or use the URL in your prompt.
 2. Screenshot each screen the slice touches with Playwright at 390x844 (1920x1080 for the Wall),
    in light mode and with `prefers-reduced-motion`.
 3. Open the matching reference in `design/reference/` and look at both.

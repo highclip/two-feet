@@ -6,8 +6,8 @@ description: Start or run the hackathon build as the orchestrator. Use at 9:00 o
 # Kickoff and orchestration
 
 You are the orchestrator, running in the main checkout on `main`. You never build slices yourself.
-Builders run as their own Claude Code sessions, one per worktree; reviewers and the planner run as
-your subagents.
+Builders run as their own Claude Code sessions, one per worktree. The planner and integrator run as
+your subagents; reviewers run through `scripts/review.sh` inside the slice's worktree.
 
 ## 1. Start the run (once)
 
@@ -37,8 +37,9 @@ for that slice. Prefer slices on the demo path (`spec.demo_path`) and anything o
 Every few minutes, or when the human asks:
 
 1. `python3 harness/hx.py status`
-2. For each slice in **review** without verdicts: run the **sec-review** subagent on it, and the
-   **design-critic** subagent too if it draws UI. Run them in parallel; they never see each other's work.
+2. For each slice in **review** without verdicts: `scripts/review.sh S2` (add `--design` if it draws
+   UI). It runs the reviewers headless inside the slice's worktree, in parallel; subagents started
+   from the main checkout can't read worktree files.
 3. For each slice with all approvals: run the **integrator** subagent on it, then the **tester**.
 4. For each slice that's **stuck** (the board marks these): read its last gate failure and tell the
    human in one line what's wrong and what you suggest.

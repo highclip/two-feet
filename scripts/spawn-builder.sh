@@ -47,7 +47,11 @@ echo "worktree: $wt"
 echo "branch:   $branch"
 
 if [[ -n ${HEADLESS:-} ]]; then
-  (cd "$wt" && HX_AGENT=$agent HX_SLICE=$slice HEADLESS=1 nohup scripts/agent.sh builder "$prompt" >/dev/null 2>&1 &)
+  # Redirect the whole subshell, not just the command: otherwise the subshell keeps the caller's
+  # stdout open and `spawn-builder.sh S2 | ...` waits for the builder to finish (found in the dry run).
+  (cd "$wt" && HX_AGENT=$agent HX_SLICE=$slice HEADLESS=1 exec nohup scripts/agent.sh builder "$prompt") \
+    </dev/null >/dev/null 2>&1 &
+  disown 2>/dev/null || true
   echo "builder started headless; follow it in $(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.harness/logs/"
   exit 0
 fi

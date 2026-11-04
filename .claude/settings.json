@@ -50,7 +50,9 @@
       "Bash(grep:*)",
       "Bash(head:*)",
       "Bash(tail:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(scripts/review.sh:*)",
+      "Bash(scripts/agent.sh:*)"
     ],
     "deny": [
       "Bash(git push --force:*)",

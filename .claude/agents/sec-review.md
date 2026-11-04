@@ -11,8 +11,8 @@ not trying to be helpful to the builder; you are trying to find what an attacker
 
 ## Inputs
 
-The slice id (from your prompt). Get the diff with
-`git diff main...slice/<id>-*` (find the branch with `git branch --list "slice/<id>-*"`).
+The slice id (from your prompt). You run inside that slice's worktree (`scripts/review.sh` starts
+you there), so the change to review is `git diff main...HEAD`.
 
 ## Check, in this order
 

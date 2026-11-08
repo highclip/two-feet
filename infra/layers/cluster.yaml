@@ -8,7 +8,7 @@ cluster:
 publicHost: twofeet.highclip.dev            # confirm the domain before creating the tunnel
 
 image:
-  repository: registry.digitalocean.com/highclip/two-feet
+  repository: registry.digitalocean.com/honk-app/two-feet   # the Highclip team's one registry (sfo2)
   # Set by CI (--set image.tag=<git sha>) or by IMAGE_TAG for a manual deploy.sh 50-app.
   tag: ""
 

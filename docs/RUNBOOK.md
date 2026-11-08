@@ -8,7 +8,9 @@ Event: Monday, November 9, 2026. Check-in 9:00, submissions close 17:30 MT. The 
 
 - [ ] **Rules.** Read the hackathon rules on wemakedevs.org. Confirm a prepared harness, spec and
       infrastructure are allowed, and whether app code written before 9:00 is. This repo assumes it isn't.
-- [ ] **DigitalOcean:** `doctl auth init --context highclip`, and know the DOCR registry name.
+- [x] **DigitalOcean:** `doctl auth init --context highclip` (token in 1Password, "DO cn-hackathon
+      token"). The registry is the team's `honk-app` in sfo2, upgraded to Professional for unlimited
+      repositories; downgrade it to Basic after the event. The cluster goes in project `cn-hackathon`.
 - [ ] **Cloudflare:** pick the hostname (`publicHost` in `infra/layers/cluster.yaml`), then
       `cloudflared tunnel create two-feet` and `cloudflared tunnel route dns two-feet <hostname>`.
       Put the tunnel id in `cluster.yaml`.

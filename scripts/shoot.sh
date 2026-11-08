@@ -7,15 +7,22 @@
 #   scripts/shoot.sh / /e/cnh/spots/abc   # several pages
 #   SIZE=1920x1080 scripts/shoot.sh /e/cnh/wall
 #   THEME=dark scripts/shoot.sh /
+#   scripts/shoot.sh --keep-data /       # use the slice's own database instead of an empty one
 #
+# By default the app runs against a fresh, empty copy of the database, so screens aren't buried
+# under test rows (the design critic saw a page at 31% scale in the CLI dry run). Empty states
+# render as a visitor would first see them.
 # Prints the PNG paths; open them with the Read tool. App logs go next to the shots.
 set -euo pipefail
 
-[[ $# -ge 1 ]] || { echo "usage: shoot.sh <path> [path...]" >&2; exit 1; }
+keep_data=""
+[[ ${1:-} == --keep-data ]] && { keep_data=1; shift; }
+[[ $# -ge 1 ]] || { echo "usage: shoot.sh [--keep-data] <path> [path...]" >&2; exit 1; }
 root=$(git rev-parse --show-toplevel)
 cd "$root/app"
 # shellcheck disable=SC1091
 source "$root/scripts/slice-env.sh"
+COMPOSE=(docker compose -f "$root/infra/local/compose.yaml")
 
 mains=(cmd/*/)
 [[ -d ${mains[0]} ]] || { echo "no main package under app/cmd/" >&2; exit 1; }
@@ -27,8 +34,17 @@ mkdir -p "$out"
 port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
 bin="$out/app-under-test"
 go build -o "$bin" "./${mains[0]}"
-# The slice's database starts empty; without this the screens the critic needs can't render.
-if [[ -n ${DATABASE_URL:-} ]]; then "$bin" migrate > "$out/migrate.log" 2>&1 || { tail -n 20 "$out/migrate.log" >&2; exit 1; }; fi
+if [[ -n ${DATABASE_URL:-} ]]; then
+  if [[ -z $keep_data ]]; then
+    db=${DATABASE_URL##*/}; db=${db%%\?*}
+    [[ $db =~ ^[a-z0-9_]+$ ]] || { echo "unexpected database name in DATABASE_URL: $db" >&2; exit 1; }
+    "${COMPOSE[@]}" exec -T -e PGOPTIONS=--client-min-messages=warning postgres psql -U twofeet -d twofeet -v ON_ERROR_STOP=1 -q \
+      -c "DROP DATABASE IF EXISTS ${db}_shots WITH (FORCE)" -c "CREATE DATABASE ${db}_shots" >/dev/null
+    export DATABASE_URL=${DATABASE_URL/\/$db/\/${db}_shots}
+  fi
+  # A fresh database has no tables; without this the screens can't render.
+  "$bin" migrate > "$out/migrate.log" 2>&1 || { tail -n 20 "$out/migrate.log" >&2; exit 1; }
+fi
 PORT=$port ADDR="127.0.0.1:$port" "$bin" > "$out/app.log" 2>&1 &
 pid=$!
 trap 'kill $pid 2>/dev/null || true' EXIT

@@ -67,6 +67,8 @@ app/
   Name them after the criterion: `TestS4_TwentyJoinsAtOnceFillExactlyEight`.
 - Store tests run against the local Postgres from `infra/local/compose.yaml`, using `DATABASE_URL`
   from the environment. Use a transaction per test and roll it back.
+- Playwright runs against the real binary built from `app/cmd/twofeet`. A test-only server is allowed
+  only for what the real binary can't do, and the demo path always runs against the real binary.
 - Playwright servers read `DATABASE_URL` and `PORT` from the environment too, and `app/e2e` depends
   only on `@playwright/test`. The e2e gate installs it; commit the `package-lock.json` it creates.
 - Playwright tests live in `app/e2e/`, run at 390x844 unless the test is about the Wall.

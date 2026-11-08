@@ -33,6 +33,10 @@ before they start. This is the most valuable thing you do.
 3. For each seam the spec doesn't settle, propose who owns it and its exact signature, and that the
    slice merging before the fan-out commits it as a working stub on `main`, so everyone builds against
    real code. Example: "S1 commits `search.Index(ctx, doc)`, a no-op that S5 fills in; S3 and S7 call it."
+   When a seam is about testing, prefer tests that drive the real binary (`app/cmd/twofeet`). Propose a
+   test-only server or route only for something the real binary can't do, and even then the real
+   binary keeps running at least the demo path in e2e. (In the CLI dry run, a test server took over
+   every Playwright spec, and no gate exercised the production server any more.)
 4. That adds to a slice's scope, so the human decides. Ask once per seam and don't wait, tagging the slice
    that would own the stub so it stays blocked until the answer is in:
    `python3 harness/hx.py --agent planner ask --slice S1 --no-wait "<seam and proposal>" --option "<proposal>" --option "<alternative>"`

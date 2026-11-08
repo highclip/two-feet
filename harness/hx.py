@@ -44,6 +44,7 @@ ENUMS = {
 }
 STUCK_MIN = {"building": 20, "gates": 10, "review": 15, "blocked": 5}
 ACTIVE = ("building", "gates", "review", "blocked")
+CHOICE_MAX = 2000  # 300 cut a planner note off mid-word, and the builder couldn't recover the rest
 # Generated or lock files overlap all the time and say nothing about two slices' approaches.
 NOISE = ("_templ.go", "go.sum", "package-lock.json", ".gitkeep")
 SPEC_TO_JSON = r"""
@@ -240,8 +241,9 @@ def cmd_ask(a):
         fields["id"] = f"D{n}"
 
     blocking = not a.fyi
-    ev = emit({"type": "decision.request", "slice": a.slice, "question": a.question,
-               "options": a.option, "blocking": blocking}, fill=next_id)
+    # With --no-wait nobody is left to move the slice back when the answer comes, so record where it was.
+    ev = emit({"type": "decision.request", "slice": a.slice, "question": a.question, "options": a.option,
+               "blocking": blocking, "prior_state": prior if blocking and a.no_wait else None}, fill=next_id)
     if not blocking or a.no_wait:
         if blocking and a.slice:
             emit({"type": "slice.state", "slice": a.slice, "to": "blocked", "reason": ev["id"]})
@@ -256,6 +258,19 @@ def cmd_ask(a):
     if a.slice and prior and prior != "blocked":
         emit({"type": "slice.state", "slice": a.slice, "to": prior, "reason": f"{ev['id']} answered"})
     print(choice)
+
+
+def unblock_after_answer(decision_id: str):
+    """Put a slice back once the last --no-wait question holding it is answered."""
+    st = reduce(read_events())
+    d = st["decisions"][decision_id]
+    s = st["slices"].get(d.get("slice"))
+    if not s or not d.get("prior_state") or s["state"] != "blocked":
+        return
+    if any(o["open"] and o.get("blocking", True) and o.get("slice") == d["slice"] for o in st["decisions"].values()):
+        return
+    prior = d["prior_state"] if d["prior_state"] != "blocked" else "planned"
+    emit({"type": "slice.state", "slice": d["slice"], "to": prior, "reason": f"{decision_id} answered", "agent": "human"})
 
 
 def cmd_wait(a):
@@ -274,6 +289,7 @@ def cmd_decide(a):
     if not d["open"]:
         raise SystemExit(f"hx: {a.id} was already answered: {d['choice']}")
     emit({"type": "decision.resolved", "id": a.id, "choice": a.choice, "agent": "human"})
+    unblock_after_answer(a.id)
 
 
 def cmd_decisions(a):
@@ -334,7 +350,7 @@ def cmd_spec(a):
 
 
 def record_choice(slice_id, text, why=None, sha=None, source="note", agent=None):
-    fields = {"type": "decision.made", "slice": slice_id, "text": text[:300], "why": why[:300] if why else None,
+    fields = {"type": "decision.made", "slice": slice_id, "text": text[:CHOICE_MAX], "why": why[:CHOICE_MAX] if why else None,
               "sha": sha, "source": source}
     if agent:
         fields["agent"] = agent
@@ -355,9 +371,9 @@ def cmd_harvest(a):
             if not line.startswith("Decision:"):
                 continue
             text, _, why = line[len("Decision:"):].strip().partition(" Why: ")
-            if text and (a.slice, text[:300]) not in seen:
+            if text and (a.slice, text[:CHOICE_MAX]) not in seen:
                 record_choice(a.slice, text, why or None, sha=sha, source="commit", agent=f"builder-{a.slice}")
-                seen.add((a.slice, text[:300]))
+                seen.add((a.slice, text[:CHOICE_MAX]))
 
 
 def overlaps(slice_id: str, st: dict) -> dict:
@@ -517,6 +533,7 @@ def cmd_serve(a):
             if str(body.get("choice")) not in d["options"]:
                 return self.send(400, "choice is not one of the options")
             ev = emit({"type": "decision.resolved", "id": d["id"], "choice": str(body["choice"]), "agent": "human"})
+            unblock_after_answer(d["id"])
             self.send(200, json.dumps(ev), "application/json")
 
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), Handler)

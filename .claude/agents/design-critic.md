@@ -16,6 +16,8 @@ the builder says they did.
    and stops it, and prints the PNG paths:
    `scripts/shoot.sh / /e/cnh/spots/<slug>` (phone, 390x844) · `SIZE=1920x1080 scripts/shoot.sh /e/cnh/wall`
    · `THEME=dark scripts/shoot.sh /`
+   Shots start from an empty database, so you see each screen's empty state as a first visitor
+   would. Add `--keep-data` as the first argument to use the slice's database and see it with data.
 3. Open each PNG with the Read tool, open the matching reference in `design/reference/`, and look at both.
 
 ## Check

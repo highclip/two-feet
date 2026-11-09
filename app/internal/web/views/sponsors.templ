@@ -1,0 +1,66 @@
+package views
+
+import (
+	"fmt"
+
+	"github.com/highclip/two-feet/app/internal/store"
+)
+
+// SponsorForm is a rep's edit form and what was typed into it.
+type SponsorForm struct {
+	Name   string
+	Solves string
+	Action string
+	Home   string
+	Error  string
+	Saved  bool
+}
+
+// WalkLabel is a walk time as people say it.
+func WalkLabel(minutes int) string {
+	if minutes <= 0 {
+		return "Right here"
+	}
+	return fmt.Sprintf("%d min walk", minutes)
+}
+
+// BoothLine is a sponsor match's logistics: the booth spot and the walk to it, leaving out whatever
+// isn't known. It is empty for a sponsor with no booth.
+func BoothLine(b store.Booth) string {
+	if b.SpotName == "" {
+		return ""
+	}
+	if b.WalkMinutes == nil {
+		return b.SpotName
+	}
+	return b.SpotName + " · " + WalkLabel(*b.WalkMinutes)
+}
+
+templ SponsorEdit(p Page, form SponsorForm) {
+	@Layout(p) {
+		<section class="intro">
+			<span class="eyebrow">Your sponsor</span>
+			<h1 class="title">{ form.Name }</h1>
+			<p class="lede">Two Feet uses this line to point people with matching problems at your booth.</p>
+		</section>
+		<form class="card form" method="post" action={ templ.SafeURL(form.Action) }>
+			if form.Error != "" {
+				<p class="form-error" role="alert">{ form.Error }</p>
+			}
+			if form.Saved {
+				<p class="form-saved" role="status">Saved. Matches use your new words within a few seconds.</p>
+			}
+			<label class="field">
+				<span class="field-label">What you solve</span>
+				<textarea class="input textarea" name="solves" maxlength="200" rows="4" required>{ form.Solves }</textarea>
+			</label>
+			<button class="button" type="submit">Save</button>
+		</form>
+		<a class="link-row" href={ templ.SafeURL(form.Home) }>Back to home</a>
+	}
+}
+
+// SponsorEditLink takes a rep from the home screen to their sponsor.
+templ SponsorEditLink(url string) {
+	<a class="link-row" href={ templ.SafeURL(url) }>Edit what your sponsor solves</a>
+}

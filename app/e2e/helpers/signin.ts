@@ -17,6 +17,16 @@ export async function enterEmailAndCode(page: Page, email: string): Promise<void
   await page.keyboard.type('424242', { delay: 50 });
 }
 
+// Creates a Clerk user with roles already set, the way an organizer sets them in the dashboard.
+export async function createClerkUser(email: string, publicMetadata: Record<string, string>): Promise<void> {
+  const res = await fetch('https://api.clerk.com/v1/users', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email_address: [email], public_metadata: publicMetadata, skip_password_requirement: true }),
+  });
+  if (!res.ok) throw new Error(`create Clerk user: ${res.status} ${await res.text()}`);
+}
+
 // Deletes the Clerk user a test created: the development instance has a cap on users, and every
 // builder's gate runs would otherwise fill it.
 export async function deleteClerkUser(email: string): Promise<void> {

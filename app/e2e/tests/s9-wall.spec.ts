@@ -4,13 +4,6 @@ import { type Browser, type BrowserContext, expect, type Page, test } from '@pla
 import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin';
 
 const WALL = '/e/cnh/wall';
-const SPOTS = [
-  'Picnic table · Patio · seats 8',
-  'Couches · Lounge · seats 8',
-  'Window table · Main room · seats 6',
-  'Kitchen island · Kitchen · seats 6',
-  'Long table · Main room · seats 10',
-];
 
 // A form time some minutes from now, in the event's timezone.
 function denverIn(minutes: number): string {
@@ -36,9 +29,15 @@ async function signedIn(browser: Browser, email: string, name: string): Promise<
   return { context, page };
 }
 
+// The venue's spots, as the create form offers them, so the test follows whatever layout is seeded.
+async function venueSpots(page: Page): Promise<string[]> {
+  await page.goto('/e/cnh/spaces/new');
+  return page.getByLabel('Where').locator('option').allTextContents();
+}
+
 // Starts a space soon, on the first spot that's free, so a kept database can't fail the test.
-async function startSpace(page: Page, title: string): Promise<string> {
-  for (const spot of SPOTS) {
+async function startSpace(page: Page, title: string, spots: string[]): Promise<string> {
+  for (const spot of spots) {
     await page.goto('/e/cnh/spaces/new');
     await page.getByLabel("What's it about?").fill(title);
     await page.getByLabel('Where').selectOption({ label: spot });
@@ -77,7 +76,8 @@ test.describe('S9 the Wall', () => {
     const title = `Wall check ${Date.now()}: a title long enough that it has to be cut to two lines`.slice(0, 80);
     const host = await signedIn(browser, emails.host, 'Zelda Quimby');
     const guest = await signedIn(browser, emails.guest, 'Ansel Rosario');
-    const spaceUrl = await startSpace(host.page, title);
+    const spots = await venueSpots(host.page);
+    const spaceUrl = await startSpace(host.page, title, spots);
 
     const wall = await openWall(browser);
     const note = wall.page.locator('.wall-note', { hasText: title.slice(0, 12) });
@@ -99,7 +99,7 @@ test.describe('S9 the Wall', () => {
     expect(fit.width).toBeLessThanOrEqual(1920);
     expect(fit.height).toBeLessThanOrEqual(1080);
     expect(fit.slots).toBe(8);
-    expect(fit.rows).toBe(SPOTS.length);
+    expect(fit.rows).toBe(spots.length);
     expect(fit.bottom).toBeLessThanOrEqual(1080);
     expect(fit.lanes).toBe(true);
 

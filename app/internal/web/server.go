@@ -58,7 +58,7 @@ type Server struct {
 	eventSlug string
 	publicURL string
 	clerkKey  string
-	ready    func(context.Context) error
+	ready     func(context.Context) error
 	undo      *undoWindows
 	wallTags  *wallTagStrip
 }

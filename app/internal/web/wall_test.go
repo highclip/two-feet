@@ -51,16 +51,25 @@ func TestS9_WallShowsTheNextTwoHoursOfEveryZoneInEightFifteenMinuteSlots(t *test
 	inside := f.spaceForm(t, "Long table", soon(t, 30), "30", "8")
 	inside.Set("title", "Inside the window")
 	f.createSpace(t, "user_host", inside)
-	beyond := f.spaceForm(t, "Couches", soon(t, 150), "30", "8")
+	beyond := f.spaceForm(t, "Long table", soon(t, 150), "30", "8")
 	beyond.Set("title", "Beyond the window")
 	f.createSpace(t, "user_host", beyond)
 
 	body := f.wallBody(t, wallPath)
 
 	assert.Equal(t, 8, strings.Count(body, "data-slot"))
-	for _, want := range []string{"Long table", "Main room", "Window table", "Kitchen island", "Kitchen", "Couches", "Lounge", "Picnic table", "Patio"} {
-		assert.Contains(t, body, want)
+	event, err := f.store.EventBySlug(context.Background(), "cnh")
+	require.NoError(t, err)
+	spots, err := f.store.Spots(context.Background(), event.ID)
+	require.NoError(t, err)
+	zones, err := f.store.ZoneNames(context.Background(), event.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, spots)
+	for _, spot := range spots {
+		assert.Contains(t, body, spot.Name)
+		assert.Contains(t, body, zones[spot.ZoneID])
 	}
+	assert.Equal(t, len(spots), strings.Count(body, `class="wall-spot"`))
 	assert.Contains(t, body, "Inside the window")
 	assert.Contains(t, body, "wall-note-title")
 	assert.NotContains(t, body, "Beyond the window")
@@ -92,7 +101,7 @@ func TestS9_SignupAnywhereChangesTheWallsCountWithinTwoSeconds(t *testing.T) {
 func TestS9_WallShowsNoPersonNamesOnlyTitlesSpotsAndCounts(t *testing.T) {
 	f := newFixture(t)
 	f.onboard(t, "user_host", "Zelda Quimby")
-	path := f.createSpace(t, "user_host", f.spaceForm(t, "Couches", soon(t, 30), "30", "8"))
+	path := f.createSpace(t, "user_host", f.spaceForm(t, "Long table", soon(t, 30), "30", "8"))
 	f.onboard(t, "user_a", "Ansel Rosario")
 	require.Equal(t, http.StatusSeeOther, f.post(path+"/join", nil, as("user_a")).Code)
 	require.Equal(t, http.StatusSeeOther, f.post("/e/cnh/posts",
@@ -103,7 +112,7 @@ func TestS9_WallShowsNoPersonNamesOnlyTitlesSpotsAndCounts(t *testing.T) {
 			for _, target := range []string{wallPath, boardPath} {
 				body := f.wallBody(t, target, opts...)
 				assert.Contains(t, body, "Collector tuning")
-				assert.Contains(t, body, "Couches")
+				assert.Contains(t, body, "Long table")
 				assert.Contains(t, body, "2 of 8")
 				assert.NotContains(t, body, "Zelda")
 				assert.NotContains(t, body, "Quimby")

@@ -55,7 +55,9 @@
       "Bash(scripts/agent.sh:*)",
       "Bash(scripts/shoot.sh:*)",
       "Bash(SIZE=1920x1080 scripts/shoot.sh:*)",
-      "Bash(THEME=dark scripts/shoot.sh:*)"
+      "Bash(THEME=dark scripts/shoot.sh:*)",
+      "Bash(curl -s https://twofeet.highclip.dev/healthz)",
+      "mcp__dash0__*"
     ],
     "deny": [
       "Bash(git push --force:*)",

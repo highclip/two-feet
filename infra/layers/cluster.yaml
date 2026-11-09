@@ -19,4 +19,6 @@ dash0:
   # app.dash0.com → Organization settings → Endpoints. Region-specific.
   endpoint: ingress.us-west-2.aws.dash0.com:4317   # confirm your region
   apiEndpoint: https://api.us-west-2.aws.dash0.com # confirm your region
-  dataset: two-feet
+  # Technical id, not the display name. The operator's cluster data lands here too, so app traces
+  # and cluster events can be read together.
+  dataset: default

@@ -16,6 +16,7 @@ import (
 
 	"github.com/highclip/two-feet/app/internal/live"
 	"github.com/highclip/two-feet/app/internal/search"
+	"github.com/highclip/two-feet/app/internal/store/storetest"
 	"github.com/highclip/two-feet/app/internal/web"
 )
 
@@ -186,6 +187,8 @@ func TestWallTickerShowsTheLatestPostsAsPlainText(t *testing.T) {
 
 func TestWallNamesTheNextActionWhenNothingIsOn(t *testing.T) {
 	f := newFixture(t)
+	// e2e runs commit real posts to this database, and they stay open for 3 hours. Rolled back with the test.
+	storetest.Exec(t, f.store, `UPDATE post SET status = 'expired' WHERE status = 'open'`)
 
 	body := f.wallBody(t, boardPath)
 

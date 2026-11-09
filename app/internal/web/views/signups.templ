@@ -1,0 +1,123 @@
+package views
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/highclip/two-feet/app/internal/store"
+)
+
+// SpaceToast is the toast a signup action leaves behind. UndoURL is empty when there's nothing to
+// take back; Clear empties the toast area after an Undo.
+type SpaceToast struct {
+	Text    string
+	UndoURL string
+	Clear   bool
+}
+
+// ordinal reads like 1st, 2nd, 3rd, 11th.
+func ordinal(n int) string {
+	suffix := "th"
+	if n%100 < 11 || n%100 > 13 {
+		switch n % 10 {
+		case 1:
+			suffix = "st"
+		case 2:
+			suffix = "nd"
+		case 3:
+			suffix = "rd"
+		}
+	}
+	return fmt.Sprintf("%d%s", n, suffix)
+}
+
+func joinLabel(sp store.Space) string {
+	free := sp.Capacity - sp.Going
+	switch {
+	case free <= 0 || sp.Waitlist > 0:
+		return "Join the waitlist"
+	case free == 1:
+		return "Join · 1 seat left"
+	}
+	return fmt.Sprintf("Join · %d seats left", free)
+}
+
+func overlapLine(o *store.OverlapError, loc *time.Location) string {
+	if o.Hosting {
+		return fmt.Sprintf("You're hosting %s at %s. Cancel it first if you'd rather join this one.", o.Title, clock(o.StartsAt, loc))
+	}
+	return fmt.Sprintf("You're going to %s at %s. Leave it and join this one?", o.Title, clock(o.StartsAt, loc))
+}
+
+func finished(v SpaceView) bool {
+	return !v.Now.Before(v.Space.EndsAt())
+}
+
+// joinControl is the viewer's own part of a space: join, leave, their place in line, or the question
+// about a space that overlaps. The overlap prompt is inline because there are no confirmation
+// dialogs (delight.rules).
+templ joinControl(v SpaceView) {
+	if v.Problem != "" {
+		<p class="form-error" role="alert">{ v.Problem }</p>
+	}
+	if v.Overlap != nil {
+		<p class="seat-line" role="alert">{ overlapLine(v.Overlap, v.Location) }</p>
+		<div class="note-actions">
+			if !v.Overlap.Hosting {
+				<form method="post" action={ templ.SafeURL(v.BaseURL + "/join") } hx-post={ v.BaseURL + "/join" } hx-target="closest .note-live" hx-swap="innerHTML">
+					<input type="hidden" name="leave" value={ v.Overlap.SpaceID }/>
+					<button class="button button-action" type="submit">Leave it and join</button>
+				</form>
+			}
+			<a class="button button-quiet" href={ templ.SafeURL(v.BaseURL) } hx-get={ v.SeatsURL } hx-target="closest .note-live" hx-swap="innerHTML">Keep things as they are</a>
+		</div>
+	} else if v.Space.Status != store.SpaceOpen || finished(v) {
+	} else if v.Signup.Status == store.SignupGoing {
+		if !v.IsHost {
+			<p class="seat-line seat-joined">You're in!</p>
+			@leaveForm(v, "Leave")
+		}
+	} else if v.Signup.Status == store.SignupWaitlist {
+		<p class="seat-line">Full. You're { ordinal(v.Signup.WaitlistPlace) } on the waitlist; we'll move you in if a seat opens.</p>
+		@leaveForm(v, "Leave the waitlist")
+	} else if !v.Space.Joinable(v.Now) {
+		<p class="seat-line">This one's been going a while, so it's closed to new people.</p>
+	} else if v.SignInURL != "" {
+		<a class="button button-action join-button" href={ templ.SafeURL(v.SignInURL) }>{ joinLabel(v.Space) }</a>
+	} else if v.CanJoin {
+		<form class="join-form" method="post" action={ templ.SafeURL(v.BaseURL + "/join") } hx-post={ v.BaseURL + "/join" } hx-target="closest .note-live" hx-swap="innerHTML">
+			<button class="button button-action join-button" type="submit">{ joinLabel(v.Space) }</button>
+		</form>
+	}
+}
+
+templ leaveForm(v SpaceView, label string) {
+	<form class="join-form" method="post" action={ templ.SafeURL(v.BaseURL + "/leave") } hx-post={ v.BaseURL + "/leave" } hx-target="closest .note-live" hx-swap="innerHTML">
+		<button class="button button-quiet join-button" type="submit">{ label }</button>
+	</form>
+}
+
+// toastBody is the inside of a signup toast.
+templ toastBody(t SpaceToast) {
+	<div class="toast" role="status" data-expire-ms="5000">
+		<span>{ t.Text }</span>
+		if t.UndoURL != "" {
+			<form method="post" action={ templ.SafeURL(t.UndoURL) } hx-post={ t.UndoURL } hx-target=".note-live" hx-swap="innerHTML">
+				<button class="toast-action" type="submit">Undo</button>
+			</form>
+		}
+	</div>
+}
+
+// SeatsResponse answers an htmx signup action: the live section, plus the toast out of band, so a
+// count arriving over SSE and replacing the live section can't take the Undo away with it.
+templ SeatsResponse(v SpaceView, t SpaceToast) {
+	@SpaceSeats(v)
+	if t.Clear || t.Text != "" {
+		<div hx-swap-oob="innerHTML:.toasts">
+			if t.Text != "" {
+				@toastBody(t)
+			}
+		</div>
+	}
+}

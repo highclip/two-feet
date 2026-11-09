@@ -31,6 +31,9 @@ templ Layout(p Page) {
 				<script async crossorigin="anonymous" data-clerk-publishable-key={ p.ClerkKey } src={ p.ClerkScript }></script>
 			}
 			<script defer src={ static(p, "app.js") }></script>
+			if p.LiveURL != "" {
+				<script defer src={ static(p, "live.js") }></script>
+			}
 		</head>
 		<body
 			data-signed-in={ boolAttr(p.SignedIn) }
@@ -55,6 +58,7 @@ templ Layout(p Page) {
 			</main>
 			if p.LiveURL != "" {
 				<div class="toasts" sse-swap="notice" aria-live="polite"></div>
+				<p class="live-note" data-live-note role="status" hidden>Reconnecting…</p>
 			}
 		</body>
 	</html>

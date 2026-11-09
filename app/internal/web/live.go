@@ -14,10 +14,16 @@ import (
 )
 
 const (
-	heartbeatEvery  = 15 * time.Second
 	liveWriteWindow = 20 * time.Second // drops a client that has stopped reading
 	maxTopics       = 16
+
+	// heartbeatFrame is a comment for proxies and an event for the page, because EventSource never
+	// shows comments to JavaScript and live.js needs to notice a connection gone silent.
+	heartbeatFrame = ": heartbeat\nevent: heartbeat\ndata: 1\n\n"
 )
+
+// heartbeatEvery is a var so a test can shorten it.
+var heartbeatEvery = 15 * time.Second
 
 var topicID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
@@ -74,7 +80,7 @@ func (s *Server) liveStream(w http.ResponseWriter, r *http.Request) {
 			err = writeFragment(w, f)
 		case <-beat.C:
 			_ = rc.SetWriteDeadline(time.Now().Add(liveWriteWindow))
-			_, err = fmt.Fprint(w, ": heartbeat\n\n")
+			_, err = fmt.Fprint(w, heartbeatFrame)
 		}
 		if err != nil {
 			return

@@ -85,22 +85,15 @@ func (h *Hub) Subscribe(ctx context.Context, topics []string) (<-chan Fragment, 
 	}
 	h.mu.Unlock()
 
-	done := make(chan struct{})
+	// One timer callback per subscriber instead of a watching goroutine keeps a stream's cost down
+	// with hundreds of open pages.
 	var once sync.Once
-	cancel := func() {
-		once.Do(func() {
-			close(done)
-			h.remove(s)
-		})
+	remove := func() { once.Do(func() { h.remove(s) }) }
+	stop := context.AfterFunc(ctx, remove)
+	return s.ch, func() {
+		stop()
+		remove()
 	}
-	go func() {
-		select {
-		case <-ctx.Done():
-			cancel()
-		case <-done:
-		}
-	}()
-	return s.ch, cancel
 }
 
 // remove unsubscribes s and closes its channel, once, under the write lock so no Publish can be

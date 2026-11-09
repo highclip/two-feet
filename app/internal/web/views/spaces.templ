@@ -45,6 +45,15 @@ type SpaceView struct {
 	CanManage bool
 	BaseURL   string
 	SeatsURL  string
+
+	// For the viewer's own join control (S4).
+	IsHost    bool
+	CanJoin   bool                // the role may join
+	SignInURL string              // set when the viewer must sign in or choose a name first
+	Signup    store.Signup        // the viewer's own place, if any
+	Overlap   *store.OverlapError // ask before moving them
+	Problem   string              // one sentence, when an action was refused
+	Toast     SpaceToast          // shown on a full page load after leaving
 }
 
 var minuteChoices = []string{"15", "30", "45"}
@@ -180,6 +189,7 @@ templ SpaceSeats(v SpaceView) {
 			@SeatCount(v.Space.Going, v.Space.Capacity, v.Space.Waitlist, false)
 		</div>
 	}
+	@joinControl(v)
 	if v.CanManage && v.Space.Status == store.SpaceOpen {
 		<div class="note-actions">
 			<a class="button button-quiet" href={ templ.SafeURL(v.BaseURL + "/edit") }>Edit</a>
@@ -232,6 +242,9 @@ templ SpacePage(p Page, v SpaceView, undo bool, startURL string) {
 					<button class="toast-action" type="submit">Undo</button>
 				</form>
 			</div>
+		}
+		if v.Toast.Text != "" {
+			@toastBody(v.Toast)
 		}
 	}
 }

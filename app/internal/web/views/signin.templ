@@ -80,8 +80,8 @@ templ Landing(p Page, v LandingView) {
 	}
 }
 
-// Home is the signed-in home screen until S8 builds the near-me feed.
-templ Home(p Page, person store.Person, startURL, discoverableURL, sponsorEditURL, searchURL string, composer PostComposer, zone ZonePrompt) {
+// Home is the signed-in home screen.
+templ Home(p Page, person store.Person, discoverableURL, sponsorEditURL, searchURL string, composer PostComposer, zone ZonePrompt, feed FeedView) {
 	@Layout(p) {
 		<section class="intro">
 			<h1 class="title">Hi, { person.DisplayName }</h1>
@@ -96,10 +96,8 @@ templ Home(p Page, person store.Person, startURL, discoverableURL, sponsorEditUR
 		@ZoneCheckIn(zone)
 		@PostForm(p, composer)
 		@SearchBox(searchURL)
-		<section class="empty">
-			<p class="empty-text">Nothing here yet. Whoever comes are the right people. Start one.</p>
-			<a class="button button-action" href={ templ.SafeURL(startURL) }>Start a space</a>
-		</section>
+		@Feed(feed)
+		<script defer src={ static(p, "countdown.js") }></script>
 		@DiscoverableToggle(discoverableURL, person.Discoverable)
 		if sponsorEditURL != "" {
 			@SponsorEditLink(sponsorEditURL)

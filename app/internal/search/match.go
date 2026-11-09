@@ -236,8 +236,9 @@ func (h *hydration) walk(zoneID string) *int {
 	return &minutes
 }
 
-// startsIn rounds up, so that a space six minutes away doesn't read five a moment after it's seeded.
-func startsIn(startsAt, now time.Time) int {
+// StartsIn is the minutes until a space starts, 0 once it has. It rounds up, so that a space six
+// minutes away doesn't read five a moment after it's seeded.
+func StartsIn(startsAt, now time.Time) int {
 	return max(0, int(math.Ceil(startsAt.Sub(now).Minutes())))
 }
 
@@ -268,7 +269,7 @@ func (h *hydration) spaces(ctx context.Context) ([]Match, error) {
 		if len(reasons) == 0 {
 			continue
 		}
-		starts := startsIn(sp.StartsAt, h.now)
+		starts := StartsIn(sp.StartsAt, h.now)
 		out = append(out, Match{
 			Kind: TypeSpace, TargetID: sp.ID, Score: hit.Score,
 			Reasons:         reasons,

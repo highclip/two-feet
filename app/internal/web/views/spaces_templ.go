@@ -1042,7 +1042,7 @@ func SpaceFormPage(p Page, form SpaceForm) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, " min</p></div><button type=\"button\" class=\"quick-change\" data-quick-change>Change</button></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "-minute space</p></div><button type=\"button\" class=\"quick-change\" data-quick-change>Change</button></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

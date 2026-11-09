@@ -372,7 +372,7 @@ details .zone-choices { margin-top: var(--gap); }
 .starts { font-weight: 700; }
 .starts-soon { padding: 1px 8px; border-radius: var(--radius-pill); background: var(--action); color: var(--on-action); }
 .starts-now { animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: 0.55; } }
+@keyframes pulse { 50% { opacity: 0.75; } }
 .match-seats { gap: 8px; }
 .match-action { display: flex; }
 .match-action .button, a.match-action { flex: 1; }
@@ -393,6 +393,10 @@ details .zone-choices { margin-top: var(--gap); }
   border-radius: var(--radius-pill);
   font-weight: 700; text-decoration: none; white-space: nowrap;
 }
+
+/* The near-me feed: match cards whose titles link to their space. */
+.feed-hint { margin: 0; }
+.match-title a { display: flex; align-items: center; min-height: var(--tap); color: var(--ink); text-decoration: none; }
 
 /* Search. */
 .search { display: flex; gap: 8px; }

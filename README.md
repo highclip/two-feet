@@ -6,8 +6,14 @@ people, the hallway conversations and the sponsor booths that can help, close to
 
 Built at the Cloud Native Hackathon with Kelsey Hightower, Salt Lake City, November 9, 2026.
 
-> **Before 9:00 on the 9th, `app/` is empty on purpose.** Everything else here is preparation:
-> the build harness, the spec, the design and the infrastructure. The app itself gets built on the day.
+> **What was prepared and what was built today.** The spec, design tokens and references, the agent
+> harness and the infrastructure were prepared before the event (commits from November 4 to 8). All
+> application code in `app/` was written during the hackathon on November 9, starting at 10:37 MT.
+
+## Try it
+
+Live at https://twofeet.highclip.dev/e/cnh. Scan a table's QR code or open that link, sign in with an
+email code, and post what you're stuck on. The Wall, for a projector, is at `/e/cnh/wall`.
 
 ## What's in here
 
@@ -24,7 +30,7 @@ infra/layers/         Numbered skaffold/Helm layers: operators, platform, app
 infra/smoke/          Throwaway service that proves the whole pipeline before Monday
 scripts/              agent.sh (run any agent), spawn-builder.sh, review.sh, shoot.sh (screenshots), setup-tools.sh
 docs/RUNBOOK.md       Before-Monday checklist, how the loop runs, and the day-of timeline
-app/                  Empty until the event starts
+app/                  The application, built on November 9
 ```
 
 ## Stack
@@ -46,12 +52,42 @@ Radar watches the cluster.
 
 Details: [`harness/README.md`](harness/README.md) · [`docs/RUNBOOK.md`](docs/RUNBOOK.md)
 
-## Local quick start
+## Run it locally
+
+You need Go 1.27, Node 20+, Docker, and a Clerk development application with email-code sign-in.
 
 ```bash
-scripts/setup-tools.sh                 # Go tools, gitleaks, Playwright
-cp infra/local/.env.example .env       # fill in Clerk keys; the rest works locally
+scripts/setup-tools.sh                          # Go tools, gitleaks, Playwright
+cp infra/local/.env.example .env                # add your Clerk test keys; the rest works locally
 docker compose -f infra/local/compose.yaml up -d
-alias hx="python3 harness/hx.py"
-hx serve                               # the board
+cd app
+set -a; source ../.env; set +a
+go run ./cmd/twofeet migrate                    # schema and the venue
+go run ./cmd/twofeet seed-demo                  # optional sample people, posts and spaces
+go run ./cmd/twofeet                            # http://localhost:8080/e/cnh
 ```
+
+Tests: `go test -race ./...` in `app/` and `npx playwright test` in `app/e2e/`.
+To change the venue, edit `app/internal/store/seed_data.json` and run `migrate` again.
+
+## AI use
+
+This project was built with AI coding agents, and we want to be plain about how.
+
+- **Claude Code wrote the application code.** Separate agents built each slice in its own git worktree;
+  others reviewed security and design; another merged.
+- **A person made the product and design decisions.** Agents had to escalate anything the spec didn't
+  settle. The answers are in the harness's event log, including what was accepted, changed or cut.
+- **Automated checks gated every merge:** gofmt, go vet, golangci-lint, `go test -race`, gosec, gitleaks,
+  govulncheck and Playwright.
+- **Gitar reviewed every feature pull request** and caught real bugs, including a forged-session issue
+  that could have exhausted the Clerk rate limit, and resolved posts staying searchable after a lost
+  delete.
+
+## How the sponsors' tools are used
+
+- **Elasticsearch** matches a posted problem to spaces, people and sponsors with hybrid semantic and
+  tag search, and powers search and the Wall's topic strip. Postgres stays the system of record.
+- **Dash0** receives OpenTelemetry traces and metrics, and its Agent0 helps diagnose demo failures.
+- **Radar** watches the Kubernetes cluster and reports rollout health after each deploy.
+- **Gitar (Sonar)** reviews every feature pull request.

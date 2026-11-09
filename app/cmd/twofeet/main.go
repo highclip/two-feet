@@ -164,7 +164,11 @@ func serve(ctx context.Context, log *slog.Logger) error {
 	indexer := search.NewQueue(elastic, log, search.QueueOptions{})
 	go search.NewSync(db, indexer, log).Run(ctx, elastic.Ready, indexer)
 	topics := search.NewTopics(search.NewHackerNews(cfg.TopicsSourceURL), search.NewMatcher(db, elastic), log)
-	go topics.Run(ctx)
+	starters, err := search.KubeConStories()
+	if err != nil {
+		return err
+	}
+	go topics.Starting(starters).Run(ctx)
 	app := web.New(web.Deps{
 		Store:     db,
 		Hub:       hub,

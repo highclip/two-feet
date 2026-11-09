@@ -132,6 +132,25 @@
     }).catch(signInFailed);
   });
 
+  function showFormDetails(form, show) {
+    var summary = form.querySelector("[data-quick-summary]");
+    if (summary) summary.hidden = show;
+    form.querySelector("[data-form-details]").hidden = !show;
+  }
+
+  // A topic fills in the title and, when a spot is free, the spot and time, leaving one tap to confirm.
+  function fillFromTopic(button) {
+    var form = button.form;
+    form.elements.title.value = button.dataset.fillTitle;
+    form.querySelectorAll("[data-fill-title]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b === button));
+    });
+    if (!button.dataset.fillSpot) return;
+    form.elements.spot.value = button.dataset.fillSpot;
+    form.elements.starts.value = button.dataset.fillStarts;
+    showFormDetails(form, false);
+  }
+
   // Toasts: an Undo goes away by itself, and a notice can be closed.
   document.querySelectorAll("[data-expire-ms]").forEach(function (el) {
     setTimeout(function () { el.remove(); }, Number(el.dataset.expireMs));
@@ -142,7 +161,10 @@
 
     // A topic from online fills in the title, which stays an ordinary field to edit.
     var suggestion = e.target.closest("[data-fill-title]");
-    if (suggestion) suggestion.form.elements.title.value = suggestion.dataset.fillTitle;
+    if (suggestion) fillFromTopic(suggestion);
+
+    var change = e.target.closest("[data-quick-change]");
+    if (change) showFormDetails(change.form, true);
   });
 
   document.addEventListener("htmx:responseError", function (e) {

@@ -377,3 +377,27 @@ func TestS12_RelatedPostsReportsASearchFailure(t *testing.T) {
 
 	require.Error(t, err)
 }
+
+func TestKubeConTopicsPassTheFilterAndStandInWhenTheSourceIsDown(t *testing.T) {
+	starters, err := search.KubeConStories()
+	require.NoError(t, err)
+	require.Len(t, starters, 6)
+
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		// Kubeflow is last in the file, so reaching the top shows every story got through the filter.
+		relater := &fakeRelater{counts: map[string]int{"Kubeflow": 9}}
+		topics := search.NewTopics(&fakeSource{err: errors.New("no route to host")}, relater, quietLog()).Starting(starters)
+		go topics.Run(ctx)
+		synctest.Wait()
+
+		got := topics.Current()
+		require.Len(t, got, 5)
+		assert.Contains(t, got[0].Title, "Kubeflow")
+		assert.Equal(t, 9, got[0].Related)
+		assert.Equal(t, "Why Kubernetes can't tell which AI agent took an action", got[1].Title)
+		cancel()
+		synctest.Wait()
+	})
+}

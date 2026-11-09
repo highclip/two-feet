@@ -61,15 +61,23 @@ type TopicLister interface {
 // Topics is the list of topics and the background job that keeps it fresh. The list lives in memory
 // only, and requests only ever read it.
 type Topics struct {
-	source  StorySource
-	relater PostRelater
-	log     *slog.Logger
-	list    atomic.Pointer[[]Topic]
+	source   StorySource
+	relater  PostRelater
+	starters []Story
+	log      *slog.Logger
+	list     atomic.Pointer[[]Topic]
 }
 
 // NewTopics returns a job that hasn't fetched anything yet. Start it with Run.
 func NewTopics(source StorySource, relater PostRelater, log *slog.Logger) *Topics {
 	return &Topics{source: source, relater: relater, log: log}
+}
+
+// Starting adds stories that are always candidates, so the list has something to say even when the
+// source has nothing cloud native at that moment. Call it before Run.
+func (t *Topics) Starting(stories []Story) *Topics {
+	t.starters = stories
+	return t
 }
 
 // Current is the last good list, empty until one has loaded.
@@ -100,9 +108,12 @@ func (t *Topics) refresh(ctx context.Context) {
 	stories, err := t.fetch(ctx)
 	if err != nil {
 		t.log.Error("fetch topics", "err", err)
-		return
+		// The starter list only stands in when there's nothing better to keep showing.
+		if len(t.Current()) > 0 || len(t.starters) == 0 {
+			return
+		}
 	}
-	candidates := topicCandidates(stories)
+	candidates := topicCandidates(append(slices.Clone(t.starters), stories...))
 	if len(candidates) == 0 {
 		t.log.Info("no new topics to show")
 		return

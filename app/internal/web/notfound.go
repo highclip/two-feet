@@ -9,7 +9,7 @@ import (
 	"github.com/highclip/two-feet/app/internal/web/views"
 )
 
-const notFoundText = "That page isn't here. The event home has everything that's on."
+const notFoundText = "That page isn't here, so head to the event home."
 
 // notFound is the GET catch-all. It also gets GETs on POST-only paths, which would otherwise be a
 // bare 405. htmx calls get a plain status, so a whole page can't be swapped into a fragment.

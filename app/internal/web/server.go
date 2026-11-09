@@ -33,6 +33,7 @@ type Deps struct {
 	Store     *store.Store
 	Hub       *live.Hub
 	Search    search.Indexer
+	Tags      search.TagCounter // the Wall's tag strip; nil hides it
 	Limiter   *Limiter
 	Auth      *auth.Authenticator
 	Log       *slog.Logger
@@ -57,6 +58,7 @@ type Server struct {
 	clerkKey  string
 	ready     func(context.Context) error
 	undo      *undoWindows
+	wallTags  *wallTagStrip
 }
 
 // New returns a Server.
@@ -65,7 +67,8 @@ func New(d Deps) *Server {
 		store: d.Store, hub: d.Hub, search: d.Search, limiter: d.Limiter, authn: d.Auth, log: d.Log,
 		sync:    search.NewSync(d.Store, d.Search, d.Log),
 		version: d.Version, eventSlug: d.EventSlug, clerkKey: d.ClerkKey, ready: d.Ready,
-		undo: newUndoWindows(),
+		undo:     newUndoWindows(),
+		wallTags: &wallTagStrip{counter: d.Tags, log: d.Log},
 	}
 }
 

@@ -22,19 +22,22 @@ const coldStart = 5 * time.Minute
 
 func quietLog() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
+func elasticURL() string {
+	if url := os.Getenv("ELASTIC_URL"); url != "" {
+		return url
+	}
+	return "http://localhost:9200"
+}
+
 // liveClient returns a client on a throwaway index in the local Elasticsearch from
 // infra/local/compose.yaml, with ELSER already answering.
 func liveClient(t *testing.T) *search.Client {
 	t.Helper()
-	url := os.Getenv("ELASTIC_URL")
-	if url == "" {
-		url = "http://localhost:9200"
-	}
 	suffix := make([]byte, 6)
 	_, err := rand.Read(suffix)
 	require.NoError(t, err)
 	c, err := search.NewClient(search.Config{
-		URL:    url,
+		URL:    elasticURL(),
 		APIKey: os.Getenv("ELASTIC_API_KEY"),
 		Index:  os.Getenv("ELASTIC_INDEX_PREFIX") + "_test_" + hex.EncodeToString(suffix),
 	})

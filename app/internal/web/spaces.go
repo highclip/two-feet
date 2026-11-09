@@ -710,6 +710,7 @@ func (s *Server) publishSpaceChanged(ctx context.Context, spaceID string) {
 	s.hub.Publish(live.SpaceTopic(sp.ID), fragment)
 	s.hub.Publish(live.SpotTopic(sp.SpotID), fragment)
 	s.hub.Publish(live.EventTopic, fragment)
+	s.publishWallChanged()
 }
 
 // publishSpacesListChanged tells feeds, spot pages and the Wall that the set of spaces changed, so

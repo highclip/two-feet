@@ -113,6 +113,7 @@ func serve(ctx context.Context, log *slog.Logger) error {
 		Store:     db,
 		Hub:       hub,
 		Search:    indexer,
+		Tags:      elastic,
 		Limiter:   web.NewLimiter(),
 		Auth:      auth.New(db, auth.NewClerk(cfg.ClerkSecretKey, cfg.PublicURL), log),
 		Log:       log,

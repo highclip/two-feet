@@ -158,6 +158,7 @@ func (s *Server) createPost(w http.ResponseWriter, r *http.Request) {
 	}
 	telemetry.RecordPost(r.Context(), post.Kind)
 	s.sync.PostOpened(r.Context(), post)
+	s.publishWallChanged()
 	http.Redirect(w, r, postURL(event.Slug, post.ID), http.StatusSeeOther) // #nosec G710 -- a fixed local path around a database-generated uuid
 }
 
@@ -252,6 +253,7 @@ func (s *Server) resolvePost(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		s.sync.PostClosed(r.Context(), resolved)
+		s.publishWallChanged()
 	}
 	http.Redirect(w, r, postURL(event.Slug, post.ID), http.StatusSeeOther) // #nosec G710 -- a fixed local path around a database-generated uuid
 }

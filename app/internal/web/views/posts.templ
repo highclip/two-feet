@@ -18,7 +18,7 @@ type PostView struct {
 	Posted     string
 	HomeURL    string
 	ResolveURL string
-	StartURL   string
+	MatchesURL string // empty when the post can't be matched
 }
 
 // defaultPlaceholder shows until the room has posted something of its own.
@@ -97,7 +97,8 @@ templ NewPost(p Page, c PostComposer, homeURL string) {
 	}
 }
 
-// PostPage is the author's own view of a post. S6 adds the matches under it.
+// PostPage is the author's own view of a post, with its matches under it. They arrive as a separate
+// fragment, so the post shows at once and outlines hold the place while the search runs.
 templ PostPage(p Page, v PostView) {
 	@Layout(p) {
 		<a class="back" href={ templ.SafeURL(v.HomeURL) }>← Home</a>
@@ -114,16 +115,22 @@ templ PostPage(p Page, v PostView) {
 					}
 				</ul>
 			}
-		</article>
-		switch v.Post.Status {
-			case store.PostOpen:
-				<section class="empty">
-					<p class="empty-text">No one's on this yet. Start a space and let it find people.</p>
-					<a class="button button-action" href={ templ.SafeURL(v.StartURL) }>Start a space</a>
-				</section>
+			if v.Post.Status == store.PostOpen {
 				<form method="post" action={ templ.SafeURL(v.ResolveURL) }>
 					<button class="button button-quiet post-resolve" type="submit">This is sorted</button>
 				</form>
+			}
+		</article>
+		switch v.Post.Status {
+			case store.PostOpen:
+				if v.MatchesURL != "" {
+					<div class="matches" hx-get={ v.MatchesURL } hx-trigger="load" hx-swap="innerHTML">
+						@NoteOutline()
+						@NoteOutline()
+						@NoteOutline()
+					</div>
+					<script defer src={ static(p, "countdown.js") }></script>
+				}
 			case store.PostResolved:
 				<section class="empty">
 					<p class="empty-text">Sorted. This post no longer shows up in anyone's matches.</p>

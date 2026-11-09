@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -24,6 +25,8 @@ const (
 	rankWindow        = 50
 	rankConstant      = 60
 	maxQueryRunes     = 500
+	// eachWindow covers every document one event can hold, so SearchEach ranks them all.
+	eachWindow = 2000
 
 	defaultKeysPageSize = 1000
 
@@ -274,6 +277,8 @@ type Query struct {
 	ExcludeOwner string // leaves out the asker's own documents
 	Size         int    // defaults to 3
 	Now          time.Time
+
+	types []string // set by SearchEach
 }
 
 // Hit is one document found.
@@ -300,8 +305,11 @@ func searchFilter(q Query, now time.Time) map[string]any {
 		mustNot = append(mustNot, map[string]any{"term": map[string]any{"owner_id": q.ExcludeOwner}})
 	}
 	boolQuery := map[string]any{"must_not": mustNot}
-	if q.Type != "" {
+	switch {
+	case q.Type != "":
 		boolQuery["filter"] = []any{map[string]any{"term": map[string]any{"type": q.Type}}}
+	case len(q.types) > 0:
+		boolQuery["filter"] = []any{map[string]any{"terms": map[string]any{"type": q.types}}}
 	}
 	return map[string]any{"bool": boolQuery}
 }
@@ -314,29 +322,38 @@ func limitRunes(s string, n int) string {
 	return string([]rune(s)[:n])
 }
 
+var sourceFields = []string{"type", "id", "body", "tags", "owner_id", "zone_id", "starts_at", "expires_at"}
+
+func semanticQuery(q Query) map[string]any {
+	return map[string]any{"semantic": map[string]any{"field": "text", "query": limitRunes(q.Text, maxQueryRunes)}}
+}
+
+// tagOverlap ranks documents by how much they share with these tags, rare tags counting for more. A
+// terms query would score every overlap the same, so "kubernetes" would tie with "otel-collector".
+func tagOverlap(tags []string) map[string]any {
+	if len(tags) == 0 {
+		return map[string]any{"terms": map[string]any{"tags": []string{}}} // matches nothing, unlike an empty bool
+	}
+	should := make([]any, 0, len(tags))
+	for _, tag := range tags {
+		should = append(should, map[string]any{"term": map[string]any{"tags": tag}})
+	}
+	return map[string]any{"bool": map[string]any{"should": should}}
+}
+
 // searchBody builds a hybrid query: ELSER on the text and tag overlap, fused with reciprocal rank
 // fusion. User text only ever appears as a JSON value.
 func searchBody(q Query, now time.Time, size int) ([]byte, error) {
-	tags := q.Tags
-	if tags == nil {
-		tags = []string{}
-	}
 	filter := searchFilter(q, now)
 	return json.Marshal(map[string]any{
 		"size":    size,
-		"_source": []string{"type", "id", "body", "tags", "owner_id", "zone_id", "starts_at", "expires_at"},
+		"_source": sourceFields,
 		"retriever": map[string]any{"rrf": map[string]any{
 			"rank_window_size": max(rankWindow, size),
 			"rank_constant":    rankConstant,
 			"retrievers": []any{
-				map[string]any{"standard": map[string]any{
-					"query":  map[string]any{"semantic": map[string]any{"field": "text", "query": limitRunes(q.Text, maxQueryRunes)}},
-					"filter": filter,
-				}},
-				map[string]any{"standard": map[string]any{
-					"query":  map[string]any{"terms": map[string]any{"tags": tags}},
-					"filter": filter,
-				}},
+				map[string]any{"standard": map[string]any{"query": semanticQuery(q), "filter": filter}},
+				map[string]any{"standard": map[string]any{"query": tagOverlap(q.Tags), "filter": filter}},
 			},
 		}},
 	})
@@ -374,6 +391,111 @@ func (c *Client) Search(ctx context.Context, q Query) ([]Hit, error) {
 		return nil, fmt.Errorf("search: %w", responseError(res))
 	}
 	return decodeHits(res.Body)
+}
+
+// rankedList runs one retriever over every document of the wanted types, best first. The window is
+// wide so every type gets ranked: a sponsor scores far below the posts around it.
+func (c *Client) rankedList(ctx context.Context, query map[string]any, filter map[string]any) ([]Hit, error) {
+	body, err := json.Marshal(map[string]any{
+		"size":      eachWindow,
+		"_source":   sourceFields,
+		"retriever": map[string]any{"standard": map[string]any{"query": query, "filter": filter}},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("encode search: %w", err)
+	}
+	res, err := c.es.Search(
+		c.es.Search.WithIndex(c.index),
+		c.es.Search.WithBody(bytes.NewReader(body)),
+		c.es.Search.WithContext(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("search: %w", err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode == http.StatusNotFound {
+		return nil, nil // nothing has been indexed yet
+	}
+	if res.IsError() {
+		return nil, fmt.Errorf("search: %w", responseError(res))
+	}
+	return decodeHits(res.Body)
+}
+
+// tagWeight is how much a tag rank counts against a semantic rank. A post is one line, so exact
+// technology names say more than ELSER's expansion of them.
+const tagWeight = 2.0
+
+// fuse combines ranked lists with reciprocal rank fusion, ranking within each type, and keeps the
+// top each hits of every type, best first. Ranks are per type because "top 3 of each type" means
+// sponsors compete with sponsors: ranked globally, how many posts sit above each sponsor decides
+// the order, which is noise.
+func fuse(semantic, tagged []Hit, each int) []Hit {
+	type entry struct {
+		hit   Hit
+		score float64
+		order int
+	}
+	entries := map[string]*entry{}
+	add := func(list []Hit, weight float64) {
+		ranks := map[string]int{}
+		for _, h := range list {
+			ranks[h.Type]++
+			key := h.Type + ":" + h.ID
+			e, ok := entries[key]
+			if !ok {
+				e = &entry{hit: h, order: len(entries)}
+				entries[key] = e
+			}
+			e.score += weight / float64(rankConstant+ranks[h.Type])
+		}
+	}
+	add(semantic, 1)
+	add(tagged, tagWeight)
+
+	byType := map[string][]*entry{}
+	for _, e := range entries {
+		byType[e.hit.Type] = append(byType[e.hit.Type], e)
+	}
+	kept := make([]Hit, 0, len(byType)*each)
+	for _, list := range byType {
+		sort.Slice(list, func(i, j int) bool {
+			if list[i].score != list[j].score {
+				return list[i].score > list[j].score
+			}
+			return list[i].order < list[j].order
+		})
+		for _, e := range list[:min(each, len(list))] {
+			e.hit.Score = e.score
+			kept = append(kept, e.hit)
+		}
+	}
+	return kept
+}
+
+// SearchEach returns the top each hits of every type. The two rankings come from separate calls
+// because a query per type would run ELSER once per type, over the 800 ms budget on one allocation.
+func (c *Client) SearchEach(ctx context.Context, q Query, types []string, each int) ([]Hit, error) {
+	if q.Text == "" {
+		return nil, errors.New("search: query text is empty")
+	}
+	now := q.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
+	q.types = types
+	q.Type = ""
+	filter := searchFilter(q, now)
+	semantic, err := c.rankedList(ctx, semanticQuery(q), filter)
+	if err != nil {
+		return nil, err
+	}
+	var tagged []Hit
+	if len(q.Tags) > 0 {
+		if tagged, err = c.rankedList(ctx, tagOverlap(q.Tags), filter); err != nil {
+			return nil, err
+		}
+	}
+	return fuse(semantic, tagged, each), nil
 }
 
 func decodeHits(r io.Reader) ([]Hit, error) {

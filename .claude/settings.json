@@ -31,6 +31,8 @@
       "Bash(mkdir:*)",
       "Bash(git branch:*)",
       "Bash(git checkout:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr comment:*)",
       "Bash(git merge:*)",
       "Bash(git fetch:*)",
       "Bash(git pull:*)",

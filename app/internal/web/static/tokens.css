@@ -1,0 +1,55 @@
+/* Two Feet design tokens. Source of truth for colors, type and shape.
+   Matches spec.yaml `design.tokens` and the reference screenshots in design/reference/.
+   Flat and digital: hairline borders, rounded corners, no shadows on cards. */
+
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap");
+
+:root {
+  /* Surfaces */
+  --board: #F3F5F4;        /* page background */
+  --card: #FFFFFF;
+  --line: #DDE2E0;         /* card borders */
+  --line-soft: #E6EAE8;    /* row dividers */
+  --chip: #EDF0EF;         /* neutral tag chips */
+
+  /* Text */
+  --ink: #16191C;          /* all text on notes and tints; 11:1 or better */
+  --ink-soft: #5E666D;     /* secondary text on --board and --card only, never on kind colors */
+
+  /* What a post is. Same color everywhere: phone, spot page, Wall. */
+  --stuck: #FFE15A;        --stuck-tint: #FFF3BF;     /* "Stuck on" */
+  --curious: #9CD2FF;      --curious-tint: #DDF0FF;   /* "Curious" */
+  --offer: #A6E3A0;        --offer-tint: #E2F5DF;     /* "Can help" */
+
+  /* Action: Join and Start only. White text on it is 5.1:1. */
+  --action: #C93A22;
+  --on-action: #FFFFFF;
+
+  /* Type */
+  --font-title: "Archivo", "Arial Narrow", system-ui, sans-serif;   /* 700-800, titles and the Wall */
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-xs: 12px;  --text-sm: 13px;  --text-base: 15px;  --text-md: 17px;
+  --text-lg: 20px;  --text-xl: 23px;  --text-2xl: 36px;
+  --wall-title: 30px;      /* readable from 5 m on a 1080p projector */
+
+  /* Shape and space */
+  --radius-card: 14px;
+  --radius-feature: 16px;
+  --radius-button: 12px;
+  --radius-pill: 999px;
+  --tap: 44px;             /* minimum tap target */
+  --gutter: 18px;
+  --gap: 12px;
+}
+
+/* The Wall is a dark projector board. Kind colors stay the same; text on them stays --ink. */
+.wall {
+  --board: #121518;
+  --wall-text: #EEF1F0;
+  --wall-muted: #A9B2B9;
+  --wall-line: rgba(238, 241, 240, 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

@@ -1,0 +1,37 @@
+{
+  "event": {
+    "name": "Cloud Native Hackathon with Kelsey Hightower",
+    "timezone": "America/Denver",
+    "starts_at": "2026-11-09T09:00:00-07:00",
+    "ends_at": "2026-11-09T17:30:00-07:00"
+  },
+  "zones": [
+    { "id": "main", "name": "Main room" },
+    { "id": "kitchen", "name": "Kitchen" },
+    { "id": "lounge", "name": "Lounge" },
+    { "id": "patio", "name": "Patio" },
+    { "id": "booths", "name": "Sponsor row" }
+  ],
+  "walks": [
+    { "a": "main", "b": "kitchen", "minutes": 1 },
+    { "a": "main", "b": "lounge", "minutes": 1 },
+    { "a": "main", "b": "booths", "minutes": 1 },
+    { "a": "kitchen", "b": "patio", "minutes": 2 },
+    { "a": "lounge", "b": "booths", "minutes": 2 }
+  ],
+  "spots": [
+    { "name": "Long table", "zone": "main", "where": "The long table in the middle of the main room", "capacity": 10 },
+    { "name": "Window table", "zone": "main", "where": "The table by the front windows", "capacity": 6 },
+    { "name": "Kitchen island", "zone": "kitchen", "where": "The tall table by the coffee machine", "capacity": 6 },
+    { "name": "Couches", "zone": "lounge", "where": "The couches around the low table", "capacity": 8 },
+    { "name": "Picnic table", "zone": "patio", "where": "The picnic table just outside the kitchen door", "capacity": 8 }
+  ],
+  "sponsors": [
+    { "name": "Dash0", "solves": "OpenTelemetry-native observability: traces, metrics and logs" },
+    { "name": "Elastic", "solves": "Search, vector search and log analytics with Elasticsearch" },
+    { "name": "Radar", "solves": "Kubernetes UI with an AI SRE for troubleshooting clusters" },
+    { "name": "Sonar", "solves": "Code quality and AI code verification (Gitar)" },
+    { "name": "Tailscale", "solves": "Private networking between machines, clusters and people" },
+    { "name": "Temporal", "solves": "Durable workflows that survive failures and retries" }
+  ]
+}

@@ -1,0 +1,58 @@
+package views
+
+// Page is what the shared layout needs.
+type Page struct {
+	Title       string
+	Version     string
+	Now         string
+	SignedIn    bool
+	Initial     string
+	ClerkKey    string
+	ClerkScript string
+}
+
+func static(p Page, file string) string {
+	return "/static/" + file + "?v=" + p.Version
+}
+
+templ Layout(p Page) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ p.Title }</title>
+			<link rel="stylesheet" href={ static(p, "tokens.css") }/>
+			<link rel="stylesheet" href={ static(p, "app.css") }/>
+			<script defer src={ static(p, "htmx.min.js") }></script>
+			<script defer src={ static(p, "sse.js") }></script>
+			if p.ClerkScript != "" {
+				<script defer crossorigin="anonymous" data-clerk-publishable-key={ p.ClerkKey } src={ p.ClerkScript }></script>
+			}
+			<script defer src={ static(p, "app.js") }></script>
+		</head>
+		<body data-signed-in={ boolAttr(p.SignedIn) }>
+			<main class="page">
+				<header class="top">
+					<div class="brand">
+						<span class="wordmark">Two Feet</span>
+						if p.Now != "" {
+							<span class="now">{ p.Now }</span>
+						}
+					</div>
+					if p.Initial != "" {
+						<span class="avatar" aria-hidden="true">{ p.Initial }</span>
+					}
+				</header>
+				{ children... }
+			</main>
+		</body>
+	</html>
+}
+
+// Message is a page that says one thing, for errors like an unknown code.
+templ Message(p Page, text string) {
+	@Layout(p) {
+		<p class="lede">{ text }</p>
+	}
+}

@@ -348,7 +348,7 @@ details .zone-choices { margin-top: var(--gap); }
 .starts { font-weight: 700; }
 .starts-soon { padding: 1px 8px; border-radius: var(--radius-pill); background: var(--action); color: var(--on-action); }
 .starts-now { animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: 0.55; } }
+@keyframes pulse { 50% { opacity: 0.75; } }
 .match-seats { gap: 8px; }
 .match-action { display: flex; }
 .match-action .button, a.match-action { flex: 1; }

@@ -58,7 +58,7 @@ body {
   font: inherit;
   font-size: var(--text-md); /* iOS zooms into anything smaller than 16px */
 }
-.textarea { min-height: 112px; padding: 10px 12px; line-height: 1.4; resize: none; }
+.textarea { min-height: 72px; padding: 10px 12px; line-height: 1.4; resize: vertical; }
 .form-error, .form-saved { margin: 0; font-weight: 700; }
 .link-row { display: flex; align-items: center; min-height: var(--tap); color: var(--ink); }
 .button {
@@ -97,7 +97,6 @@ body {
 }
 .toggle-thumb { width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--card); }
 .toggle[aria-checked="true"] .toggle-track { background: var(--ink); justify-content: flex-end; }
-.textarea { min-height: 72px; padding: 10px 12px; resize: vertical; }
 .segmented { margin: 0; padding: 0; border: 0; }
 .segmented .field-label { padding: 0; margin-bottom: 4px; }
 .segments { display: flex; gap: 6px; }

@@ -43,6 +43,26 @@ removed from `fixme` as soon as the slice merges.
    Agent0's likely cause or thread link:
    `python3 harness/hx.py --agent tester demo pass --flow "<flow>"`
    `python3 harness/hx.py --agent tester demo fail --flow "<flow>" --detail "<step>: <what happened>. Agent0: <likely cause or link>"`
+5. Post a deploy report on the merged PR, once per merge. It shows what Dash0 saw for that commit.
+   Step 4 comes first, and a problem here never undoes or delays it.
+   - Find the merge you were told about, or the latest with
+     `git log --first-parent --format=%h --grep='^merge S' -1`, then its PR with
+     `gh pr list --state merged --search <merge commit> --json number`. No PR means no comment.
+   - The version to report is the one `/healthz` returned when the demo ran. If that's later than the
+     merge, say so in the comment. Dash0 tags traces with it as `service.version`.
+   - Use Dash0's read and query tools on dataset `default`, service `two-feet`, for that version.
+     Don't call `runTask` for this: step 3 is the only place it's used. Get a link to one trace that
+     shows the handler with its Postgres and Elasticsearch child spans, the request and error counts,
+     p95 latency, and the same numbers for the previous version.
+   - Post it with `gh pr comment <number> --body "<report>"`. Use these lines:
+     `Deployed: <version>` · `Demo path: pass, or fail at <step>` · `Trace: <link>` ·
+     `Requests / errors / p95: <this version> (previous: <previous version>)`, with the request count
+     beside each p95 because a handful of requests says little · on a failure,
+     `Agent0: <likely cause in your own words, marked as a lead> <thread link>`.
+   - Only report what a tool returned. If Dash0 is unavailable or has no data for the version, write
+     `Dash0: no data for <version>` and post the rest.
+   - This repo is public. Never put user text, names, emails, tokens, span attributes or Agent0's raw
+     output in the comment.
 
 ## Also
 

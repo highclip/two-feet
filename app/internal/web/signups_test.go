@@ -239,6 +239,57 @@ func TestLeaveToastOffersUndoOnlyWhenNobodyWasPromoted(t *testing.T) {
 	assert.NotContains(t, promoted.Body.String(), "/leave/undo")
 }
 
+func TestPlainFormLeaveShowsTheToastForWhatTheyLeftAfterTheRedirect(t *testing.T) {
+	f := newFixture(t)
+	path, _ := f.joinableSpace(t, "2")
+	f.onboard(t, "user_a", "Ana")
+	f.onboard(t, "user_b", "Ben")
+	f.onboard(t, "user_c", "Cy")
+	f.post(path+"/join", nil, as("user_a"))
+	f.post(path+"/join", nil, as("user_b")) // first in line
+	f.post(path+"/join", nil, as("user_c")) // second in line
+
+	require.Equal(t, http.StatusSeeOther, f.post(path+"/leave", nil, as("user_c")).Code)
+	waitlist := f.get(path, as("user_c")).Body.String()
+	assert.Contains(t, waitlist, "You&#39;ve left the waitlist.")
+	assert.NotContains(t, waitlist, "Law of two feet. You&#39;ve left.")
+	assert.Contains(t, waitlist, "/leave/undo", "nobody moved, so they can take it back")
+
+	require.Equal(t, http.StatusSeeOther, f.post(path+"/leave", nil, as("user_a")).Code)
+	seat := f.get(path, as("user_a")).Body.String()
+	assert.Contains(t, seat, "your seat went to the next person")
+	assert.NotContains(t, seat, "/leave/undo", "D2: no Undo once someone was promoted")
+
+	assert.NotContains(t, f.get(path, as("user_b")).Body.String(), "You&#39;ve left", "only the person who left is told")
+}
+
+func TestPlainFormLeaveOfASeatSaysTheyLeft(t *testing.T) {
+	f := newFixture(t)
+	path, _ := f.joinableSpace(t, "3")
+	f.onboard(t, "user_a", "Ana")
+	f.post(path+"/join", nil, as("user_a"))
+
+	require.Equal(t, http.StatusSeeOther, f.post(path+"/leave", nil, as("user_a")).Code)
+
+	page := f.get(path, as("user_a")).Body.String()
+	assert.Contains(t, page, "Law of two feet. You&#39;ve left.")
+	assert.Contains(t, page, "/leave/undo")
+}
+
+func TestJoiningAgainDropsTheLeaveToast(t *testing.T) {
+	f := newFixture(t)
+	path, _ := f.joinableSpace(t, "3")
+	f.onboard(t, "user_a", "Ana")
+	f.post(path+"/join", nil, as("user_a"))
+	f.post(path+"/leave", nil, as("user_a"))
+
+	f.post(path+"/join", nil, as("user_a"))
+
+	page := f.get(path, as("user_a")).Body.String()
+	assert.NotContains(t, page, "You&#39;ve left")
+	assert.NotContains(t, page, "/leave/undo")
+}
+
 func TestUndoLeaveIsTooLateOnceTheWindowHasClosedAndHarmlessWhenAlreadyBack(t *testing.T) {
 	f := newFixture(t)
 	path, id := f.joinableSpace(t, "3")

@@ -32,6 +32,14 @@ func (s *Server) registerSignups(mux *http.ServeMux) {
 
 func leaveUndoKey(spaceID, personID string) string { return "leave:" + spaceID + ":" + personID }
 
+func leaveNoteKey(spaceID, personID string) string { return "left:" + spaceID + ":" + personID }
+
+// closeLeave ends the Undo and the toast of a leave that no longer stands.
+func (s *Server) closeLeave(spaceID, personID string) {
+	s.undo.close(leaveUndoKey(spaceID, personID))
+	s.undo.close(leaveNoteKey(spaceID, personID))
+}
+
 func isHtmx(r *http.Request) bool { return r.Header.Get("HX-Request") != "" }
 
 // signupRequest loads what every signup action needs and checks join_or_leave_space.
@@ -156,6 +164,7 @@ func (s *Server) joinSpace(w http.ResponseWriter, r *http.Request) {
 		s.limiter.Release(person.ID, joinAction)
 	} else {
 		telemetry.RecordSignup(ctx)
+		s.closeLeave(sp.ID, person.ID)
 		s.publishSpaceChanged(ctx, sp.ID)
 		if res.LeftSpaceID != "" {
 			s.tellPromoted(ctx, e, res.LeftSpaceID, res.Promoted)
@@ -196,6 +205,7 @@ func (s *Server) leaveSpace(w http.ResponseWriter, r *http.Request) {
 func (s *Server) leaveToast(ctx context.Context, e store.Event, sp store.Space, person store.Person, res store.LeaveResult) views.SpaceToast {
 	if len(res.Promoted) > 0 {
 		s.tellPromoted(ctx, e, sp.ID, res.Promoted)
+		s.undo.startNote(leaveNoteKey(sp.ID, person.ID), leftSeatLine)
 		return views.SpaceToast{Text: leftSeatLine}
 	}
 	s.undo.start(leaveUndoKey(sp.ID, person.ID))
@@ -203,7 +213,25 @@ func (s *Server) leaveToast(ctx context.Context, e store.Event, sp store.Space, 
 	if !res.WasGoing {
 		text = leftLineLine
 	}
-	return views.SpaceToast{Text: text, UndoURL: spaceURL(e.Slug, sp.Slug) + "/leave/undo"}
+	s.undo.startNote(leaveNoteKey(sp.ID, person.ID), text)
+	return views.SpaceToast{Text: text, UndoURL: leaveUndoURL(e, sp)}
+}
+
+func leaveUndoURL(e store.Event, sp store.Space) string {
+	return spaceURL(e.Slug, sp.Slug) + "/leave/undo"
+}
+
+// toastAfterRedirect is leaveToast's answer for a plain form post, whose redirect can't carry it.
+func (s *Server) toastAfterRedirect(e store.Event, sp store.Space, personID string) views.SpaceToast {
+	text := s.undo.note(leaveNoteKey(sp.ID, personID))
+	if text == "" {
+		return views.SpaceToast{}
+	}
+	toast := views.SpaceToast{Text: text}
+	if s.undo.open(leaveUndoKey(sp.ID, personID)) {
+		toast.UndoURL = leaveUndoURL(e, sp)
+	}
+	return toast
 }
 
 func (s *Server) undoLeave(w http.ResponseWriter, r *http.Request) {
@@ -254,7 +282,7 @@ func (s *Server) undoLeave(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	s.undo.close(key)
+	s.closeLeave(sp.ID, person.ID)
 	s.publishSpaceChanged(ctx, sp.ID)
 	s.answer(w, r, e, sp, person, http.StatusSeeOther, clear, nil)
 }

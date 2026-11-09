@@ -52,35 +52,58 @@ func (s *Server) registerSpaces(mux *http.ServeMux) {
 	s.registerSignups(mux)
 }
 
-// undoWindows remembers which spaces were cancelled moments ago. It lives in memory, like the live
-// hub: losing it in a restart only ends an Undo that had seconds left.
+// undoWindows remembers what happened moments ago: which spaces were cancelled, who left, and what
+// their toast said. It lives in memory, like the live hub: losing it in a restart only ends an Undo
+// that had seconds left.
 type undoWindows struct {
 	mu        sync.Mutex
-	startedAt map[string]time.Time
+	startedAt map[string]undoEntry
 	now       func() time.Time
 }
 
-func newUndoWindows() *undoWindows {
-	return &undoWindows{startedAt: map[string]time.Time{}, now: time.Now}
+type undoEntry struct {
+	at   time.Time
+	note string
 }
 
-func (u *undoWindows) start(spaceID string) {
+func newUndoWindows() *undoWindows {
+	return &undoWindows{startedAt: map[string]undoEntry{}, now: time.Now}
+}
+
+func (u *undoWindows) start(spaceID string) { u.startNote(spaceID, "") }
+
+// startNote opens a window that carries a line of text for a page loaded while it's open.
+func (u *undoWindows) startNote(key, note string) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	now := u.now()
-	for id, at := range u.startedAt {
-		if now.Sub(at) >= undoWindow {
+	for id, entry := range u.startedAt {
+		if now.Sub(entry.at) >= undoWindow {
 			delete(u.startedAt, id)
 		}
 	}
-	u.startedAt[spaceID] = now
+	u.startedAt[key] = undoEntry{at: now, note: note}
 }
 
 func (u *undoWindows) open(spaceID string) bool {
+	_, ok := u.entry(spaceID)
+	return ok
+}
+
+// note returns the window's text, or "" once it has closed.
+func (u *undoWindows) note(key string) string {
+	entry, _ := u.entry(key)
+	return entry.note
+}
+
+func (u *undoWindows) entry(key string) (undoEntry, bool) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	at, ok := u.startedAt[spaceID]
-	return ok && u.now().Sub(at) < undoWindow
+	entry, ok := u.startedAt[key]
+	if !ok || u.now().Sub(entry.at) >= undoWindow {
+		return undoEntry{}, false
+	}
+	return entry, true
 }
 
 func (u *undoWindows) close(spaceID string) {
@@ -450,8 +473,8 @@ func (s *Server) spacePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	undo := v.CanManage && sp.Status == store.SpaceCancelled && s.undo.open(sp.ID)
-	if viewer != nil && s.undo.open(leaveUndoKey(sp.ID, viewer.ID)) {
-		v.Toast = views.SpaceToast{Text: leftLine, UndoURL: spaceURL(e.Slug, sp.Slug) + "/leave/undo"}
+	if viewer != nil {
+		v.Toast = s.toastAfterRedirect(e, sp, viewer.ID)
 	}
 	s.render(w, r, http.StatusOK, views.SpacePage(s.livePage(r, e, sp.Title, spaceTopic(sp)), v, undo, spacesURL(e.Slug)+"/new"))
 }

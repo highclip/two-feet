@@ -261,6 +261,28 @@ func TestSwitchingLeavesTheFirstSpaceAndPromotesItsWaitlist(t *testing.T) {
 	assert.Equal(t, store.SignupGoing, f.status(t, first.ID, b.ID))
 }
 
+func TestSwitchingAwayFromACancelledSpaceLeavesItsWaitlistAlone(t *testing.T) {
+	f := newSignupFixture(t)
+	ctx := context.Background()
+	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Couches'`)
+	first := f.space(t, f.spot, 60, 30, 2)
+	second := f.space(t, couches, 75, 30, 4)
+	a, b := f.person(t, "a"), f.person(t, "b")
+	f.join(t, first.ID, a.ID)
+	f.join(t, first.ID, b.ID) // waitlisted
+	_, err := f.s.CancelSpace(ctx, first.ID)
+	require.NoError(t, err)
+
+	got, err := f.s.JoinSpace(ctx, store.JoinInput{SpaceID: second.ID, PersonID: a.ID, LeaveSpaceID: first.ID, Now: f.now})
+	require.NoError(t, err)
+
+	assert.Equal(t, store.SignupGoing, got.Status, "a cancelled space doesn't stand in the way")
+	assert.Empty(t, got.Promoted)
+	assert.Empty(t, got.LeftSpaceID)
+	assert.Equal(t, store.SignupGoing, f.status(t, first.ID, a.ID), "a restored space still has them")
+	assert.Equal(t, store.SignupWaitlist, f.status(t, first.ID, b.ID))
+}
+
 func TestHostCannotLeaveTheirOwnSpace(t *testing.T) {
 	f := newSignupFixture(t)
 	ctx := context.Background()

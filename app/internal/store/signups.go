@@ -291,9 +291,9 @@ func (s *Store) JoinSpace(ctx context.Context, in JoinInput) (JoinResult, error)
 			return nil
 		}
 
-		// Only a space that really clashes can be given up: leave is a form field, and the times may
-		// have changed since the prompt was shown.
-		if leaving.id != "" && !overlaps(leaving, sp) {
+		// Only an open space that really clashes can be given up: leave is a form field, and the space
+		// may have been cancelled or moved since the prompt was shown.
+		if leaving.id != "" && (leaving.status != SpaceOpen || !overlaps(leaving, sp)) {
 			leaving = lockedSpace{}
 		}
 		if clash, err := overlappingGoing(ctx, tx, sp, in.PersonID, leaving.id); err != nil {

@@ -146,7 +146,7 @@ func TestS3_OverlappingSpaceIsRefusedSayingUntilWhenAndWhereToTry(t *testing.T) 
 	w := f.post("/e/cnh/spaces", f.spaceForm(t, "Long table", tomorrowAt(t, 14, 15), "30", ""), as("user_kofi"))
 
 	assert.Equal(t, http.StatusConflict, w.Code)
-	assert.Contains(t, w.Body.String(), "Long table is taken until 2:30. Try Couches.")
+	assert.Contains(t, w.Body.String(), "Long table is taken until 2:30. Try Corner chairs.")
 	assert.Contains(t, w.Body.String(), `value="Collector tuning"`, "what they typed stays in the form")
 
 	touching := f.post("/e/cnh/spaces", f.spaceForm(t, "Long table", tomorrowAt(t, 14, 30), "15", ""), as("user_kofi"))
@@ -157,18 +157,15 @@ func TestS3_OverlapSuggestionSkipsBusySpotsAndSaysWhenNoneIsFree(t *testing.T) {
 	f := newFixture(t)
 	f.onboard(t, "user_jun", "Jun")
 	starts := tomorrowAt(t, 10, 0)
+	// Asking for ten seats leaves only Long table, Table rows and The bar.
 	f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", starts, "30", ""))
-	f.createSpace(t, "user_jun", f.spaceForm(t, "Couches", starts, "30", ""))
+	f.createSpace(t, "user_jun", f.spaceForm(t, "Table rows", starts, "30", ""))
 
-	w := f.post("/e/cnh/spaces", f.spaceForm(t, "Long table", starts, "30", ""), as("user_jun"))
-	assert.Contains(t, w.Body.String(), "Long table is taken until 10:30. Try Kitchen island.")
+	w := f.post("/e/cnh/spaces", f.spaceForm(t, "Long table", starts, "30", "10"), as("user_jun"))
+	assert.Contains(t, w.Body.String(), "Long table is taken until 10:30. Try The bar.")
 
-	f.createSpace(t, "user_jun", f.spaceForm(t, "Kitchen island", starts, "30", ""))
-	f.createSpace(t, "user_jun", f.spaceForm(t, "Picnic table", starts, "30", ""))
-	f.createSpace(t, "user_jun", f.spaceForm(t, "Window table", starts, "30", ""))
-	// Five creations is the limit, so this last refusal comes from a second person.
-	f.onboard(t, "user_kofi", "Kofi")
-	full := f.post("/e/cnh/spaces", f.spaceForm(t, "Long table", starts, "30", ""), as("user_kofi"))
+	f.createSpace(t, "user_jun", f.spaceForm(t, "The bar", starts, "30", ""))
+	full := f.post("/e/cnh/spaces", f.spaceForm(t, "Long table", starts, "30", "10"), as("user_jun"))
 	assert.Contains(t, full.Body.String(), "Long table is taken until 10:30. Pick another time.")
 }
 
@@ -177,14 +174,13 @@ func TestEditSuggestionCanOfferTheSpotTheSpaceIsLeaving(t *testing.T) {
 	f.onboard(t, "user_jun", "Jun")
 	starts := tomorrowAt(t, 10, 0)
 	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", starts, "30", ""))
-	f.createSpace(t, "user_jun", f.spaceForm(t, "Couches", starts, "30", ""))
-	// Kitchen island sorts before Long table, so it has to be busy for Long table to be next.
-	f.createSpace(t, "user_jun", f.spaceForm(t, "Kitchen island", starts, "30", ""))
+	f.createSpace(t, "user_jun", f.spaceForm(t, "The bar", starts, "30", ""))
 
-	w := f.post(path+"/edit", f.spaceForm(t, "Couches", starts, "30", ""), as("user_jun"))
+	// Asking for ten seats leaves Long table first in line, and it is this space's own spot.
+	w := f.post(path+"/edit", f.spaceForm(t, "The bar", starts, "30", "10"), as("user_jun"))
 
 	assert.Equal(t, http.StatusConflict, w.Code)
-	assert.Contains(t, w.Body.String(), "Couches is taken until 10:30. Try Long table.")
+	assert.Contains(t, w.Body.String(), "The bar is taken until 10:30. Try Long table.")
 }
 
 func TestS3_CapacityLargerThanTheSpotIsRefused(t *testing.T) {
@@ -196,9 +192,9 @@ func TestS3_CapacityLargerThanTheSpotIsRefused(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "Long table seats 10. Pick 10 or fewer.")
 
 	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", tomorrowAt(t, 14, 0), "30", "10"))
-	edit := f.post(path+"/edit", f.spaceForm(t, "Window table", tomorrowAt(t, 14, 0), "30", "10"), as("user_jun"))
+	edit := f.post(path+"/edit", f.spaceForm(t, "Window bench", tomorrowAt(t, 14, 0), "30", "10"), as("user_jun"))
 	assert.Equal(t, http.StatusUnprocessableEntity, edit.Code)
-	assert.Contains(t, edit.Body.String(), "Window table seats 6. Pick 6 or fewer.")
+	assert.Contains(t, edit.Body.String(), "Window bench seats 6. Pick 6 or fewer.")
 }
 
 func TestS3_SomeoneOtherThanHostOrOrganizerGets403(t *testing.T) {
@@ -233,14 +229,14 @@ func TestS3_HostAndOrganizerCanEditAndCancel(t *testing.T) {
 	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", tomorrowAt(t, 14, 0), "30", ""))
 
 	assert.Contains(t, f.get(path+"/edit", as("user_jun")).Body.String(), `value="Collector tuning"`)
-	changed := f.spaceForm(t, "Couches", tomorrowAt(t, 15, 0), "45", "6")
+	changed := f.spaceForm(t, "Corner couches", tomorrowAt(t, 15, 0), "45", "6")
 	changed.Set("title", "Collector tuning, part two")
 	w := f.post(path+"/edit", changed, as("user_jun"))
 	require.Equal(t, http.StatusSeeOther, w.Code, w.Body.String())
 	assert.Equal(t, path, w.Header().Get("Location"))
 	page := f.get(path, as("user_jun")).Body.String()
 	assert.Contains(t, page, "Collector tuning, part two")
-	assert.Contains(t, page, "Couches")
+	assert.Contains(t, page, "Corner couches")
 	assert.Contains(t, page, "1 of 6 going")
 
 	require.Equal(t, http.StatusSeeOther, f.post(path+"/cancel", nil, as("user_org")).Code)
@@ -401,13 +397,13 @@ func TestUndoIsRefusedWhenTheSpotHasBeenTaken(t *testing.T) {
 	f.onboard(t, "user_jun", "Jun")
 	f.onboard(t, "user_kofi", "Kofi")
 	starts := tomorrowAt(t, 14, 0)
-	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", starts, "30", "8"))
+	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", starts, "30", "10"))
 	require.Equal(t, http.StatusSeeOther, f.post(path+"/cancel", nil, as("user_jun")).Code)
 	f.createSpace(t, "user_kofi", f.spaceForm(t, "Long table", starts, "30", ""))
 
 	w := f.post(path+"/undo", nil, as("user_jun"))
 	assert.Equal(t, http.StatusConflict, w.Code)
-	assert.Contains(t, w.Body.String(), "Long table is taken until 2:30. Try Couches.")
+	assert.Contains(t, w.Body.String(), "Long table is taken until 2:30. Try Table rows.")
 }
 
 func TestEditCannotDropCapacityBelowThoseGoingOrTouchACancelledSpace(t *testing.T) {
@@ -526,11 +522,11 @@ func TestCreatingSpacesIsRateLimitedPerPersonAndSaysWhenToTryAgain(t *testing.T)
 		f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", tomorrowAt(t, 9+i, 0), "15", ""))
 	}
 
-	w := f.post("/e/cnh/spaces", f.spaceForm(t, "Couches", tomorrowAt(t, 15, 0), "15", ""), as("user_jun"))
+	w := f.post("/e/cnh/spaces", f.spaceForm(t, "Corner couches", tomorrowAt(t, 15, 0), "15", ""), as("user_jun"))
 	assert.Equal(t, http.StatusTooManyRequests, w.Code)
 	assert.Contains(t, w.Body.String(), "You can start another at")
 
-	f.createSpace(t, "user_kofi", f.spaceForm(t, "Couches", tomorrowAt(t, 15, 0), "15", ""))
+	f.createSpace(t, "user_kofi", f.spaceForm(t, "Corner couches", tomorrowAt(t, 15, 0), "15", ""))
 }
 
 func TestCreateFromAPostPrefillsATrimmedTitleAndLinksThePost(t *testing.T) {
@@ -599,7 +595,7 @@ func TestPrefillAndFromPostIgnoreClosedOrMalformedPosts(t *testing.T) {
 func TestFormPrefillsSpotAndStartFromTheLink(t *testing.T) {
 	f := newFixture(t)
 	f.onboard(t, "user_jun", "Jun")
-	spot := f.spotID(t, "Couches")
+	spot := f.spotID(t, "Corner couches")
 	starts := time.Date(2030, 1, 2, 22, 30, 0, 0, time.UTC) // 3:30 PM in Denver
 
 	body := f.get("/e/cnh/spaces/new?spot="+spot+"&starts="+url.QueryEscape(starts.Format(time.RFC3339)), as("user_jun")).Body.String()
@@ -610,7 +606,7 @@ func TestFormPrefillsSpotAndStartFromTheLink(t *testing.T) {
 func TestIndexingFollowsTheSpaceAndNeverFailsTheRequest(t *testing.T) {
 	f := newFixture(t)
 	host := f.onboard(t, "user_jun", "Jun")
-	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Kitchen island", tomorrowAt(t, 14, 0), "30", ""))
+	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Kitchen counter", tomorrowAt(t, 14, 0), "30", ""))
 	id := spaceID(t, f, path)
 
 	doc, ok := f.index.doc("space", id)
@@ -624,7 +620,7 @@ func TestIndexingFollowsTheSpaceAndNeverFailsTheRequest(t *testing.T) {
 	assert.Contains(t, f.index.deleted, "space/"+id)
 
 	f.index.fail = true
-	f.createSpace(t, "user_jun", f.spaceForm(t, "Couches", tomorrowAt(t, 16, 0), "30", ""))
+	f.createSpace(t, "user_jun", f.spaceForm(t, "Corner couches", tomorrowAt(t, 16, 0), "30", ""))
 }
 
 func TestSignedInPagesFollowTheirOwnPersonTopic(t *testing.T) {

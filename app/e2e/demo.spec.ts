@@ -30,9 +30,9 @@ test.describe.serial('demo path', () => {
     await deleteClerkUser(email);
   });
 
-  test.fixme('step 1: scan the Kitchen island QR on a phone (S2: spot pages)', async () => {
-    await page.goto('/e/cnh/s/kitchen-island');
-    await expect(page.getByRole('heading', { name: /Kitchen island/ })).toBeVisible();
+  test.fixme('step 1: scan the Kitchen counter QR on a phone (S2: spot pages)', async () => {
+    await page.goto('/e/cnh/s/kitchen-counter');
+    await expect(page.getByRole('heading', { name: /Kitchen counter/ })).toBeVisible();
   });
 
   test('step 1: sign in with an email code', async () => {

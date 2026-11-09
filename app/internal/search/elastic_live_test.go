@@ -130,7 +130,7 @@ func TestS7_EditedSolvesShowInSearchWithinFiveSeconds(t *testing.T) {
 func TestS7_SponsorHitCarriesTheBoothZone(t *testing.T) {
 	c := liveClient(t)
 	ctx := context.Background()
-	require.NoError(t, c.Index(ctx, search.SponsorDoc("dash0", "Dash0", "OTel collector pipelines", "booths")))
+	require.NoError(t, c.Index(ctx, search.SponsorDoc("dash0", "Dash0", "OTel collector pipelines", "main")))
 	require.NoError(t, c.Index(ctx, search.SponsorDoc("elastic", "Elastic", "OTel collector pipelines", "")))
 
 	var hits []search.Hit
@@ -144,7 +144,7 @@ func TestS7_SponsorHitCarriesTheBoothZone(t *testing.T) {
 	for _, h := range hits {
 		zones[h.ID] = h.ZoneID
 	}
-	assert.Equal(t, map[string]string{"dash0": "booths", "elastic": ""}, zones)
+	assert.Equal(t, map[string]string{"dash0": "main", "elastic": ""}, zones)
 }
 
 func TestSearchCombinesTagOverlapAndLeavesOutTheAsker(t *testing.T) {

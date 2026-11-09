@@ -223,7 +223,7 @@ func TestRejoiningAfterLeavingGoesToTheBackOfTheLine(t *testing.T) {
 func TestS4_JoiningAnOverlappingSpaceAsksToLeaveTheFirst(t *testing.T) {
 	f := newSignupFixture(t)
 	ctx := context.Background()
-	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Couches'`)
+	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Corner couches'`)
 	first := f.space(t, f.spot, 60, 30, 2)
 	second := f.space(t, couches, 75, 30, 4)
 	third := f.space(t, couches, 120, 15, 4)
@@ -244,7 +244,7 @@ func TestS4_JoiningAnOverlappingSpaceAsksToLeaveTheFirst(t *testing.T) {
 func TestSwitchingLeavesTheFirstSpaceAndPromotesItsWaitlist(t *testing.T) {
 	f := newSignupFixture(t)
 	ctx := context.Background()
-	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Couches'`)
+	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Corner couches'`)
 	first := f.space(t, f.spot, 60, 30, 2)
 	second := f.space(t, couches, 75, 30, 4)
 	a, b := f.person(t, "a"), f.person(t, "b")
@@ -264,7 +264,7 @@ func TestSwitchingLeavesTheFirstSpaceAndPromotesItsWaitlist(t *testing.T) {
 func TestSwitchingAwayFromACancelledSpaceLeavesItsWaitlistAlone(t *testing.T) {
 	f := newSignupFixture(t)
 	ctx := context.Background()
-	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Couches'`)
+	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Corner couches'`)
 	first := f.space(t, f.spot, 60, 30, 2)
 	second := f.space(t, couches, 75, 30, 4)
 	a, b := f.person(t, "a"), f.person(t, "b")
@@ -286,7 +286,7 @@ func TestSwitchingAwayFromACancelledSpaceLeavesItsWaitlistAlone(t *testing.T) {
 func TestHostCannotLeaveTheirOwnSpace(t *testing.T) {
 	f := newSignupFixture(t)
 	ctx := context.Background()
-	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Couches'`)
+	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Corner couches'`)
 	hosted := f.space(t, f.spot, 60, 30, 4)
 	other := f.space(t, couches, 75, 30, 4)
 	storetest.Exec(t, f.s, `DELETE FROM signup WHERE space_id = $1 AND person_id = $2`, other.ID, f.host.ID)
@@ -305,7 +305,7 @@ func TestHostCannotLeaveTheirOwnSpace(t *testing.T) {
 
 func TestBeingOnlyWaitlistedDoesNotCountAsOverlap(t *testing.T) {
 	f := newSignupFixture(t)
-	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Couches'`)
+	couches := storetest.QueryString(t, f.s, `SELECT id::text FROM spot WHERE name = 'Corner couches'`)
 	first := f.space(t, f.spot, 60, 30, 2)
 	second := f.space(t, couches, 75, 30, 4)
 	a, b := f.person(t, "a"), f.person(t, "b")

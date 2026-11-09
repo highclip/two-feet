@@ -60,6 +60,7 @@ func TestSponsorBoothIsNotFoundUntilMapped(t *testing.T) {
 	s := storetest.Tx(t)
 	ctx := context.Background()
 	emptyVenue(t, s)
+	defer store.SwapSeedDataForTest(fmt.Appendf(nil, boothSeed, ""))()
 	require.NoError(t, s.Seed(ctx, "cnh"))
 
 	_, err := s.SponsorBooth(ctx, seededSponsor(t, s, "Dash0").ID, "kitchen")
@@ -72,16 +73,16 @@ func TestSponsorBoothGivesSpotZoneAndShortestWalk(t *testing.T) {
 	ctx := context.Background()
 	emptyVenue(t, s)
 	require.NoError(t, s.Seed(ctx, "cnh"))
-	require.NoError(t, s.SetSponsorBooth(ctx, "Dash0", "Couches"))
+	require.NoError(t, s.SetSponsorBooth(ctx, "Dash0", "Corner couches"))
 	id := seededSponsor(t, s, "Dash0").ID
 
-	from, err := s.SponsorBooth(ctx, id, "kitchen") // kitchen to main to lounge: 1 + 1
+	from, err := s.SponsorBooth(ctx, id, "kitchen")
 	require.NoError(t, err)
-	assert.Equal(t, "Couches", from.SpotName)
+	assert.Equal(t, "Corner couches", from.SpotName)
 	assert.Equal(t, "lounge", from.ZoneID)
 	assert.Equal(t, "Lounge", from.ZoneName)
 	require.NotNil(t, from.WalkMinutes)
-	assert.Equal(t, 2, *from.WalkMinutes)
+	assert.Equal(t, 1, *from.WalkMinutes)
 
 	same, err := s.SponsorBooth(ctx, id, "lounge")
 	require.NoError(t, err)
@@ -94,12 +95,12 @@ func TestSponsorBoothWithoutACheckInHasNoWalk(t *testing.T) {
 	ctx := context.Background()
 	emptyVenue(t, s)
 	require.NoError(t, s.Seed(ctx, "cnh"))
-	require.NoError(t, s.SetSponsorBooth(ctx, "Dash0", "Couches"))
+	require.NoError(t, s.SetSponsorBooth(ctx, "Dash0", "Corner couches"))
 
 	booth, err := s.SponsorBooth(ctx, seededSponsor(t, s, "Dash0").ID, "")
 
 	require.NoError(t, err)
-	assert.Equal(t, "Couches", booth.SpotName)
+	assert.Equal(t, "Corner couches", booth.SpotName)
 	assert.Nil(t, booth.WalkMinutes)
 }
 
@@ -108,7 +109,7 @@ func TestSponsorBoothWithNoRouteHasNoWalk(t *testing.T) {
 	ctx := context.Background()
 	emptyVenue(t, s)
 	require.NoError(t, s.Seed(ctx, "cnh"))
-	require.NoError(t, s.SetSponsorBooth(ctx, "Dash0", "Couches"))
+	require.NoError(t, s.SetSponsorBooth(ctx, "Dash0", "Corner couches"))
 
 	booth, err := s.SponsorBooth(ctx, seededSponsor(t, s, "Dash0").ID, "nowhere")
 
@@ -121,17 +122,18 @@ func TestSetSponsorBoothRefusesAnUnknownSpotOrSponsor(t *testing.T) {
 	ctx := context.Background()
 	emptyVenue(t, s)
 	require.NoError(t, s.Seed(ctx, "cnh"))
+	before := seededSponsor(t, s, "Dash0").BoothSpotID
 
 	assert.ErrorIs(t, s.SetSponsorBooth(ctx, "Dash0", "No such spot"), store.ErrNotFound)
-	assert.ErrorIs(t, s.SetSponsorBooth(ctx, "No such sponsor", "Couches"), store.ErrNotFound)
-	assert.Nil(t, seededSponsor(t, s, "Dash0").BoothSpotID)
+	assert.ErrorIs(t, s.SetSponsorBooth(ctx, "No such sponsor", "Corner couches"), store.ErrNotFound)
+	assert.Equal(t, *before, *seededSponsor(t, s, "Dash0").BoothSpotID)
 }
 
 const boothSeed = `{
   "event": {"name": "E", "timezone": "America/Denver", "starts_at": "2026-11-09T09:00:00-07:00", "ends_at": "2026-11-09T17:30:00-07:00"},
-  "zones": [{"id": "booths", "name": "Sponsor row"}],
+  "zones": [{"id": "main", "name": "Main room"}],
   "walks": [],
-  "spots": [{"name": "Dash0 booth", "zone": "booths", "where": "", "capacity": 4}],
+  "spots": [{"name": "Dash0 booth", "zone": "main", "where": "", "capacity": 4}],
   "sponsors": [{"name": "Dash0", "solves": "Traces", "booth": "%s"}]
 }`
 
@@ -160,8 +162,9 @@ func TestSeedingTwiceKeepsAManualBoothWhenTheSeedNamesNone(t *testing.T) {
 	s := storetest.Tx(t)
 	ctx := context.Background()
 	emptyVenue(t, s)
+	defer store.SwapSeedDataForTest(fmt.Appendf(nil, boothSeed, ""))()
 	require.NoError(t, s.Seed(ctx, "cnh"))
-	require.NoError(t, s.SetSponsorBooth(ctx, "Dash0", "Couches"))
+	require.NoError(t, s.SetSponsorBooth(ctx, "Dash0", "Dash0 booth"))
 
 	require.NoError(t, s.Seed(ctx, "cnh"))
 

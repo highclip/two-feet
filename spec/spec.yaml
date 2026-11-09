@@ -51,22 +51,28 @@ stack:
 venue_seed:
   zones:
     - { id: main, name: Main room }
+    - { id: cafe, name: Cafe }
     - { id: kitchen, name: Kitchen }
     - { id: lounge, name: Lounge }
-    - { id: patio, name: Patio }
-    - { id: booths, name: Sponsor row }
   walks:                        # undirected edges, minutes on foot
+    - [main, cafe, 1]
     - [main, kitchen, 1]
     - [main, lounge, 1]
-    - [main, booths, 1]
-    - [kitchen, patio, 2]
-    - [lounge, booths, 2]
+    - [cafe, kitchen, 1]
+    - [cafe, lounge, 1]
+    - [kitchen, lounge, 1]
   spots:                        # a table, a couch, a booth. Each gets a QR code.
     - { name: Long table, zone: main, capacity: 10 }
-    - { name: Window table, zone: main, capacity: 6 }
-    - { name: Kitchen island, zone: kitchen, capacity: 6 }
-    - { name: Couches, zone: lounge, capacity: 8 }
-    - { name: Picnic table, zone: patio, capacity: 8 }
+    - { name: Table rows, zone: main, capacity: 16 }
+    - { name: Window bench, zone: main, capacity: 6 }
+    - { name: South bench, zone: main, capacity: 6 }
+    - { name: Round tables, zone: cafe, capacity: 8 }
+    - { name: The bar, zone: cafe, capacity: 10 }
+    - { name: Kitchen counter, zone: kitchen, capacity: 6 }
+    - { name: North lounge, zone: lounge, capacity: 6 }
+    - { name: Corner couches, zone: lounge, capacity: 6 }
+    - { name: Corner chairs, zone: lounge, capacity: 4 }
+    - { name: Sponsor Tables, zone: main, capacity: 6 }
 
 sponsors_seed:                  # confirm wording with each sponsor rep on the day
   - { name: Dash0, solves: "OpenTelemetry-native observability: traces, metrics and logs" }

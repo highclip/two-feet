@@ -7,31 +7,37 @@
   },
   "zones": [
     { "id": "main", "name": "Main room" },
+    { "id": "cafe", "name": "Cafe" },
     { "id": "kitchen", "name": "Kitchen" },
-    { "id": "lounge", "name": "Lounge" },
-    { "id": "patio", "name": "Patio" },
-    { "id": "booths", "name": "Sponsor row" }
+    { "id": "lounge", "name": "Lounge" }
   ],
   "walks": [
+    { "a": "main", "b": "cafe", "minutes": 1 },
     { "a": "main", "b": "kitchen", "minutes": 1 },
     { "a": "main", "b": "lounge", "minutes": 1 },
-    { "a": "main", "b": "booths", "minutes": 1 },
-    { "a": "kitchen", "b": "patio", "minutes": 2 },
-    { "a": "lounge", "b": "booths", "minutes": 2 }
+    { "a": "cafe", "b": "kitchen", "minutes": 1 },
+    { "a": "cafe", "b": "lounge", "minutes": 1 },
+    { "a": "kitchen", "b": "lounge", "minutes": 1 }
   ],
   "spots": [
-    { "name": "Long table", "zone": "main", "where": "The long table in the middle of the main room", "capacity": 10 },
-    { "name": "Window table", "zone": "main", "where": "The table by the front windows", "capacity": 6 },
-    { "name": "Kitchen island", "zone": "kitchen", "where": "The tall table by the coffee machine", "capacity": 6 },
-    { "name": "Couches", "zone": "lounge", "where": "The couches around the low table", "capacity": 8 },
-    { "name": "Picnic table", "zone": "patio", "where": "The picnic table just outside the kitchen door", "capacity": 8 }
+    { "name": "Long table", "zone": "main", "where": "The long conference table at the south end of the open room", "capacity": 10 },
+    { "name": "Table rows", "zone": "main", "where": "The two rows of tables in the middle of the open room", "capacity": 16 },
+    { "name": "Window bench", "zone": "main", "where": "The bench along the 400 South windows", "capacity": 6 },
+    { "name": "South bench", "zone": "main", "where": "The bench along the south wall of the open room", "capacity": 6 },
+    { "name": "Round tables", "zone": "cafe", "where": "The six round tables in the middle of the floor", "capacity": 8 },
+    { "name": "The bar", "zone": "cafe", "where": "The bar seats just north of the round tables", "capacity": 10 },
+    { "name": "Kitchen counter", "zone": "kitchen", "where": "The counter along the north wall", "capacity": 6 },
+    { "name": "North lounge", "zone": "lounge", "where": "The room in the northwest corner, by the stairs", "capacity": 6 },
+    { "name": "Corner couches", "zone": "lounge", "where": "The couches in the southwest corner", "capacity": 6 },
+    { "name": "Corner chairs", "zone": "lounge", "where": "The armchairs in the far southwest corner", "capacity": 4 },
+    { "name": "Sponsor Tables", "zone": "main", "where": "Across from the Kitchen", "capacity": 6 }
   ],
   "sponsors": [
-    { "name": "Dash0", "solves": "OpenTelemetry-native observability: traces, metrics and logs" },
-    { "name": "Elastic", "solves": "Search, vector search and log analytics with Elasticsearch" },
-    { "name": "Radar", "solves": "Kubernetes UI with an AI SRE for troubleshooting clusters" },
-    { "name": "Sonar", "solves": "Code quality and AI code verification (Gitar)" },
-    { "name": "Tailscale", "solves": "Private networking between machines, clusters and people" },
-    { "name": "Temporal", "solves": "Durable workflows that survive failures and retries" }
+    { "name": "Dash0", "solves": "OpenTelemetry-native observability: traces, metrics and logs", "booth": "Sponsor Tables" },
+    { "name": "Elastic", "solves": "Search, vector search and log analytics with Elasticsearch", "booth": "Sponsor Tables" },
+    { "name": "Radar", "solves": "Kubernetes UI with an AI SRE for troubleshooting clusters", "booth": "Sponsor Tables" },
+    { "name": "Sonar", "solves": "Code quality and AI code verification (Gitar)", "booth": "Sponsor Tables" },
+    { "name": "Tailscale", "solves": "Private networking between machines, clusters and people", "booth": "Sponsor Tables" },
+    { "name": "Temporal", "solves": "Durable workflows that survive failures and retries", "booth": "Sponsor Tables" }
   ]
 }

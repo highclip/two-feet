@@ -55,7 +55,7 @@ func TestDemoSeedLoadsTheCountsAndMustIncludeRows(t *testing.T) {
 
 	sp := collector(t, s, now)
 	assert.Equal(t, "Collector tuning: dropping spans under load", sp.Title)
-	assert.Equal(t, "Long table", sp.SpotName, "D1 moved it here from Kitchen island")
+	assert.Equal(t, "Long table", sp.SpotName, "the demo scan is at Kitchen counter, one minute away")
 	assert.Equal(t, 8, sp.Capacity)
 	assert.Equal(t, 5, sp.Going)
 	assert.WithinDuration(t, now.Add(6*time.Minute), sp.StartsAt, time.Minute)

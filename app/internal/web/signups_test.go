@@ -130,7 +130,7 @@ func TestWaitlistedPersonIsToldTheirPlaceInLine(t *testing.T) {
 func TestS4_JoiningAnOverlappingSpaceAsksInlineToLeaveTheFirst(t *testing.T) {
 	f := newFixture(t)
 	first, firstID := f.joinableSpace(t, "4")
-	other := f.spaceForm(t, "Couches", soon(t, 75), "30", "4")
+	other := f.spaceForm(t, "Corner couches", soon(t, 75), "30", "4")
 	other.Set("title", "Tail sampling")
 	second := f.createSpace(t, "user_host", other)
 	secondID := spaceID(t, f, second)
@@ -307,7 +307,7 @@ func TestUndoLeaveIsTooLateOnceTheWindowHasClosedAndHarmlessWhenAlreadyBack(t *t
 func TestPublishesAndNoticesFollowASwitchBetweenSpaces(t *testing.T) {
 	f := newFixture(t)
 	first, firstID := f.joinableSpace(t, "2")
-	otherForm := f.spaceForm(t, "Couches", soon(t, 75), "30", "4")
+	otherForm := f.spaceForm(t, "Corner couches", soon(t, 75), "30", "4")
 	second := f.createSpace(t, "user_host", otherForm)
 	f.onboard(t, "user_a", "Ana")
 	waiting := f.onboard(t, "user_b", "Ben")

@@ -38,9 +38,9 @@ func TestS1_SeedRunTwiceLeavesEverythingExactlyOnce(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, count(t, s, "event"))
-	assert.Equal(t, 5, count(t, s, "zone"))
-	assert.Equal(t, 5, count(t, s, "zone_walk"))
-	assert.Equal(t, 5, count(t, s, "spot"))
+	assert.Equal(t, 4, count(t, s, "zone"))
+	assert.Equal(t, 6, count(t, s, "zone_walk"))
+	assert.Equal(t, 11, count(t, s, "spot"))
 	assert.Equal(t, 6, count(t, s, "sponsor"))
 	assert.Equal(t, first, second, "a re-run keeps every printed QR slug")
 	for name, slug := range first {
@@ -56,11 +56,11 @@ func TestSeedAppliesVenueChangesButKeepsSponsorEdits(t *testing.T) {
 	before, err := s.SpotQRSlugs(ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, s.ExecForTest(ctx, `UPDATE spot SET "where" = 'old note', zone_id = 'patio' WHERE name = 'Couches'`))
+	require.NoError(t, s.ExecForTest(ctx, `UPDATE spot SET "where" = 'old note', zone_id = 'cafe' WHERE name = 'Corner couches'`))
 	require.NoError(t, s.ExecForTest(ctx, `UPDATE sponsor SET solves = 'edited by the rep' WHERE name = 'Dash0'`))
 	require.NoError(t, s.Seed(ctx, "cnh"))
 
-	spot, err := s.SpotByQRSlug(ctx, before["Couches"])
+	spot, err := s.SpotByQRSlug(ctx, before["Corner couches"])
 	require.NoError(t, err)
 	assert.Equal(t, "lounge", spot.ZoneID)
 	assert.NotEqual(t, "old note", spot.Where)
@@ -71,22 +71,32 @@ func TestSeedAppliesVenueChangesButKeepsSponsorEdits(t *testing.T) {
 		if sp.Name == "Dash0" {
 			assert.Equal(t, "edited by the rep", sp.Solves)
 		}
-		assert.Nil(t, sp.BoothSpotID, "booth spots wait for the venue mapping (D22)")
+		assert.NotNil(t, sp.BoothSpotID, "the seed file maps every sponsor to a booth")
 	}
 }
+
+// The real venue is one minute between any two zones, so the shortest-path case needs its own map.
+const chainSeed = `{
+  "event": {"name": "E", "timezone": "America/Denver", "starts_at": "2026-11-09T09:00:00-07:00", "ends_at": "2026-11-09T17:30:00-07:00"},
+  "zones": [{"id": "main", "name": "Main"}, {"id": "kitchen", "name": "Kitchen"}, {"id": "cafe", "name": "Cafe"}, {"id": "lounge", "name": "Lounge"}],
+  "walks": [{"a": "cafe", "b": "kitchen", "minutes": 2}, {"a": "kitchen", "b": "main", "minutes": 1}, {"a": "main", "b": "lounge", "minutes": 1}],
+  "spots": [],
+  "sponsors": []
+}`
 
 func TestWalkMinutesIsShortestPathAndZeroInSameZone(t *testing.T) {
 	s := storetest.Tx(t)
 	ctx := context.Background()
 	emptyVenue(t, s)
+	defer store.SwapSeedDataForTest([]byte(chainSeed))()
 	require.NoError(t, s.Seed(ctx, "cnh"))
 
 	same, err := s.WalkMinutes(ctx, "kitchen", "kitchen")
 	require.NoError(t, err)
 	assert.Equal(t, 0, same)
 
-	// patio to kitchen to main to booths: 2 + 1 + 1.
-	far, err := s.WalkMinutes(ctx, "booths", "patio")
+	// cafe to kitchen to main to lounge: 2 + 1 + 1.
+	far, err := s.WalkMinutes(ctx, "lounge", "cafe")
 	require.NoError(t, err)
 	assert.Equal(t, 4, far)
 

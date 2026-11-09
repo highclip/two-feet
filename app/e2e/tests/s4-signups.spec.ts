@@ -66,7 +66,7 @@ test.describe('S4 live signups', () => {
     const ben = await signedIn(browser, emails.ben, 'Ben');
 
     const spaceUrl = await createSpace(host.page, 'Collector tuning', 'Long table · Main room · seats 10', `${day}T14:00`, '2');
-    const otherUrl = await createSpace(host.page, 'Tail sampling', 'Couches · Lounge · seats 8', `${day}T14:15`, '4');
+    const otherUrl = await createSpace(host.page, 'Tail sampling', 'Corner couches · Lounge · seats 6', `${day}T14:15`, '4');
 
     // Two browsers on the same space: one joins, the other's count moves without a reload.
     await host.page.goto(spaceUrl);
@@ -165,7 +165,7 @@ test.describe('S4 live signups', () => {
     const joinerEmail = testEmail('s4-restart-joiner');
     const host = await signedIn(browser, email, 'Rae');
     try {
-      const spaceUrl = await createSpace(host.page, 'Restart check', 'Window table · Main room · seats 6', `${futureDay()}T09:00`, '4');
+      const spaceUrl = await createSpace(host.page, 'Restart check', 'Window bench · Main room · seats 6', `${futureDay()}T09:00`, '4');
       const path = new URL(spaceUrl).pathname;
 
       // A second copy of the real binary on its own port, so the test can stop and start it.

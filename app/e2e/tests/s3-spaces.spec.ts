@@ -71,7 +71,7 @@ test.describe('S3 spaces', () => {
     await page.goto('/e/cnh/spaces/new');
     await fillForm();
     await page.getByRole('button', { name: 'Start this space' }).click();
-    await expect(page.getByRole('alert')).toHaveText('Long table is taken until 2:30. Try Couches.');
+    await expect(page.getByRole('alert')).toHaveText('Long table is taken until 2:30. Try Corner chairs.');
 
     await page.goto(spacePage);
     await page.getByRole('button', { name: 'Cancel space' }).click();

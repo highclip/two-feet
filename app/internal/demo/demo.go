@@ -83,11 +83,11 @@ var spaces = []sampleSpace{
 		"marcus", collectorTitle, "Bring your collector config and a graph of what you're losing.",
 		"Long table", 6 * time.Minute, 30, 8, []string{"priya", "ines", "tomas", "kofi"},
 	},
-	{"nora", "ArgoCD across many clusters", "What's working, what isn't.", "Window table", 10 * time.Minute, 30, 6, []string{"sam"}},
-	{"lena", "Postgres migrations without downtime", "Locks, batches and backfills.", "Kitchen island", 20 * time.Minute, 30, 6, []string{"dev"}},
-	{"aiko", "Hybrid search show and tell", "ELSER and rank fusion, live.", "Couches", 35 * time.Minute, 30, 8, nil},
+	{"nora", "ArgoCD across many clusters", "What's working, what isn't.", "Window bench", 10 * time.Minute, 30, 6, []string{"sam"}},
+	{"lena", "Postgres migrations without downtime", "Locks, batches and backfills.", "Kitchen counter", 20 * time.Minute, 30, 6, []string{"dev"}},
+	{"aiko", "Hybrid search show and tell", "ELSER and rank fusion, live.", "Corner couches", 35 * time.Minute, 30, 6, nil},
 	{"dev", "Durable workflows: what really survives a restart", "", "Long table", 45 * time.Minute, 30, 10, []string{"kofi"}},
-	{"mei", "Smaller Docker images", "Bring a Dockerfile.", "Picnic table", 50 * time.Minute, 15, 8, nil},
+	{"mei", "Smaller Docker images", "Bring a Dockerfile.", "Round tables", 50 * time.Minute, 15, 8, nil},
 }
 
 // Load replaces the sample data, then rebuilds the index so it holds this run's rows and none of

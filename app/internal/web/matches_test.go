@@ -251,6 +251,7 @@ func TestS6_ASponsorWithNoBoothYetStillMatchesWithoutOffering(t *testing.T) {
 	f := newMatchFixture(t, finder)
 	_, postID := f.askerPost(t, "user_asker", "Sam")
 	id := f.seededSponsorID(t, "Dash0")
+	storetest.Exec(t, f.store, `UPDATE sponsor SET booth_spot_id = NULL WHERE id = $1`, id)
 	finder.hits = []search.Hit{{Type: search.TypeSponsor, ID: id, Text: "Dash0: traces"}}
 
 	card := cards(f.matchesHTML(t, "user_asker", postID))["sponsor:"+id]
@@ -329,7 +330,7 @@ func TestS6_AHitPostgresNoLongerWantsIsDropped(t *testing.T) {
 	cancelled := f.makeSpace(t, host.ID, "Long table", "Cancelled space", 6*time.Minute, 8)
 	_, err := f.store.CancelSpace(context.Background(), cancelled.ID)
 	require.NoError(t, err)
-	tooFar := f.makeSpace(t, host.ID, "Couches", "Moved to much later", 2*time.Hour, 8)
+	tooFar := f.makeSpace(t, host.ID, "Corner couches", "Moved to much later", 2*time.Hour, 6)
 	finder.hits = []search.Hit{spaceHit(cancelled), spaceHit(tooFar),
 		{Type: search.TypeSponsor, ID: "not-a-uuid"},
 		{Type: search.TypeSpace, ID: "00000000-0000-0000-0000-000000000000"}}

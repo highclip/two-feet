@@ -100,10 +100,19 @@ func serve(ctx context.Context, log *slog.Logger) error {
 	db := store.New(pool)
 	go telemetry.ReportSpacesOpen(ctx, db.CountOpenSpaces, log)
 	hub := live.NewHub()
+	elastic, err := search.NewClient(search.Config{
+		URL: cfg.ElasticURL, APIKey: cfg.ElasticAPIKey, Index: cfg.ElasticIndexPrefix,
+		Transport: telemetry.ElasticTransport(http.DefaultTransport),
+	})
+	if err != nil {
+		return err
+	}
+	indexer := search.NewQueue(elastic, log, search.QueueOptions{})
+	go search.NewSync(db, indexer, log).Run(ctx, elastic.Ready, indexer)
 	app := web.New(web.Deps{
 		Store:     db,
 		Hub:       hub,
-		Search:    search.Noop{},
+		Search:    indexer,
 		Limiter:   web.NewLimiter(),
 		Auth:      auth.New(db, auth.NewClerk(cfg.ClerkSecretKey, cfg.PublicURL), log),
 		Log:       log,
@@ -140,6 +149,7 @@ func serve(ctx context.Context, log *slog.Logger) error {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("shutdown", "err", err)
 	}
+	indexer.Close(shutdownCtx)
 	if err := shutdownTelemetry(shutdownCtx); err != nil {
 		log.Error("shutdown telemetry", "err", err)
 	}

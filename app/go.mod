@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/a-h/templ v0.3.857
 	github.com/clerk/clerk-sdk-go/v2 v2.8.0
+	github.com/elastic/go-elasticsearch/v8 v8.19.7
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/stretchr/testify v1.12.1
@@ -23,6 +24,7 @@ require (
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.9.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect

@@ -91,7 +91,7 @@ func PostForm(p Page, c PostComposer) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		if c.Action != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form class=\"note\" method=\"post\" action=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form class=\"composer\" method=\"post\" action=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -169,14 +169,14 @@ func PostForm(p Page, c PostComposer) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</fieldset><label class=\"field\"><span class=\"sr-only\">Your post, in one line</span> <textarea class=\"input note-text\" name=\"text\" rows=\"3\" minlength=\"10\" maxlength=\"280\" required placeholder=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</fieldset><label class=\"field\"><span class=\"sr-only\">Your post, in one line</span> <textarea class=\"input composer-text\" name=\"text\" rows=\"3\" minlength=\"10\" maxlength=\"280\" required placeholder=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(firstPlaceholder(c))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/posts.templ`, Line: 81, Col: 132}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/posts.templ`, Line: 81, Col: 136}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -189,7 +189,7 @@ func PostForm(p Page, c PostComposer) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(placeholderJSON(c))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/posts.templ`, Line: 81, Col: 173}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/posts.templ`, Line: 81, Col: 177}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -202,7 +202,7 @@ func PostForm(p Page, c PostComposer) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(c.Text)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/posts.templ`, Line: 81, Col: 184}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/posts.templ`, Line: 81, Col: 188}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -452,7 +452,7 @@ func PostPage(p Page, v PostView) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\"><button class=\"button button-quiet\" type=\"submit\">This is sorted</button></form>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\"><button class=\"button button-quiet post-resolve\" type=\"submit\">This is sorted</button></form>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

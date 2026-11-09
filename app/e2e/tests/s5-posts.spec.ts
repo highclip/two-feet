@@ -28,14 +28,14 @@ test.describe('S5 posts', () => {
 
     await page.screenshot({ path: `${shots}/home-composer.png`, fullPage: true });
 
-    const composer = page.locator('form.note');
+    const composer = page.locator('form.composer');
     const background = () => composer.evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(await background()).toBe('rgb(255, 243, 191)'); // --stuck-tint
     await page.locator('.kind', { hasText: 'Curious' }).click();
     await expect.poll(background).toBe('rgb(221, 240, 255)'); // --curious-tint
     await page.locator('.kind', { hasText: 'Stuck on' }).click();
 
-    for (const target of await page.locator('form.note .kind-label, form.note button').all()) {
+    for (const target of await page.locator('form.composer .kind-label, form.composer button').all()) {
       const box = await target.boundingBox();
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
     }

@@ -63,7 +63,7 @@ func placeholderJSON(c PostComposer) string {
 // PostForm is the note you write a post on. Choosing a kind recolors it, with CSS alone.
 templ PostForm(p Page, c PostComposer) {
 	if c.Action != "" {
-		<form class="note" method="post" action={ templ.SafeURL(c.Action) }>
+		<form class="composer" method="post" action={ templ.SafeURL(c.Action) }>
 			if c.Error != "" {
 				<p class="form-error" role="alert">{ c.Error }</p>
 			}
@@ -78,7 +78,7 @@ templ PostForm(p Page, c PostComposer) {
 			</fieldset>
 			<label class="field">
 				<span class="sr-only">Your post, in one line</span>
-				<textarea class="input note-text" name="text" rows="3" minlength="10" maxlength="280" required placeholder={ firstPlaceholder(c) } data-placeholders={ placeholderJSON(c) }>{ c.Text }</textarea>
+				<textarea class="input composer-text" name="text" rows="3" minlength="10" maxlength="280" required placeholder={ firstPlaceholder(c) } data-placeholders={ placeholderJSON(c) }>{ c.Text }</textarea>
 			</label>
 			<button class="button" type="submit">Post it</button>
 		</form>
@@ -122,7 +122,7 @@ templ PostPage(p Page, v PostView) {
 					<a class="button button-action" href={ templ.SafeURL(v.StartURL) }>Start a space</a>
 				</section>
 				<form method="post" action={ templ.SafeURL(v.ResolveURL) }>
-					<button class="button button-quiet" type="submit">This is sorted</button>
+					<button class="button button-quiet post-resolve" type="submit">This is sorted</button>
 				</form>
 			case store.PostResolved:
 				<section class="empty">

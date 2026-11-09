@@ -54,6 +54,39 @@ func TestWallNoteStretchedToReadableStopsAtTheNextOne(t *testing.T) {
 	assert.Equal(t, 5, notes[1].From)
 }
 
+func TestWallBackToBackNotesNearTheWindowEndStayOnOneRow(t *testing.T) {
+	window := time.Date(2026, 11, 9, 14, 30, 0, 0, time.UTC)
+	now := window.Add(time.Minute)
+
+	cases := []struct {
+		name                 string
+		first, second        int
+		firstFrom, firstTo   int
+		secondFrom, secondTo int
+	}{
+		{"meet inside the last slot", 100, 115, 100, 105, 105, 120},
+		{"meet on the last slot's edge", 90, 105, 90, 105, 105, 120},
+		{"meet just before the last slot", 89, 104, 89, 104, 104, 119},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			spaces := []store.Space{
+				wallSpace(window.Add(time.Duration(tc.first)*time.Minute), 15),
+				wallSpace(window.Add(time.Duration(tc.second)*time.Minute), 15),
+			}
+
+			notes := placeWallNotes(spaces, window, now)
+
+			require.Len(t, notes, 2)
+			assert.Equal(t, tc.firstFrom, notes[0].From)
+			assert.Equal(t, tc.firstTo, notes[0].To)
+			assert.Equal(t, tc.secondFrom, notes[1].From)
+			assert.Equal(t, tc.secondTo, notes[1].To)
+			assert.LessOrEqual(t, notes[0].To, notes[1].From, "overlapping columns wrap to a row the lane doesn't have")
+		})
+	}
+}
+
 func TestWallChipFollowsTheClock(t *testing.T) {
 	start := time.Date(2026, 11, 9, 14, 30, 0, 0, time.UTC)
 	cases := []struct {

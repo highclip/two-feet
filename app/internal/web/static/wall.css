@@ -113,7 +113,7 @@ html, body { margin: 0; height: 100%; }
   top: -12px;
   right: 16px;
   padding: 3px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-button);
   background: var(--wall-text);
   color: var(--ink);
   font-size: 17px;

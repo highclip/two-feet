@@ -175,16 +175,18 @@ func wallTagViews(tags []search.TagCount) []views.WallTag {
 // placeWallNotes turns one spot's spaces, in start order, into notes positioned by the minute within
 // the window. Notes are copied field by field so nothing but title and counts can reach the page.
 func placeWallNotes(spaces []store.Space, window, now time.Time) []views.WallNote {
+	// Every start is pulled back before any end is worked out: a lane has one row, so a note that
+	// runs past the next one's pulled-back start would wrap below it.
+	froms := make([]int, len(spaces))
+	for i, sp := range spaces {
+		froms[i] = min(wallMinute(sp.StartsAt, window), wallMinutes-wallMinSpan)
+	}
 	notes := make([]views.WallNote, 0, len(spaces))
 	for i, sp := range spaces {
-		from := wallMinute(sp.StartsAt, window)
-		to := max(wallMinute(sp.EndsAt(), window), from+wallMinSpan)
-		if from > wallMinutes-wallMinSpan {
-			from = wallMinutes - wallMinSpan
-		}
-		to = min(to, wallMinutes)
+		from := froms[i]
+		to := min(max(wallMinute(sp.EndsAt(), window), from+wallMinSpan), wallMinutes)
 		if i+1 < len(spaces) {
-			to = min(to, max(wallMinute(spaces[i+1].StartsAt, window), from+1))
+			to = min(to, max(froms[i+1], from+1))
 		}
 		chip, hot := wallChip(sp.StartsAt, now)
 		notes = append(notes, views.WallNote{

@@ -43,6 +43,7 @@ test.describe('S3 spaces', () => {
     await expect(page.getByText('Jun, hosting')).toBeVisible();
     await expect(page.getByText('1 of 8 going')).toBeVisible();
     const spacePage = page.url();
+    await page.screenshot({ path: '../../.harness/shots/S3/space.png', fullPage: true });
 
     const box = await page.getByRole('link', { name: 'Edit' }).boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);
@@ -52,10 +53,12 @@ test.describe('S3 spaces', () => {
     await fillForm();
     await page.getByRole('button', { name: 'Start this space' }).click();
     await expect(page.getByRole('alert')).toHaveText('Long table is taken until 2:30. Try Couches.');
+    await page.screenshot({ path: '../../.harness/shots/S3/form-refused.png', fullPage: true });
 
     await page.goto(spacePage);
     await page.getByRole('button', { name: 'Cancel space' }).click();
     await expect(page.getByText('Cancelled by host')).toBeVisible();
+    await page.screenshot({ path: '../../.harness/shots/S3/cancelled.png', fullPage: true });
     await page.getByRole('button', { name: 'Undo' }).click();
     await expect(page.getByText('1 of 8 going')).toBeVisible();
     await expect(page.getByText('Cancelled by host')).toHaveCount(0);

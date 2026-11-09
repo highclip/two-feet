@@ -50,6 +50,19 @@ var vocabulary = map[string]string{
 	"ebpf":                    "ebpf",
 }
 
+// vocabularyTags is the known technologies in a text, leaving out any other word ExtractTags keeps.
+func vocabularyTags(text string) []string {
+	return slices.DeleteFunc(ExtractTags(text), func(tag string) bool { return !knownTags[tag] })
+}
+
+var knownTags = func() map[string]bool {
+	set := make(map[string]bool, len(vocabulary))
+	for _, tag := range vocabulary {
+		set[tag] = true
+	}
+	return set
+}()
+
 // stopwords are common words that say nothing about the topic of a post.
 var stopwords = func() map[string]bool {
 	words := strings.Fields(`

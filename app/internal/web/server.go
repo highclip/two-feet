@@ -35,6 +35,7 @@ type Deps struct {
 	Search    search.Indexer
 	Finder    search.Finder     // reads the index for matches; nil finds nothing
 	Tags      search.TagCounter // the Wall's tag strip; nil hides it
+	Topics    search.TopicLister // stories from online, for the Wall and the Start a space form; nil hides them
 	Limiter   *Limiter
 	Auth      *auth.Authenticator
 	Log       *slog.Logger
@@ -66,6 +67,7 @@ type Server struct {
 	undo      *undoWindows
 	now       func() time.Time
 	wallTags  *wallTagStrip
+	topics    search.TopicLister
 }
 
 // New returns a Server.
@@ -82,6 +84,7 @@ func New(d Deps) *Server {
 		undo:     newUndoWindows(),
 		now:      now,
 		wallTags: &wallTagStrip{counter: d.Tags, log: d.Log},
+		topics:   d.Topics,
 	}
 }
 

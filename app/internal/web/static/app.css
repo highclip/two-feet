@@ -99,6 +99,22 @@ body {
 .toggle[aria-checked="true"] .toggle-track { background: var(--ink); justify-content: flex-end; }
 .segmented { margin: 0; padding: 0; border: 0; }
 .segmented .field-label { padding: 0; margin-bottom: 4px; }
+.suggestions { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.suggestion {
+  display: flex; flex-direction: column; gap: 2px;
+  width: 100%; min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.suggestion-title { font-weight: 700; overflow-wrap: anywhere; }
+.suggestion-meta { font-size: var(--text-sm); color: var(--ink-soft); }
+
 .segments { display: flex; gap: 6px; }
 .segment { flex: 1; }
 .segment input { position: absolute; opacity: 0; }

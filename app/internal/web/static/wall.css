@@ -155,6 +155,12 @@ html, body { margin: 0; height: 100%; }
 .wall-tag { flex: none; padding: 6px 14px; border: 1px solid var(--wall-line); border-radius: var(--radius-pill); font-size: 22px; white-space: nowrap; }
 .wall-tag b { margin-left: 4px; color: var(--stuck); font-variant-numeric: tabular-nums; }
 
+.wall-topics { flex: none; height: 58px; display: flex; align-items: center; gap: 20px; }
+.wall-topic-list { flex: 1; min-width: 0; margin: 0; padding: 0; list-style: none; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 20px; }
+.wall-topic { min-width: 0; display: flex; flex-direction: column; }
+.wall-topic-title { font-size: 22px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wall-topic-meta { font-size: 18px; line-height: 1.2; color: var(--wall-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 .wall-foot { flex: none; height: 56px; box-sizing: border-box; padding-top: 14px; border-top: 1px solid var(--wall-line); display: flex; align-items: center; justify-content: space-between; gap: 32px; }
 .wall-ticker { min-width: 0; flex: 1; display: flex; align-items: baseline; gap: 28px; font-size: 22px; }
 .wall-ticker-item { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

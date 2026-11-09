@@ -139,6 +139,10 @@
   document.addEventListener("click", function (e) {
     var close = e.target.closest("[data-dismiss]");
     if (close) close.closest(".toast").remove();
+
+    // A topic from online fills in the title, which stays an ordinary field to edit.
+    var suggestion = e.target.closest("[data-fill-title]");
+    if (suggestion) suggestion.form.elements.title.value = suggestion.dataset.fillTitle;
   });
 
   document.addEventListener("htmx:responseError", function (e) {

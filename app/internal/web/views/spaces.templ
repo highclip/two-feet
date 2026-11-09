@@ -33,6 +33,25 @@ type SpaceForm struct {
 	PostID   string
 	Spots    []SpotOption
 	Error    string
+
+	Suggestions []Topic // topics from online to borrow a title from; create form only
+}
+
+// Topic is something being discussed online, as the Wall and the create form show it. It holds a
+// headline and a count: there's nowhere to put a name or the words of a post.
+type Topic struct {
+	Title   string
+	Source  string
+	Related int
+}
+
+// Line says where a topic comes from and how many posts in the room relate to it.
+func (t Topic) Line() string {
+	noun := "posts"
+	if t.Related == 1 {
+		noun = "post"
+	}
+	return fmt.Sprintf("%s · %d %s in the room", t.Source, t.Related, noun)
 }
 
 // SpaceView is what the space page shows. ShowNames is false for visitors, who see counts only.
@@ -282,6 +301,21 @@ templ SpaceFormPage(p Page, form SpaceForm) {
 				<span class="field-label">What's it about?</span>
 				<input class="input" type="text" name="title" value={ form.Title } minlength="5" maxlength="80" required/>
 			</label>
+			if len(form.Suggestions) > 0 {
+				<div class="field">
+					<span class="field-label">Or borrow one from online</span>
+					<ul class="suggestions">
+						for _, t := range form.Suggestions {
+							<li>
+								<button type="button" class="suggestion" data-fill-title={ t.Title }>
+									<span class="suggestion-title">{ t.Title }</span>
+									<span class="suggestion-meta">{ t.Line() }</span>
+								</button>
+							</li>
+						}
+					</ul>
+				</div>
+			}
 			<label class="field">
 				<span class="field-label">A line from you (optional)</span>
 				<textarea class="input textarea" name="blurb" rows="2" maxlength="280">{ form.Blurb }</textarea>

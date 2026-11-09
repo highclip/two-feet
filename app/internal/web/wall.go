@@ -119,6 +119,7 @@ func (s *Server) buildWall(ctx context.Context, e store.Event) (views.WallBoard,
 		StartURL: spacesURL(e.Slug) + "/new",
 		Dense:    len(spots) > wallDenseRows,
 		Tags:     wallTagViews(s.wallTags.get(ctx, now)),
+		Topics:   s.topicViews(),
 	}
 	for i := range wallSlots {
 		board.Slots = append(board.Slots, window.Add(time.Duration(i)*wallSlot).In(loc).Format("3:04"))

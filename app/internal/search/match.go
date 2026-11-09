@@ -18,6 +18,9 @@ const perType = 3
 // because the index can lag: hits Postgres rejects mustn't use up the slots of the ones below them.
 const candidatesPerType = perType * 4
 
+// relatedPostsWindow is how many posts can count towards a topic, more than a room will have open.
+const relatedPostsWindow = 500
+
 // matchTypes are what a post is matched against; findTypes also include posts, for the search box.
 var (
 	matchTypes = []string{TypeSpace, TypePerson, TypeSponsor}
@@ -141,6 +144,37 @@ func (m *Matcher) run(ctx context.Context, asker store.Person, text string, tags
 		h.hits[hit.Type] = append(h.hits[hit.Type], hit)
 	}
 	return h.results(ctx)
+}
+
+// RelatedPosts counts the open posts that fit some text, by the same rule a match has to meet: the
+// post shares a tag or a word with it. It returns a number only, and counts everyone's posts.
+func (m *Matcher) RelatedPosts(ctx context.Context, text string, tags []string, now time.Time) (int, error) {
+	if m.finder == nil || text == "" {
+		return 0, nil
+	}
+	tags = withParents(tags)
+	hits, err := m.finder.SearchEach(ctx, Query{Text: text, Tags: tags, Now: now}, []string{TypePost}, relatedPostsWindow)
+	if err != nil {
+		return 0, fmt.Errorf("find related posts: %w", err)
+	}
+	if len(hits) == 0 {
+		return 0, nil
+	}
+	ids := make([]string, 0, len(hits))
+	for _, hit := range hits {
+		ids = append(ids, hit.ID)
+	}
+	posts, err := m.store.OpenPostsByIDs(ctx, ids, now)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, row := range posts {
+		if len(Reasons(text, tags, row.Post.Tags, row.Post.Text)) > 0 {
+			count++
+		}
+	}
+	return count, nil
 }
 
 // parentTags are broader tags a more specific one implies, so a question about the OTel collector

@@ -1,3 +1,4 @@
+import { setupClerkTestingToken } from '@clerk/testing/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
 import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin';
@@ -6,6 +7,7 @@ import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin
 const shots = '../../.harness/shots/S5';
 
 async function signInAndOnboard(page: Page, email: string, name: string): Promise<void> {
+  await setupClerkTestingToken({ page }); // before Clerk's first request, which starts on page load
   await page.goto('/sign-in?return=%2Fe%2Fcnh');
   await enterEmailAndCode(page, email);
   await expect(page).toHaveURL(/\/e\/cnh\/onboarding/, { timeout: 30_000 });

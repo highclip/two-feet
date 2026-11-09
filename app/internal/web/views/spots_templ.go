@@ -29,11 +29,11 @@ type SpotView struct {
 
 // SpotBoard is the part of a spot's page that refetches when its spaces change.
 type SpotBoard struct {
-	URL   string
-	Home  string // the event's home, where an empty board sends people who can't start a space
-	Now   *SpaceView
-	Next  []SpaceView
-	Start *StartHere // nil for people who can't start a space
+	URL     string
+	WallURL string // where an empty board sends people who can't start a space
+	Now     *SpaceView
+	Next    []SpaceView
+	Start   *StartHere // nil for people who can't start a space
 }
 
 // StartHere is the button that opens the create form for this spot's next free slot. Fits is how
@@ -364,12 +364,12 @@ func SpotBoardBody(b SpotBoard) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var13 templ.SafeURL = templ.SafeURL(b.Home)
+				var templ_7745c5c3_Var13 templ.SafeURL = templ.SafeURL(b.WallURL)
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var13)))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\">Go to the event home</a></section>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\">Open the Wall</a></section>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

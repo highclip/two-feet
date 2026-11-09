@@ -168,11 +168,13 @@ func serve(ctx context.Context, log *slog.Logger) error {
 		Hub:       hub,
 		Search:    indexer,
 		Finder:    elastic,
+		Tags:      elastic,
 		Limiter:   web.NewLimiter(),
 		Auth:      auth.New(db, auth.NewClerk(cfg.ClerkSecretKey, cfg.PublicURL), log),
 		Log:       log,
 		Version:   version,
 		EventSlug: cfg.EventSlug,
+		PublicURL: cfg.PublicURL,
 		ClerkKey:  cfg.ClerkPublishableKey,
 		Ready:     pool.Ping,
 	})

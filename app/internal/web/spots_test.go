@@ -126,7 +126,7 @@ func TestS2_SpotPageShowsNameWhereNowAndNextTwoTodayWithCountsAndJoin(t *testing
 	assert.Len(t, regexp.MustCompile(`action="[^"]*/join"`).FindAllString(body, -1), 3, "one Join form per space")
 	assert.Contains(t, text, "Join · 3 seats left")
 	assert.Contains(t, text, "Dana", "signed-in people see hosts")
-	assert.Contains(t, body, `class="spot-board" hx-get="`+boardPath(spot)+`" hx-trigger="sse:spaces-changed" hx-sync="this:queue last"`, "a board refetch waits for a join's answer")
+	assert.Contains(t, body, `class="spot-board" hx-get="`+spotBoardPath(spot)+`" hx-trigger="sse:spaces-changed" hx-sync="this:queue last"`, "a board refetch waits for a join's answer")
 	assert.Contains(t, body, `hx-sync="closest .spot-board:queue last"`, "a join holds off the board swap")
 }
 
@@ -180,7 +180,7 @@ func TestSpotPageWithNothingOnSaysSoAndOffersToStart(t *testing.T) {
 	assert.Contains(t, text, "Start a space here")
 }
 
-func TestSpotPageWithNothingOnSendsOrganizersToTheEventInsteadOfOfferingToStart(t *testing.T) {
+func TestSpotPageWithNothingOnSendsOrganizersToTheWallInsteadOfOfferingToStart(t *testing.T) {
 	f := newFixture(t)
 	f.at = noon(t)
 	f.meta["user_org"] = auth.Metadata{Role: "organizer"}
@@ -190,7 +190,7 @@ func TestSpotPageWithNothingOnSendsOrganizersToTheEventInsteadOfOfferingToStart(
 
 	assert.Contains(t, visible(body), "Nothing here yet. Whoever comes are the right people.")
 	assert.NotContains(t, visible(body), "Start one")
-	assert.Contains(t, body, `<a class="button" href="/e/cnh">Go to the event home</a>`)
+	assert.Contains(t, body, `<a class="button" href="/e/cnh/wall">Open the Wall</a>`)
 }
 
 func TestS2_StartASpaceHereOpensFormWithThisSpotAndNextFreeSlot(t *testing.T) {
@@ -259,7 +259,7 @@ func TestS2_SpotPageUpdatesWhenSomeoneJoinsOrASpaceIsCreatedHere(t *testing.T) {
 	id := spaceID(t, f, path)
 	expectFragment(t, updates, "spaces-changed")
 
-	board := f.get(boardPath(spot)).Body.String()
+	board := f.get(spotBoardPath(spot)).Body.String()
 	assert.Contains(t, board, `sse-swap="space-`+id+`"`, "the new row takes count updates")
 
 	require.Equal(t, http.StatusSeeOther, f.post(path+"/join", nil, as("user_a")).Code)
@@ -268,7 +268,7 @@ func TestS2_SpotPageUpdatesWhenSomeoneJoinsOrASpaceIsCreatedHere(t *testing.T) {
 	assert.NotContains(t, count, "Ana", "public topics carry counts only")
 }
 
-func boardPath(spot store.Spot) string {
+func spotBoardPath(spot store.Spot) string {
 	return "/e/cnh/spots/" + url.PathEscape(spot.QRSlug) + "/board"
 }
 
@@ -277,7 +277,7 @@ func TestBoardRefetchDoesNotCheckAnyoneIn(t *testing.T) {
 	f.onboard(t, "user_a", "Ana")
 	spot := f.spot(t, "Couches")
 
-	require.Equal(t, http.StatusOK, f.get(boardPath(spot), as("user_a")).Code)
+	require.Equal(t, http.StatusOK, f.get(spotBoardPath(spot), as("user_a")).Code)
 
 	assert.Nil(t, f.person(t, "user_a").ZoneID)
 	assert.Equal(t, http.StatusNotFound, f.get("/e/cnh/spots/nope/board").Code)
@@ -540,7 +540,7 @@ func TestS2_NoResponseContainsAnotherPersonsZone(t *testing.T) {
 
 	responses := map[string]string{
 		"spot page":   f.get(spotPath(spot), as("user_a")).Body.String(),
-		"board":       f.get(boardPath(spot), as("user_a")).Body.String(),
+		"board":       f.get(spotBoardPath(spot), as("user_a")).Body.String(),
 		"space page":  f.get("/e/cnh/spaces/"+sp.Slug, as("user_a")).Body.String(),
 		"seats":       f.get("/e/cnh/spaces/"+sp.Slug+"/seats", as("user_a")).Body.String(),
 		"live update": fragment,

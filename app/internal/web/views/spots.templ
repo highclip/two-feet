@@ -21,11 +21,11 @@ type SpotView struct {
 
 // SpotBoard is the part of a spot's page that refetches when its spaces change.
 type SpotBoard struct {
-	URL   string
-	Home  string // the event's home, where an empty board sends people who can't start a space
-	Now   *SpaceView
-	Next  []SpaceView
-	Start *StartHere // nil for people who can't start a space
+	URL     string
+	WallURL string // where an empty board sends people who can't start a space
+	Now     *SpaceView
+	Next    []SpaceView
+	Start   *StartHere // nil for people who can't start a space
 }
 
 // StartHere is the button that opens the create form for this spot's next free slot. Fits is how
@@ -139,7 +139,7 @@ templ SpotBoardBody(b SpotBoard) {
 		} else {
 			<section class="empty">
 				<p class="empty-text">Nothing here yet. Whoever comes are the right people.</p>
-				<a class="button" href={ templ.SafeURL(b.Home) }>Go to the event home</a>
+				<a class="button" href={ templ.SafeURL(b.WallURL) }>Open the Wall</a>
 			</section>
 		}
 	}

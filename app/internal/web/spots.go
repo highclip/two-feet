@@ -135,7 +135,7 @@ func (s *Server) boardView(ctx context.Context, e store.Event, spot store.Spot, 
 	if err != nil {
 		return views.SpotBoard{}, err
 	}
-	board := views.SpotBoard{URL: eventURL(e.Slug) + "/spots/" + url.PathEscape(spot.QRSlug) + "/board", Home: eventURL(e.Slug)}
+	board := views.SpotBoard{URL: eventURL(e.Slug) + "/spots/" + url.PathEscape(spot.QRSlug) + "/board", WallURL: eventURL(e.Slug) + "/wall"}
 	for _, sp := range schedule {
 		if sp.StartsAt.After(now) && len(board.Next) == nextHereCount {
 			break

@@ -33,12 +33,14 @@ type Deps struct {
 	Store     *store.Store
 	Hub       *live.Hub
 	Search    search.Indexer
-	Finder    search.Finder // reads the index for matches; nil finds nothing
+	Finder    search.Finder     // reads the index for matches; nil finds nothing
+	Tags      search.TagCounter // the Wall's tag strip; nil hides it
 	Limiter   *Limiter
 	Auth      *auth.Authenticator
 	Log       *slog.Logger
 	Version   string
 	EventSlug string
+	PublicURL string // where people reach the app, for QR codes
 	ClerkKey  string // publishable key
 	// Ready reports whether the process can serve, for /readyz.
 	Ready func(context.Context) error
@@ -58,10 +60,12 @@ type Server struct {
 	log       *slog.Logger
 	version   string
 	eventSlug string
+	publicURL string
 	clerkKey  string
 	ready     func(context.Context) error
 	undo      *undoWindows
 	now       func() time.Time
+	wallTags  *wallTagStrip
 }
 
 // New returns a Server.
@@ -74,8 +78,10 @@ func New(d Deps) *Server {
 		store: d.Store, hub: d.Hub, search: d.Search, limiter: d.Limiter, authn: d.Auth, log: d.Log,
 		sync:    search.NewSync(d.Store, d.Search, d.Log),
 		matcher: search.NewMatcher(d.Store, d.Finder),
-		version: d.Version, eventSlug: d.EventSlug, clerkKey: d.ClerkKey, ready: d.Ready,
-		undo: newUndoWindows(), now: now,
+		version: d.Version, eventSlug: d.EventSlug, publicURL: strings.TrimRight(d.PublicURL, "/"), clerkKey: d.ClerkKey, ready: d.Ready,
+		undo:     newUndoWindows(),
+		now:      now,
+		wallTags: &wallTagStrip{counter: d.Tags, log: d.Log},
 	}
 }
 

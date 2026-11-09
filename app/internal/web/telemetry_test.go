@@ -14,8 +14,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TestS10_RealRoutesProduceOneNamedServerSpan drives the real middleware chain, where the auth
-// middleware copies the request, so the span can only get its route name through telemetry.Route.
+// TestS10_RealRoutesProduceOneNamedServerSpan drives the real middleware chain as a signed-in
+// person. The auth middleware then copies the request, so the outer span can only get its route
+// name through telemetry.Route. An anonymous request wouldn't prove that.
 func TestS10_RealRoutesProduceOneNamedServerSpan(t *testing.T) {
 	spans := tracetest.NewInMemoryExporter()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSyncer(spans))
@@ -27,8 +28,8 @@ func TestS10_RealRoutesProduceOneNamedServerSpan(t *testing.T) {
 	})
 
 	f := newFixture(t)
-	w := f.get("/e/cnh")
-	require.Equal(t, http.StatusOK, w.Code)
+	w := f.get("/e/cnh", as("user_s10"))
+	require.Equal(t, http.StatusSeeOther, w.Code, "a new person is sent to onboarding")
 	f.get("/healthz")
 
 	got := spans.GetSpans()

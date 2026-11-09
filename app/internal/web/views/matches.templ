@@ -12,6 +12,7 @@ type MatchCard struct {
 	Kind       string // space, person, sponsor or post
 	Key        string // kind:id, also used to spot new matches
 	Title      string
+	TitleURL   string // makes the title a link
 	Eyebrow    string
 	PostKind   string // colors the pill and tint
 	Quote      string
@@ -112,7 +113,9 @@ templ MatchNote(c MatchCard, deal int) {
 				if c.Eyebrow != "" {
 					<span class="match-eyebrow">{ c.Eyebrow }</span>
 				}
-				if c.Title != "" {
+				if c.TitleURL != "" {
+					<h3 class="match-title"><a href={ templ.SafeURL(c.TitleURL) }>{ c.Title }</a></h3>
+				} else if c.Title != "" {
 					<h3 class="match-title">{ c.Title }</h3>
 				}
 			</div>

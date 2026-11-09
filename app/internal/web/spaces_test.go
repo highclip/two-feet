@@ -627,7 +627,7 @@ func TestSignedInPagesFollowTheirOwnPersonTopic(t *testing.T) {
 	f := newFixture(t)
 	p := f.onboard(t, "user_jun", "Jun")
 	home := f.get("/e/cnh", as("user_jun")).Body.String()
-	assert.Contains(t, home, `sse-connect="`+live.URL("cnh", live.PersonTopic(p.ID))+`"`)
+	assert.Contains(t, home, `sse-connect="`+live.URL("cnh", live.EventTopic, live.PersonTopic(p.ID))+`"`)
 	assert.Contains(t, home, `sse-swap="notice"`)
 	assert.NotContains(t, f.get("/e/cnh").Body.String(), "sse-connect")
 }

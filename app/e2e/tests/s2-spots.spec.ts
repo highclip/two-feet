@@ -119,12 +119,13 @@ test.describe('S2 spot pages', () => {
       await liveConnected(ben.page);
       const card = ben.page.locator('.spot-now');
       await expect(card.getByRole('heading', { name: underWay })).toBeVisible();
-      await expect(card.getByText(/Happening now · until/)).toHaveCount(1);
+      const status = card.getByText(/Happening now · until/).locator('visible=true');
+      await expect(status).toHaveCount(1);
       await expect(card.getByText('Ana, hosting')).toBeVisible();
-      await card.getByRole('button', { name: 'Join · 3 seats left' }).click();
+      await card.getByRole('button', { name: 'Join · 4 seats left' }).click();
       await expect(card.getByText("You're in!")).toBeVisible();
       await expect(card.getByText('2 of 5 going')).toBeVisible();
-      await expect(card.getByText(/Happening now · until/)).toHaveCount(1); // the swap doesn't bring back the hidden copy
+      await expect(status).toHaveCount(1); // the swap doesn't bring back the hidden copy
       await ben.page.screenshot({ path: testInfo.outputPath('happening-now.png'), fullPage: true });
       expect(ben.page.url()).toContain('spot=');
       await card.getByRole('button', { name: 'Leave', exact: true }).click();

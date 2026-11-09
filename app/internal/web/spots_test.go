@@ -130,6 +130,7 @@ func TestS2_SpotPageShowsNameWhereNowAndNextTwoTodayWithCountsAndJoin(t *testing
 
 func TestSpotPageWithNothingOnSaysSoAndOffersToStart(t *testing.T) {
 	f := newFixture(t)
+	f.at = noon(t)
 	f.onboard(t, "user_a", "Ana")
 
 	text := visible(f.get(spotPath(f.spot(t, "Couches")), as("user_a")).Body.String())
@@ -145,9 +146,9 @@ func TestS2_StartASpaceHereOpensFormWithThisSpotAndNextFreeSlot(t *testing.T) {
 	host := f.onboard(t, "user_host", "Dana")
 	f.onboard(t, "user_a", "Ana")
 	spot := f.spot(t, "Kitchen island")
-	f.spaceAt(t, host, spot, "Happening right now", now.Add(-8*time.Minute), 30)                                  // until 3:00
-	f.spaceAt(t, host, spot, "Three o'clock one", time.Date(2031, 3, 12, 15, 0, 0, 0, denver(t)), 30)             // until 3:30
-	f.spaceAt(t, host, spot, "Quarter to four one", time.Date(2031, 3, 12, 15, 45, 0, 0, denver(t)), 30)          // leaves a 15-minute gap
+	f.spaceAt(t, host, spot, "Happening right now", now.Add(-8*time.Minute), 30)                         // until 3:00
+	f.spaceAt(t, host, spot, "Three o'clock one", time.Date(2031, 3, 12, 15, 0, 0, 0, denver(t)), 30)    // until 3:30
+	f.spaceAt(t, host, spot, "Quarter to four one", time.Date(2031, 3, 12, 15, 45, 0, 0, denver(t)), 30) // leaves a 15-minute gap
 
 	body := f.get(spotPath(spot), as("user_a")).Body.String()
 	assert.Contains(t, visible(body), "Next free: 3:30 · 15 minutes")
@@ -213,7 +214,9 @@ func TestS2_SpotPageUpdatesWhenSomeoneJoinsOrASpaceIsCreatedHere(t *testing.T) {
 	assert.NotContains(t, count, "Ana", "public topics carry counts only")
 }
 
-func boardPath(spot store.Spot) string { return "/e/cnh/spots/" + url.PathEscape(spot.QRSlug) + "/board" }
+func boardPath(spot store.Spot) string {
+	return "/e/cnh/spots/" + url.PathEscape(spot.QRSlug) + "/board"
+}
 
 func TestBoardRefetchDoesNotCheckAnyoneIn(t *testing.T) {
 	f := newFixture(t)

@@ -8,10 +8,9 @@ import (
 
 // Document types, as stored in the index's type field.
 const (
-	TypePost    = "post"
-	TypeSpace   = "space"
-	TypeSponsor = "sponsor"
-	TypePerson  = "person"
+	TypePost   = "post"
+	TypeSpace  = "space"
+	TypePerson = "person"
 )
 
 // Doc is one searchable document: an open post, an upcoming space, a sponsor or a discoverable

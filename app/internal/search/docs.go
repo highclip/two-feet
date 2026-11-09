@@ -40,11 +40,3 @@ func SpaceDoc(id, title, blurb, hostID, zoneID string, startsAt time.Time, minut
 		StartsAt: &starts, ExpiresAt: &ends,
 	}
 }
-
-// SponsorDoc is the document for a sponsor. zoneID is empty until the sponsor has a booth spot.
-func SponsorDoc(id, name, solves, zoneID string) Doc {
-	return Doc{
-		Type: TypeSponsor, ID: id, Text: name + ". " + solves,
-		Tags: ExtractTags(solves), ZoneID: zoneID,
-	}
-}

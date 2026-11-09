@@ -45,7 +45,7 @@ func seededPerson(t *testing.T, s *store.Store, clerkID, name string) store.Pers
 }
 
 func TestAllIndexesSponsorsOpenPostsUpcomingSpacesAndDiscoverablePeople(t *testing.T) {
-	s, tx := storetest.TxDB(t)
+	s := storetest.Tx(t)
 	ctx := context.Background()
 	require.NoError(t, s.Seed(ctx, "cnh"))
 	index := &memoryIndex{docs: map[string]search.Doc{}}
@@ -56,11 +56,10 @@ func TestAllIndexesSponsorsOpenPostsUpcomingSpacesAndDiscoverablePeople(t *testi
 	require.NoError(t, s.SetDiscoverable(ctx, hidden.ID, false))
 	post, err := s.CreatePost(ctx, author.ID, store.PostStuck, "indexing every open post", []string{"indexing"})
 	require.NoError(t, err)
-	var spaceID string
-	require.NoError(t, tx.QueryRow(ctx, `
+	spaceID := storetest.QueryString(t, s, `
 		INSERT INTO space (slug, host_id, title, spot_id, starts_at, minutes, capacity)
 		SELECT 'test-slug-collector', $1, 'Collector tuning', id, $2, 30, 8 FROM spot WHERE name = 'Long table'
-		RETURNING id::text`, author.ID, time.Now().Add(20*time.Minute)).Scan(&spaceID))
+		RETURNING id::text`, author.ID, time.Now().Add(20*time.Minute))
 
 	require.NoError(t, sync.All(ctx))
 

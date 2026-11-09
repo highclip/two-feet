@@ -58,7 +58,9 @@ body {
   font: inherit;
   font-size: var(--text-md); /* iOS zooms into anything smaller than 16px */
 }
-.form-error { margin: 0; font-weight: 700; }
+.textarea { min-height: 112px; padding: 10px 12px; line-height: 1.4; resize: none; }
+.form-error, .form-saved { margin: 0; font-weight: 700; }
+.link-row { display: flex; align-items: center; min-height: var(--tap); color: var(--ink); }
 .button {
   display: flex; align-items: center; justify-content: center;
   min-height: 50px;

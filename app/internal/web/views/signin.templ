@@ -59,7 +59,7 @@ templ Landing(p Page, signInURL string) {
 }
 
 // Home is the signed-in home screen until S8 builds the near-me feed.
-templ Home(p Page, person store.Person, startURL, discoverableURL string, composer PostComposer) {
+templ Home(p Page, person store.Person, startURL, discoverableURL, sponsorEditURL string, composer PostComposer) {
 	@Layout(p) {
 		<section class="intro">
 			<h1 class="title">Hi, { person.DisplayName }</h1>
@@ -77,6 +77,9 @@ templ Home(p Page, person store.Person, startURL, discoverableURL string, compos
 			<a class="button button-action" href={ templ.SafeURL(startURL) }>Start a space</a>
 		</section>
 		@DiscoverableToggle(discoverableURL, person.Discoverable)
+		if sponsorEditURL != "" {
+			@SponsorEditLink(sponsorEditURL)
+		}
 	}
 }
 

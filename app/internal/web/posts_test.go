@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -57,13 +56,7 @@ func (r *recorder) doc(key string) (search.Doc, bool) {
 
 func newFixtureWith(t *testing.T, indexer search.Indexer, meta map[string]auth.Metadata) *fixture {
 	t.Helper()
-	f, _ := newFixtureTx(t, indexer, meta)
-	return f
-}
-
-func newFixtureTx(t *testing.T, indexer search.Indexer, meta map[string]auth.Metadata) (*fixture, pgx.Tx) {
-	t.Helper()
-	s, tx := storetest.TxDB(t)
+	s := storetest.Tx(t)
 	require.NoError(t, s.Seed(context.Background(), "cnh"))
 	hub := live.NewHub()
 	t.Cleanup(hub.Close)
@@ -79,7 +72,7 @@ func newFixtureTx(t *testing.T, indexer search.Indexer, meta map[string]auth.Met
 		EventSlug: "cnh",
 		ClerkKey:  "pk_test_" + base64.RawStdEncoding.EncodeToString([]byte("clerk.example.com$")),
 		Ready:     func(context.Context) error { return nil },
-	}).Handler()}, tx
+	}).Handler()}
 }
 
 func postForm(kind, text string) url.Values { return url.Values{"kind": {kind}, "text": {text}} }
@@ -363,11 +356,9 @@ func TestPersonDocumentFollowsOnboardingPostsAndDiscoverable(t *testing.T) {
 
 func TestPostAndPersonDocumentsNeverCarryAZone(t *testing.T) {
 	idx := &recorder{docs: map[string]search.Doc{}}
-	f, tx := newFixtureTx(t, idx, nil)
+	f := newFixtureWith(t, idx, nil)
 	person := f.onboard(t, "user_poster", "Jun")
-	_, err := tx.Exec(context.Background(),
-		`UPDATE person SET zone_id = 'kitchen', zone_seen_at = now() WHERE id = $1`, person.ID)
-	require.NoError(t, err)
+	storetest.Exec(t, f.store, `UPDATE person SET zone_id = 'kitchen', zone_seen_at = now() WHERE id = $1`, person.ID)
 
 	id := postIDFrom(f.createPost(t, "user_poster", "somewhere in the kitchen probably"))
 

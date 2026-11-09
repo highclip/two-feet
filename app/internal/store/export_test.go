@@ -5,6 +5,13 @@ import (
 	"fmt"
 )
 
+// SwapSeedDataForTest replaces the embedded seed file and returns a function that puts it back.
+func SwapSeedDataForTest(data []byte) (restore func()) {
+	old := seedData
+	seedData = data
+	return func() { seedData = old }
+}
+
 // ExecForTest runs a statement on the test's transaction.
 func (s *Store) ExecForTest(ctx context.Context, sql string) error {
 	_, err := s.db.Exec(ctx, sql)

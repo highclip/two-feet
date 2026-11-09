@@ -132,6 +132,15 @@
     }).catch(signInFailed);
   });
 
+  // Toasts: an Undo goes away by itself, and a notice can be closed.
+  document.querySelectorAll("[data-expire-ms]").forEach(function (el) {
+    setTimeout(function () { el.remove(); }, Number(el.dataset.expireMs));
+  });
+  document.addEventListener("click", function (e) {
+    var close = e.target.closest("[data-dismiss]");
+    if (close) close.closest(".toast").remove();
+  });
+
   document.addEventListener("htmx:responseError", function (e) {
     if (e.detail.xhr.status === 401) {
       location.href = "/sign-in?return=" + encodeURIComponent(location.pathname + location.search);

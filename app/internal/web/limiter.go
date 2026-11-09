@@ -37,3 +37,13 @@ func (l *Limiter) Allow(personID, action string, limit int, window time.Duration
 	l.hits[key] = append(kept, now)
 	return true, time.Time{}
 }
+
+// Release gives back the latest attempt, for a request that turned out to change nothing.
+func (l *Limiter) Release(personID, action string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	key := personID + "\x00" + action
+	if n := len(l.hits[key]); n > 0 {
+		l.hits[key] = l.hits[key][:n-1]
+	}
+}

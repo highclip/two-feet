@@ -1,0 +1,309 @@
+package views
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+	"unicode/utf8"
+
+	"github.com/highclip/two-feet/app/internal/store"
+)
+
+// SpotOption is one choice in the spot picker.
+type SpotOption struct {
+	ID    string
+	Label string
+}
+
+// SpaceForm is the create or edit form and what was typed into it.
+type SpaceForm struct {
+	Action   string
+	Heading  string
+	Lede     string
+	Submit   string
+	IsEdit   bool
+	CancelTo string
+	Title    string
+	Blurb    string
+	SpotID   string
+	Starts   string // datetime-local, in the event's timezone
+	Minutes  string
+	Capacity string
+	PostID   string
+	Spots    []SpotOption
+	Error    string
+}
+
+// SpaceView is what the space page shows. ShowNames is false for visitors, who see counts only.
+type SpaceView struct {
+	Space     store.Space
+	Now       time.Time
+	Location  *time.Location
+	ShowNames bool
+	Going     []store.Attendee
+	CanManage bool
+	BaseURL   string
+	SeatsURL  string
+}
+
+var minuteChoices = []string{"15", "30", "45"}
+
+// clock formats a time as the spec writes it: 2:30, no AM or PM.
+func clock(t time.Time, loc *time.Location) string {
+	return t.In(loc).Format("3:04")
+}
+
+// SpaceStatus is the line above a space's title.
+func SpaceStatus(sp store.Space, now time.Time, loc *time.Location) string {
+	switch {
+	case sp.Status == store.SpaceCancelled:
+		return "Cancelled by host"
+	case now.Before(sp.StartsAt):
+		day := ""
+		if sp.StartsAt.In(loc).YearDay() != now.In(loc).YearDay() || sp.StartsAt.In(loc).Year() != now.In(loc).Year() {
+			day = sp.StartsAt.In(loc).Format("Mon Jan 2") + ", "
+		}
+		return fmt.Sprintf("%s%s · %d min", day, clock(sp.StartsAt, loc), sp.Minutes)
+	case now.Before(sp.EndsAt()):
+		return "Happening now · until " + clock(sp.EndsAt(), loc)
+	}
+	return "Finished at " + clock(sp.EndsAt(), loc)
+}
+
+func kindLabel(kind string) string {
+	switch kind {
+	case "stuck":
+		return "Stuck on"
+	case "curious":
+		return "Curious"
+	case "offer":
+		return "Can help"
+	}
+	return ""
+}
+
+func noteClass(kind string) string {
+	if kindLabel(kind) == "" {
+		return "note"
+	}
+	return "note note-" + kind
+}
+
+func attendeeInitial(a store.Attendee) string {
+	r, size := utf8.DecodeRuneInString(a.Name)
+	if size == 0 {
+		return ""
+	}
+	return strings.ToUpper(string(r))
+}
+
+// goingNames reads like "Jun, Priya and 3 others".
+func goingNames(going []store.Attendee) string {
+	names := make([]string, 0, 2)
+	for i, a := range going {
+		if i == 2 {
+			break
+		}
+		names = append(names, a.Name)
+	}
+	others := len(going) - len(names)
+	switch {
+	case len(names) == 0:
+		return ""
+	case others == 0 && len(names) == 1:
+		return names[0]
+	case others == 0:
+		return names[0] + " and " + names[1]
+	case others == 1:
+		return names[0] + ", " + names[1] + " and 1 other"
+	}
+	return fmt.Sprintf("%s, %s and %d others", names[0], names[1], others)
+}
+
+func seatLine(going, capacity, waitlist int) string {
+	line := fmt.Sprintf("%d of %d going", going, capacity)
+	if waitlist > 0 {
+		line += fmt.Sprintf(" · %d waiting", waitlist)
+	}
+	return line
+}
+
+func seatRange(n int) []int {
+	out := make([]int, n)
+	for i := range out {
+		out[i] = i
+	}
+	return out
+}
+
+// SeatCount is the counts-only fragment published on the public topics (D17), so it carries no
+// names and no initials. Swap it into an element with sse-swap="space-<id>".
+templ SeatCount(going, capacity, waitlist int, cancelled bool) {
+	if cancelled {
+		<span class="seat-line">Cancelled by host</span>
+	} else {
+		<span class="seats" aria-hidden="true">
+			for _, i := range seatRange(capacity) {
+				if i < going {
+					<span class="seat seat-filled"></span>
+				} else {
+					<span class="seat"></span>
+				}
+			}
+		</span>
+		<span class="seat-line">{ seatLine(going, capacity, waitlist) }</span>
+	}
+}
+
+// SpaceSeats is the signed-in or visitor version of a space's live section.
+templ SpaceSeats(v SpaceView) {
+	<p class="note-status">{ SpaceStatus(v.Space, v.Now, v.Location) }</p>
+	if v.Space.Status == store.SpaceCancelled {
+		<p class="seat-line">Nobody needs to come. Pick another space or start one.</p>
+	} else if v.ShowNames {
+		<div class="seat-row">
+			<span class="seats" aria-hidden="true">
+				for _, i := range seatRange(v.Space.Capacity) {
+					if i < len(v.Going) {
+						<span class="seat seat-filled">{ attendeeInitial(v.Going[i]) }</span>
+					} else {
+						<span class="seat"></span>
+					}
+				}
+			</span>
+			<span class="seat-names">{ goingNames(v.Going) }</span>
+		</div>
+		<p class="seat-line">{ seatLine(v.Space.Going, v.Space.Capacity, v.Space.Waitlist) }</p>
+	} else {
+		<div class="seat-row">
+			@SeatCount(v.Space.Going, v.Space.Capacity, v.Space.Waitlist, false)
+		</div>
+	}
+	if v.CanManage && v.Space.Status == store.SpaceOpen {
+		<div class="note-actions">
+			<a class="button button-quiet" href={ templ.SafeURL(v.BaseURL + "/edit") }>Edit</a>
+			<form method="post" action={ templ.SafeURL(v.BaseURL + "/cancel") }>
+				<button class="button button-quiet" type="submit">Cancel space</button>
+			</form>
+		</div>
+	}
+}
+
+// SpacePage shows one space. The live section refetches on every change to the space, so a
+// signed-in reader keeps names and a visitor never gets them.
+templ SpacePage(p Page, v SpaceView, undo bool, startURL string) {
+	@Layout(p) {
+		<section class="intro">
+			<span class="eyebrow">{ v.Space.SpotName } · { v.Space.ZoneName }</span>
+			<h1 class="title">{ v.Space.Title }</h1>
+			if v.Space.SpotWhere != "" {
+				<p class="lede">{ v.Space.SpotWhere }</p>
+			}
+		</section>
+		<article class={ noteClass(v.Space.Kind) }>
+			if label := kindLabel(v.Space.Kind); label != "" {
+				<span class={ "pill pill-" + v.Space.Kind }>{ label }</span>
+			}
+			if v.ShowNames {
+				<div class="host-row">
+					<span class="seat seat-filled">{ attendeeInitial(store.Attendee{Name: v.Space.HostName}) }</span>
+					<div class="host-text">
+						if v.Space.Blurb != "" {
+							<p class="host-quote">{ v.Space.Blurb }</p>
+						}
+						<p class="host-name">{ v.Space.HostName }, hosting</p>
+					</div>
+				</div>
+			} else if v.Space.Blurb != "" {
+				<p class="host-quote">{ v.Space.Blurb }</p>
+			}
+			<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID }>
+				@SpaceSeats(v)
+			</div>
+		</article>
+		if v.Space.Status == store.SpaceCancelled {
+			<a class="button button-action" href={ templ.SafeURL(startURL) }>Start a space</a>
+		}
+		if undo {
+			<div class="toast" role="status" data-expire-ms="5000">
+				<span>Cancelled. Everyone going has been told.</span>
+				<form method="post" action={ templ.SafeURL(v.BaseURL + "/undo") }>
+					<button class="toast-action" type="submit">Undo</button>
+				</form>
+			</div>
+		}
+	}
+}
+
+// Notice is the message pushed to one person's own topic.
+templ Notice(text, href string) {
+	<div class="toast" role="status">
+		<a class="toast-text" href={ templ.SafeURL(href) }>{ text }</a>
+		<button class="toast-action" type="button" data-dismiss aria-label="Dismiss">Close</button>
+	</div>
+}
+
+// SpaceFormPage creates or edits a space.
+templ SpaceFormPage(p Page, form SpaceForm) {
+	@Layout(p) {
+		<section class="intro">
+			<h1 class="title">{ form.Heading }</h1>
+			<p class="lede">{ form.Lede }</p>
+		</section>
+		<form class="card form" method="post" action={ templ.SafeURL(form.Action) }>
+			if form.PostID != "" {
+				<input type="hidden" name="post" value={ form.PostID }/>
+			}
+			if form.Error != "" {
+				<p class="form-error" role="alert">{ form.Error }</p>
+			}
+			<label class="field">
+				<span class="field-label">What's it about?</span>
+				<input class="input" type="text" name="title" value={ form.Title } minlength="5" maxlength="80" required/>
+			</label>
+			<label class="field">
+				<span class="field-label">A line from you (optional)</span>
+				<textarea class="input textarea" name="blurb" rows="2" maxlength="280">{ form.Blurb }</textarea>
+			</label>
+			<label class="field">
+				<span class="field-label">Where</span>
+				<select class="input" name="spot" required>
+					for _, spot := range form.Spots {
+						<option value={ spot.ID } selected?={ spot.ID == form.SpotID }>{ spot.Label }</option>
+					}
+				</select>
+			</label>
+			<label class="field">
+				<span class="field-label">Starts</span>
+				<input class="input" type="datetime-local" name="starts" value={ form.Starts } step="60" required/>
+			</label>
+			<fieldset class="field segmented">
+				<legend class="field-label">How long</legend>
+				<div class="segments">
+					for _, m := range minuteChoices {
+						<label class="segment">
+							<input type="radio" name="minutes" value={ m } checked?={ m == form.Minutes } required/>
+							<span>{ m } min</span>
+						</label>
+					}
+				</div>
+			</fieldset>
+			<label class="field">
+				<span class="field-label">How many people (optional)</span>
+				<input class="input" type="number" name="capacity" value={ form.Capacity } min="2" inputmode="numeric" placeholder="Everyone the spot seats"/>
+			</label>
+			if form.IsEdit {
+				<button class="button" type="submit">{ form.Submit }</button>
+				<a class="button button-quiet" href={ templ.SafeURL(form.CancelTo) }>Back to the space</a>
+			} else {
+				<button class="button button-action" type="submit">{ form.Submit }</button>
+			}
+		</form>
+	}
+}
+
+// SpotLabel is a spot's line in the picker.
+func SpotLabel(spot store.Spot, zone string) string {
+	return spot.Name + " · " + zone + " · seats " + strconv.Itoa(spot.Capacity)
+}

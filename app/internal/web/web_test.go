@@ -18,7 +18,6 @@ import (
 
 	"github.com/highclip/two-feet/app/internal/auth"
 	"github.com/highclip/two-feet/app/internal/live"
-	"github.com/highclip/two-feet/app/internal/search"
 	"github.com/highclip/two-feet/app/internal/store"
 	"github.com/highclip/two-feet/app/internal/store/storetest"
 	"github.com/highclip/two-feet/app/internal/web"
@@ -44,6 +43,8 @@ type fixture struct {
 	store *store.Store
 	hub   *live.Hub
 	srv   http.Handler
+	index *recordingIndexer
+	meta  map[string]auth.Metadata
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -53,12 +54,14 @@ func newFixture(t *testing.T) *fixture {
 	hub := live.NewHub()
 	t.Cleanup(hub.Close)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return &fixture{store: s, hub: hub, srv: web.New(web.Deps{
+	index := &recordingIndexer{}
+	meta := map[string]auth.Metadata{}
+	return &fixture{store: s, hub: hub, index: index, meta: meta, srv: web.New(web.Deps{
 		Store:     s,
 		Hub:       hub,
-		Search:    search.Noop{},
+		Search:    index,
 		Limiter:   web.NewLimiter(),
-		Auth:      auth.New(s, fakeClerk{}, log),
+		Auth:      auth.New(s, fakeClerk{meta: meta}, log),
 		Log:       log,
 		Version:   "test-version",
 		EventSlug: "cnh",

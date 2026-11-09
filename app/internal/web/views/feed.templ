@@ -12,9 +12,9 @@ type FeedView struct {
 
 func feedHeading(v FeedView) string {
 	if v.Located {
-		return "On near you"
+		return "Near you"
 	}
-	return "On soon"
+	return "On now and soon"
 }
 
 // Feed refetches when the set of spaces changes, and each minute because time alone moves spaces

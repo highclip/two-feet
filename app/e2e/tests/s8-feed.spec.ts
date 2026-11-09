@@ -92,6 +92,5 @@ test.describe('S8 near-me feed', () => {
     expect(await home.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     const title = await card.getByRole('link', { name: 'Near me first' }).boundingBox();
     expect(title?.height).toBeGreaterThanOrEqual(44);
-    await home.screenshot({ path: '../../.harness/shots/S8/feed-cards.png', fullPage: true });
   });
 });

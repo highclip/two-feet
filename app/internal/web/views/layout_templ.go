@@ -114,7 +114,7 @@ func Layout(p Page) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if p.ClerkScript != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<script defer crossorigin=\"anonymous\" data-clerk-publishable-key=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<script async crossorigin=\"anonymous\" data-clerk-publishable-key=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -2,6 +2,56 @@ import { expect, test } from '@playwright/test';
 
 import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin';
 
+const clerkScript = /clerk\.browser\.js/;
+
+test.describe('S1 sign-in page while Clerk loads', () => {
+  test('the area under the lede shows a card outline until Clerk mounts', async ({ page }) => {
+    await page.route(clerkScript, () => {}); // held open, as on slow venue wifi
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
+
+    const outline = page.locator('.clerk-mount .card');
+    await expect(outline).toBeVisible();
+    const box = await outline.boundingBox();
+    expect(box?.height).toBeGreaterThan(100);
+    expect(await outline.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('1px');
+  });
+
+  test('a Clerk script that fails says so and offers a reload that recovers', async ({ page }) => {
+    await page.route(clerkScript, (route) => route.abort());
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByText("Sign-in didn't load. Reload to try again.")).toBeVisible({ timeout: 15_000 });
+    const reload = page.getByRole('button', { name: 'Reload' });
+    await expect(reload).toBeVisible();
+
+    await page.unroute(clerkScript);
+    await reload.click();
+    await expect(page.locator('input[name="identifier"]')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Sign-in didn't load")).toHaveCount(0);
+  });
+
+  test('a Clerk script that never finishes still ends in the reload message', async ({ page }) => {
+    await page.route(clerkScript, () => {});
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByText("Sign-in didn't load. Reload to try again.")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('the mounted widget uses the design tokens and has no card shadow', async ({ page }) => {
+    await page.goto('/sign-in');
+    const input = page.locator('input[name="identifier"]');
+    await expect(input).toBeVisible({ timeout: 30_000 });
+
+    await expect(page.locator('.clerk-placeholder')).toHaveCount(0);
+    expect(await input.evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Atkinson Hyperlegible');
+    for (const part of ['.cl-cardBox', '.cl-card']) {
+      expect(await page.locator(part).first().evaluate((el) => getComputedStyle(el).boxShadow), part).toBe('none');
+    }
+    const color = await page.locator('.cl-headerTitle, .cl-formFieldLabel').first().evaluate((el) => getComputedStyle(el).color);
+    expect(color).toBe('rgb(22, 25, 28)'); // --ink
+  });
+});
+
 test.describe('S1 sign-in', () => {
   const email = testEmail('s1-newcomer');
 

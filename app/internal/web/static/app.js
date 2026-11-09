@@ -5,6 +5,7 @@
   "use strict";
 
   var RECENT_MS = 10000;
+  var SIGN_IN_DEADLINE_MS = 10000;
 
   // Reports whether this guard fired recently, and records that it's firing now. Stops a reload or
   // redirect loop if the server keeps rejecting a session Clerk thinks is fine.
@@ -15,6 +16,68 @@
     return recent;
   }
 
+  function token(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // Clerk draws in its own theme unless told otherwise. Values come from tokens.css at runtime so
+  // there is one place to change them.
+  function appearance() {
+    var card = {
+      boxShadow: "none",
+      border: "1px solid " + token("--line"),
+      borderRadius: token("--radius-card"),
+      backgroundColor: token("--card"),
+    };
+    var title = { fontFamily: token("--font-title"), fontWeight: 800 };
+    return {
+      variables: {
+        colorPrimary: token("--ink"),
+        colorText: token("--ink"),
+        colorTextSecondary: token("--ink-soft"),
+        colorBackground: token("--card"),
+        colorInputBackground: token("--card"),
+        colorInputText: token("--ink"),
+        fontFamily: token("--font-body"),
+        fontFamilyButtons: token("--font-title"),
+        borderRadius: token("--radius-button"),
+      },
+      elements: {
+        rootBox: { width: "100%" },
+        cardBox: Object.assign({ width: "100%" }, card),
+        card: { boxShadow: "none", border: "0", backgroundColor: token("--card") },
+        footer: { background: token("--card") },
+        headerTitle: title,
+        formButtonPrimary: { boxShadow: "none", minHeight: token("--tap") },
+        formFieldInput: { boxShadow: "none", borderColor: token("--line"), minHeight: token("--tap") },
+      },
+    };
+  }
+
+  // Swaps the loading outline for one sentence and a way to try again. The outline's element stays
+  // in place, so if Clerk arrives late after all, showMounted still clears it.
+  function showSignInFailed(slot) {
+    var text = document.createElement("p");
+    text.textContent = "Sign-in didn't load. Reload to try again.";
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "button";
+    button.textContent = "Reload";
+    button.addEventListener("click", function () { location.reload(); });
+    slot.setAttribute("role", "alert");
+    slot.replaceChildren(text, button);
+  }
+
+  // Removes the loading outline as soon as Clerk has put something of its own in the mount point.
+  function showMounted(el, slot) {
+    new MutationObserver(function (records, observer) {
+      if (Array.prototype.some.call(el.children, function (child) { return child !== slot; })) {
+        slot.remove();
+        observer.disconnect();
+      }
+    }).observe(el, { childList: true });
+  }
+
   function signInPage(clerk, el) {
     var returnTo = el.dataset.return || "/";
     if (!clerk.user) {
@@ -22,6 +85,7 @@
         withSignUp: true,
         forceRedirectUrl: returnTo,
         signUpForceRedirectUrl: returnTo,
+        appearance: appearance(),
       });
       return;
     }
@@ -34,18 +98,33 @@
     });
   }
 
+  var signInEl = document.getElementById("clerk-sign-in");
+  var signInSlot = signInEl && signInEl.querySelector(".clerk-placeholder");
+
+  function signInFailed() {
+    if (signInSlot && signInSlot.isConnected) showSignInFailed(signInSlot);
+  }
+
+  if (signInSlot) {
+    showMounted(signInEl, signInSlot);
+    // A stalled connection never fires an error, and holds up the window's load event too.
+    setTimeout(signInFailed, SIGN_IN_DEADLINE_MS);
+  }
+
   window.addEventListener("load", function () {
-    if (!window.Clerk) return;
+    if (!window.Clerk) {
+      signInFailed();
+      return;
+    }
     window.Clerk.load().then(function () {
-      var el = document.getElementById("clerk-sign-in");
-      if (el) {
-        signInPage(window.Clerk, el);
+      if (signInEl) {
+        signInPage(window.Clerk, signInEl);
         return;
       }
       if (window.Clerk.user && document.body.dataset.signedIn === "false" && !firedRecently("twofeet-refresh")) {
         window.Clerk.session.getToken().then(function () { location.reload(); });
       }
-    });
+    }).catch(signInFailed);
   });
 
   document.addEventListener("htmx:responseError", function (e) {

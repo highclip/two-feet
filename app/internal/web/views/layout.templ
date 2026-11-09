@@ -27,7 +27,7 @@ templ Layout(p Page) {
 			<script defer src={ static(p, "htmx.min.js") }></script>
 			<script defer src={ static(p, "sse.js") }></script>
 			if p.ClerkScript != "" {
-				<script defer crossorigin="anonymous" data-clerk-publishable-key={ p.ClerkKey } src={ p.ClerkScript }></script>
+				<script async crossorigin="anonymous" data-clerk-publishable-key={ p.ClerkKey } src={ p.ClerkScript }></script>
 			}
 			<script defer src={ static(p, "app.js") }></script>
 		</head>

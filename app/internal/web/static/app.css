@@ -96,3 +96,8 @@ body {
 .toggle-thumb { width: 20px; height: 20px; border-radius: var(--radius-pill); background: var(--card); }
 .toggle[aria-checked="true"] .toggle-track { background: var(--ink); justify-content: flex-end; }
 .clerk-mount { min-height: 320px; display: flex; justify-content: center; }
+.clerk-placeholder {
+  width: 100%; min-height: 320px;
+  display: flex; flex-direction: column; justify-content: center; gap: var(--gap);
+}
+.clerk-placeholder p { margin: 0; }

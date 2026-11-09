@@ -17,7 +17,9 @@ templ SignIn(p Page, returnTo string) {
 			<h1 class="title">Sign in</h1>
 			<p class="lede">We'll email you a code. No password.</p>
 		</section>
-		<div id="clerk-sign-in" class="clerk-mount" data-return={ returnTo }></div>
+		<div id="clerk-sign-in" class="clerk-mount" data-return={ returnTo }>
+			<div class="card clerk-placeholder" role="status" aria-label="Loading sign-in"></div>
+		</div>
 	}
 }
 

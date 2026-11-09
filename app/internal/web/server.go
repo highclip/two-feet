@@ -104,6 +104,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/e/"+s.eventSlug, http.StatusSeeOther)
 	})
+	mux.HandleFunc("GET /", s.notFound)
 	mux.HandleFunc("GET /sign-in", s.signIn)
 	mux.HandleFunc("GET /e/{slug}", s.eventPage)
 	mux.Handle("GET /e/{slug}/onboarding", auth.RequirePerson(http.HandlerFunc(s.onboardingForm)))

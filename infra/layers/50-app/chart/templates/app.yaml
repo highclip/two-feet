@@ -25,6 +25,8 @@ spec:
       terminationGracePeriodSeconds: 20
       securityContext:
         runAsNonRoot: true
+        # The image's numeric uid (distroless nonroot): Kubernetes can't verify a user given by name.
+        runAsUser: 65532
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: app
@@ -77,6 +79,8 @@ spec:
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true
+        # The image's numeric uid (distroless nonroot): Kubernetes can't verify a user given by name.
+        runAsUser: 65532
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: migrate
@@ -98,5 +102,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   # Don't restart the app when monitoring is enabled; only workloads created or updated later.
-  instrumentWorkloads: created-and-updated
+  instrumentWorkloads:
+    mode: created-and-updated
 {{- end }}

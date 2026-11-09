@@ -308,7 +308,7 @@ func TestCodeFromAnotherEventIsUnknown(t *testing.T) {
 
 func TestS2_CheckInOlderThan45MinutesAsksWhereAndIsNotCounted(t *testing.T) {
 	f := newFixture(t)
-	f.at = time.Now()
+	f.at = noon(t) // well clear of real check-ins an e2e run leaves in a kept database
 	p := f.onboard(t, "user_a", "Ana")
 	others := []string{"user_b", "user_c", "user_d"}
 	for i, id := range others {
@@ -334,7 +334,7 @@ func TestS2_CheckInOlderThan45MinutesAsksWhereAndIsNotCounted(t *testing.T) {
 
 func TestS2_ZoneWithFewerThanThreeShowsAFew(t *testing.T) {
 	f := newFixture(t)
-	f.at = time.Now()
+	f.at = noon(t) // well clear of real check-ins an e2e run leaves in a kept database
 	people := []store.Person{
 		f.onboard(t, "user_a", "Ana"),
 		f.onboard(t, "user_b", "Ben"),

@@ -27,6 +27,10 @@ hook=0
 case $input in *'"hook_event_name"'*) hook=1 ;; esac
 
 HX=(python3 "$(cd "$(dirname "$0")" && pwd)/hx.py")
+# Reviewers run in a slice's worktree too, and their sessions fire this hook when they stop. Only
+# builders are gated (reviewers were re-running every gate and flipping the board in the live run).
+if [ "$hook" -eq 1 ]; then case ${HX_AGENT:-} in builder-*) ;; *) exit 0 ;; esac; fi
+
 SLICE="${1:-${HX_SLICE:-$(git branch --show-current 2>/dev/null | sed -nE 's#^slice/(S[0-9]+).*#\1#p')}}"
 [ -z "$SLICE" ] && exit 0    # not on a slice branch: nothing to gate
 

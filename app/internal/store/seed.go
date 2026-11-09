@@ -41,12 +41,14 @@ type seedFile struct {
 	Sponsors []struct {
 		Name   string `json:"name"`
 		Solves string `json:"solves"`
+		Booth  string `json:"booth"` // optional: the name of a spot in Spots
 	} `json:"sponsors"`
 }
 
 // Seed loads the event, venue and sponsors, and can run any number of times. Spots upsert by name,
 // so a re-run applies edits and keeps the qr_slug already printed on a sign. Sponsors are only
-// inserted: after that the solves text belongs to the sponsor's rep (S7).
+// inserted: after that the solves text belongs to the sponsor's rep (S7). A sponsor's optional
+// "booth" names a spot in the file and is applied on every run, so mapping booths is a data edit.
 func (s *Store) Seed(ctx context.Context, eventSlug string) error {
 	var data seedFile
 	if err := json.Unmarshal(seedData, &data); err != nil {
@@ -114,6 +116,11 @@ func (s *Store) Seed(ctx context.Context, eventSlug string) error {
 				ON CONFLICT (name) DO NOTHING`, sp.Name, sp.Solves)
 			if err != nil {
 				return fmt.Errorf("insert sponsor %s: %w", sp.Name, err)
+			}
+			if sp.Booth != "" {
+				if err := New(tx).SetSponsorBooth(ctx, sp.Name, sp.Booth); err != nil {
+					return err
+				}
 			}
 		}
 		return nil

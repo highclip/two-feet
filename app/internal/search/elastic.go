@@ -32,9 +32,9 @@ const (
 )
 
 // body keeps a plain copy of the text, because older clusters return a semantic_text field with its
-// embeddings attached.
+// embeddings attached. It sets no refresh_interval: Elastic Serverless refuses anything under 5s, and
+// writes ask for their own refresh.
 const indexDefinition = `{
-  "settings": {"index": {"refresh_interval": "1s"}},
   "mappings": {
     "dynamic": "strict",
     "properties": {

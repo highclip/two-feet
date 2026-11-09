@@ -557,6 +557,24 @@ func TestCreateFromAPostPrefillsATrimmedTitleAndLinksThePost(t *testing.T) {
 	assert.Equal(t, []string{"otel", "k8s"}, doc.Tags)
 }
 
+func TestSpaceDocumentAddsThePostsTagsWithoutRepeatingItsOwn(t *testing.T) {
+	f := newFixture(t)
+	author := f.onboard(t, "user_jun", "Jun")
+	f.onboard(t, "user_kofi", "Kofi")
+	post := storetest.QueryString(t, f.store,
+		`INSERT INTO post (author_id, kind, text, tags) VALUES ($1, 'stuck', 'our spans keep vanishing somewhere', '{otel,k8s,otel}') RETURNING id::text`, author.ID)
+
+	submit := f.spaceForm(t, "Long table", tomorrowAt(t, 14, 0), "30", "")
+	submit.Set("title", "Tuning #otel together")
+	submit.Set("post", post)
+	id := spaceID(t, f, f.createSpace(t, "user_kofi", submit))
+
+	doc, ok := f.index.doc(search.TypeSpace, id)
+	require.True(t, ok)
+	assert.Equal(t, []string{"otel", "k8s"}, doc.Tags)
+	assert.Contains(t, doc.Text, "Tuning #otel together. ")
+}
+
 func TestPrefillAndFromPostIgnoreClosedOrMalformedPosts(t *testing.T) {
 	f := newFixture(t)
 	author := f.onboard(t, "user_jun", "Jun")

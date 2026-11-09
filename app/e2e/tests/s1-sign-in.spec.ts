@@ -1,3 +1,4 @@
+import { setupClerkTestingToken } from '@clerk/testing/playwright';
 import { expect, test } from '@playwright/test';
 
 import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin';
@@ -63,6 +64,7 @@ test.describe('S1 sign-in', () => {
   });
 
   test('a visitor signs in with an emailed code, lands on onboarding, then home', async ({ page }) => {
+    await setupClerkTestingToken({ page }); // before Clerk's first request, which starts on page load
     await page.goto('/e/cnh');
     await page.getByRole('link', { name: 'Sign in with your email' }).click();
     await expect(page).toHaveURL(/\/sign-in/);

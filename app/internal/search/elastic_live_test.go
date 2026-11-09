@@ -103,6 +103,47 @@ func TestS5_PostPastItsExpiresAtNoLongerAppearsInMatches(t *testing.T) {
 	assert.Equal(t, []string{"live"}, hitIDs(hits))
 }
 
+func TestS7_EditedSolvesShowInSearchWithinFiveSeconds(t *testing.T) {
+	c := liveClient(t)
+	q := search.NewQueue(c, quietLog(), search.QueueOptions{})
+	t.Cleanup(func() { q.Close(context.Background()) })
+	ctx := context.Background()
+	const before, after = "Dash0: managed dashboards for small teams", "Dash0: tail sampling for OTel collector pipelines"
+	query := search.Query{Text: "tail sampling for collector pipelines", Type: search.TypeSponsor, Size: 3}
+	require.NoError(t, c.Index(ctx, search.SponsorDoc("dash0", "Dash0", "managed dashboards for small teams", "")))
+	require.Eventually(t, func() bool {
+		hits, err := c.Search(ctx, query)
+		return err == nil && len(hits) == 1 && hits[0].Text == before
+	}, 30*time.Second, 100*time.Millisecond, "first version never became searchable")
+
+	require.NoError(t, q.Index(ctx, search.SponsorDoc("dash0", "Dash0", "tail sampling for OTel collector pipelines", "")))
+
+	assert.Eventually(t, func() bool {
+		hits, err := c.Search(ctx, query)
+		return err == nil && len(hits) == 1 && hits[0].Text == after
+	}, 5*time.Second, 100*time.Millisecond, "edit not searchable within 5 seconds")
+}
+
+func TestS7_SponsorHitCarriesTheBoothZone(t *testing.T) {
+	c := liveClient(t)
+	ctx := context.Background()
+	require.NoError(t, c.Index(ctx, search.SponsorDoc("dash0", "Dash0", "OTel collector pipelines", "booths")))
+	require.NoError(t, c.Index(ctx, search.SponsorDoc("elastic", "Elastic", "OTel collector pipelines", "")))
+
+	var hits []search.Hit
+	require.Eventually(t, func() bool {
+		var err error
+		hits, err = c.Search(ctx, search.Query{Text: "OTel collector pipelines", Type: search.TypeSponsor, Size: 3})
+		return err == nil && len(hits) == 2
+	}, 30*time.Second, 100*time.Millisecond, "sponsors never became searchable")
+
+	zones := map[string]string{}
+	for _, h := range hits {
+		zones[h.ID] = h.ZoneID
+	}
+	assert.Equal(t, map[string]string{"dash0": "booths", "elastic": ""}, zones)
+}
+
 func TestSearchCombinesTagOverlapAndLeavesOutTheAsker(t *testing.T) {
 	c := liveClient(t)
 	ctx := context.Background()

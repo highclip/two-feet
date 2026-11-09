@@ -1,3 +1,4 @@
+import { setupClerkTestingToken } from '@clerk/testing/playwright';
 import { expect, test } from '@playwright/test';
 
 import { createClerkUser, deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin';
@@ -14,6 +15,7 @@ test.describe('S7 sponsors', () => {
   });
 
   test('a sponsor rep edits their solves text from the home screen', async ({ page }, testInfo) => {
+    await setupClerkTestingToken({ page }); // before Clerk's first request, which starts on page load
     await page.goto('/sign-in?return=/e/cnh');
     await enterEmailAndCode(page, email);
     await expect(page).toHaveURL(/\/e\/cnh\/onboarding/, { timeout: 30_000 });

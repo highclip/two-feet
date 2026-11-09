@@ -1,3 +1,4 @@
+import { setupClerkTestingToken } from '@clerk/testing/playwright';
 import { expect, test } from '@playwright/test';
 
 import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin';
@@ -18,6 +19,7 @@ test.describe('S3 spaces', () => {
   });
 
   test('a host creates a space, is refused an overlap, then cancels and undoes it', async ({ page }) => {
+    await setupClerkTestingToken({ page }); // before Clerk's first request, which starts on page load
     await page.goto('/e/cnh/spaces/new');
     await expect(page).toHaveURL(/\/sign-in/);
     await enterEmailAndCode(page, email);

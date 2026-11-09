@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -578,7 +579,7 @@ func (s *Server) cancelSpace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.undo.start(sp.ID)
-	if err := s.search.Delete(r.Context(), "space", sp.ID); err != nil {
+	if err := s.search.Delete(r.Context(), search.TypeSpace, sp.ID); err != nil {
 		s.log.Error("unindex space", "err", err, "space", sp.ID)
 	}
 	s.notify(r.Context(), told, person.ID, "Cancelled by host: "+sp.Title, spaceURL(e.Slug, sp.Slug))
@@ -685,18 +686,13 @@ func (s *Server) publishSpacesListChanged(spotIDs ...string) {
 // indexSpace writes a space to search after the commit. A failure is logged and never reaches the
 // person who made the space.
 func (s *Server) indexSpace(ctx context.Context, sp store.Space, tags []string) {
-	starts, ends := sp.StartsAt, sp.EndsAt()
-	err := s.search.Index(ctx, search.Doc{
-		Type:      "space",
-		ID:        sp.ID,
-		Text:      strings.TrimSpace(sp.Title + "\n" + sp.Blurb),
-		Tags:      tags,
-		OwnerID:   sp.HostID,
-		ZoneID:    sp.ZoneID,
-		StartsAt:  &starts,
-		ExpiresAt: &ends,
-	})
-	if err != nil {
+	doc := search.SpaceDoc(sp.ID, sp.Title, sp.Blurb, sp.HostID, sp.ZoneID, sp.StartsAt, sp.Minutes)
+	for _, tag := range tags {
+		if !slices.Contains(doc.Tags, tag) {
+			doc.Tags = append(doc.Tags, tag)
+		}
+	}
+	if err := s.search.Index(ctx, doc); err != nil {
 		s.log.Error("index space", "err", err, "space", sp.ID)
 	}
 }

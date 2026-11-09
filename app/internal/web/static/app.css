@@ -242,3 +242,65 @@ body {
 .pill-stuck { background: var(--stuck); }
 .pill-curious { background: var(--curious); }
 .pill-offer { background: var(--offer); }
+
+/* A spot's page. */
+.title .eyebrow { display: block; margin-bottom: 4px; font-family: var(--font-body); line-height: 1.4; }
+.title-zone { font-size: var(--text-lg); font-weight: 700; letter-spacing: 0; color: var(--ink-soft); }
+.spot-board { display: flex; flex-direction: column; gap: var(--gutter); }
+.spot-now .note-live .note-status { display: none; } /* the card's own head says it */
+.now-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.now-status { font-size: var(--text-sm); font-weight: 700; font-variant-numeric: tabular-nums; }
+.now-title { margin: 0; font-family: var(--font-title); font-weight: 800; font-size: var(--text-xl); line-height: 1.12; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.now-title a, .next-title { color: var(--ink); text-decoration: none; }
+.now-title a { display: block; min-height: var(--tap); }
+.next-here { display: flex; flex-direction: column; gap: 8px; }
+.next-heading { margin: 0; }
+.next-row {
+  display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+.next-time { display: flex; flex-direction: column; }
+.next-clock { font-family: var(--font-title); font-weight: 800; font-size: var(--text-lg); line-height: 1; font-variant-numeric: tabular-nums; }
+.next-length { font-size: var(--text-xs); color: var(--ink-soft); }
+.next-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.next-title { display: flex; align-items: center; min-height: var(--tap); font-family: var(--font-title); font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
+.next-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: var(--text-sm); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.next-count .seats { display: none; } /* the same fragment draws dots on bigger cards */
+.next-join { min-height: var(--tap); padding: 0 14px; }
+.next-state { font-size: var(--text-sm); font-weight: 700; }
+.start-here {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
+  min-height: 64px;
+  padding: 10px 16px;
+  border: 1.5px dashed var(--ink-soft);
+  border-radius: var(--radius-card);
+  color: var(--ink);
+  text-decoration: none;
+}
+.start-title { font-family: var(--font-title); font-weight: 800; font-size: var(--text-md); }
+.start-line { font-size: var(--text-sm); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.whoever { margin: 0; text-align: center; font-size: var(--text-sm); color: var(--ink-soft); }
+
+/* "Where are you?" on the home screen. */
+.zone-card { display: flex; flex-direction: column; gap: var(--gap); }
+.zone-heading { margin: 0; font-family: var(--font-title); font-weight: 800; font-size: var(--text-lg); }
+.zone-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--gap); min-height: var(--tap); font-weight: 700; cursor: pointer; list-style: none; }
+.zone-summary::-webkit-details-marker { display: none; }
+.zone-moved { color: var(--ink-soft); font-size: var(--text-sm); }
+.zone-choices { display: flex; flex-direction: column; gap: 6px; }
+details .zone-choices { margin-top: var(--gap); }
+.zone-choice {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--gap);
+  width: 100%; min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit; font-weight: 700;
+  cursor: pointer;
+}
+.zone-count { font-weight: 400; color: var(--ink-soft); font-variant-numeric: tabular-nums; }

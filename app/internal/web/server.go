@@ -41,6 +41,8 @@ type Deps struct {
 	ClerkKey  string // publishable key
 	// Ready reports whether the process can serve, for /readyz.
 	Ready func(context.Context) error
+	// Now is the clock the spot pages read; nil means the real time.
+	Now func() time.Time
 }
 
 // Server is the app's HTTP surface.
@@ -57,15 +59,20 @@ type Server struct {
 	clerkKey  string
 	ready     func(context.Context) error
 	undo      *undoWindows
+	now       func() time.Time
 }
 
 // New returns a Server.
 func New(d Deps) *Server {
+	now := d.Now
+	if now == nil {
+		now = time.Now
+	}
 	return &Server{
 		store: d.Store, hub: d.Hub, search: d.Search, limiter: d.Limiter, authn: d.Auth, log: d.Log,
 		sync:    search.NewSync(d.Store, d.Search, d.Log),
 		version: d.Version, eventSlug: d.EventSlug, clerkKey: d.ClerkKey, ready: d.Ready,
-		undo: newUndoWindows(),
+		undo: newUndoWindows(), now: now,
 	}
 }
 

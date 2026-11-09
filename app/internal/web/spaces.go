@@ -235,6 +235,9 @@ func (s *Server) newSpaceForm(w http.ResponseWriter, r *http.Request) {
 		starts = t
 	}
 	form.Starts = starts.In(loc).Format(formTime)
+	if minutes := r.URL.Query().Get("minutes"); minutes == "15" || minutes == "30" || minutes == "45" {
+		form.Minutes = minutes
+	}
 	if post := r.URL.Query().Get("post"); uuidShape.MatchString(post) {
 		summary, err := s.store.PostForSpace(r.Context(), post, time.Now())
 		switch {
@@ -491,10 +494,15 @@ func (s *Server) spaceSeats(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	v, err := s.spaceView(r.Context(), e, sp, currentPerson(r.Context()))
+	viewer := currentPerson(r.Context())
+	v, err := s.spaceView(r.Context(), e, sp, viewer)
 	if err != nil {
 		s.serverError(w, err)
 		return
+	}
+	// A spot page asks with its own code, so a visitor's Join comes back to that spot (S2).
+	if code := r.URL.Query().Get("spot"); viewer == nil && code != "" {
+		v.SignInURL = auth.SignInURL(spotURL(e.Slug, code))
 	}
 	s.render(w, r, http.StatusOK, views.SpaceSeats(v))
 }

@@ -45,6 +45,7 @@ type fixture struct {
 	srv   http.Handler
 	index *spaceIndexer
 	meta  map[string]auth.Metadata
+	at    time.Time // what the spot pages take to be now; zero means the real time
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -56,7 +57,8 @@ func newFixture(t *testing.T) *fixture {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	index := &spaceIndexer{}
 	meta := map[string]auth.Metadata{}
-	return &fixture{store: s, hub: hub, index: index, meta: meta, srv: web.New(web.Deps{
+	f := &fixture{store: s, hub: hub, index: index, meta: meta}
+	f.srv = web.New(web.Deps{
 		Store:     s,
 		Hub:       hub,
 		Search:    index,
@@ -67,7 +69,14 @@ func newFixture(t *testing.T) *fixture {
 		EventSlug: "cnh",
 		ClerkKey:  "pk_test_" + base64.RawStdEncoding.EncodeToString([]byte("clerk.example.com$")),
 		Ready:     func(context.Context) error { return nil },
-	}).Handler()}
+		Now: func() time.Time {
+			if f.at.IsZero() {
+				return time.Now()
+			}
+			return f.at
+		},
+	}).Handler()
+	return f
 }
 
 type requestOpt func(*http.Request)

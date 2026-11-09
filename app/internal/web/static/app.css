@@ -129,6 +129,8 @@ body {
 .note-actions { display: flex; gap: 8px; }
 .note-actions > * { flex: 1; }
 .note-actions .button { width: 100%; padding: 0 8px; white-space: nowrap; }
+.note-actions-stack { flex-direction: column; }
+.note-actions-stack > * { flex: none; }
 .host-row { display: flex; align-items: flex-start; gap: 10px; }
 .host-text { min-width: 0; }
 .host-quote { margin: 0; font-style: italic; overflow-wrap: anywhere; white-space: pre-line; }

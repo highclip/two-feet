@@ -62,7 +62,7 @@ templ joinControl(v SpaceView) {
 	}
 	if v.Overlap != nil {
 		<p class="seat-line" role="alert">{ overlapLine(v.Overlap, v.Location) }</p>
-		<div class="note-actions">
+		<div class="note-actions note-actions-stack">
 			if !v.Overlap.Hosting {
 				<form method="post" action={ templ.SafeURL(v.BaseURL + "/join") } hx-post={ v.BaseURL + "/join" } hx-target="closest .note-live" hx-swap="innerHTML">
 					<input type="hidden" name="leave" value={ v.Overlap.SpaceID }/>

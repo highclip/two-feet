@@ -31,10 +31,15 @@ func ordinal(n int) string {
 	return fmt.Sprintf("%d%s", n, suffix)
 }
 
+// joinsWaitlist reports whether joining this space now puts you in line instead of in a seat.
+func joinsWaitlist(sp store.Space) bool {
+	return sp.Going >= sp.Capacity || sp.Waitlist > 0
+}
+
 func joinLabel(sp store.Space) string {
 	free := sp.Capacity - sp.Going
 	switch {
-	case free <= 0 || sp.Waitlist > 0:
+	case joinsWaitlist(sp):
 		return "Join the waitlist"
 	case free == 1:
 		return "Join · 1 seat left"

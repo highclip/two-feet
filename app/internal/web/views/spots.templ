@@ -1,0 +1,272 @@
+package views
+
+import (
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/highclip/two-feet/app/internal/store"
+)
+
+// SpotView is a spot's page. CheckedIn is true once opening it has put the viewer here, and
+// ZoneCount is empty for visitors, who don't get zone counts (see_zone_counts).
+type SpotView struct {
+	Spot      store.Spot
+	ZoneName  string
+	CheckedIn bool
+	ZoneCount string
+	SignInURL string // set for visitors
+	Board     SpotBoard
+}
+
+// SpotBoard is the part of a spot's page that refetches when its spaces change.
+type SpotBoard struct {
+	URL     string
+	WallURL string // where an empty board sends people who can't start a space
+	Now     *SpaceView
+	Next    []SpaceView
+	Start   *StartHere // nil for people who can't start a space
+}
+
+// StartHere is the button that opens the create form for this spot's next free slot. Fits is how
+// many minutes are free from Slot.
+type StartHere struct {
+	URL      string
+	Slot     time.Time
+	Fits     int
+	Location *time.Location
+}
+
+// ZoneChoice is one zone in the "I'm in" picker. Count is already rounded by ZoneCountLabel.
+type ZoneChoice struct {
+	ID    string
+	Name  string
+	Count string
+}
+
+// ZonePrompt is the home screen's check-in. Current names the viewer's zone while their check-in is
+// fresh; Stale means they had one and it has run out.
+type ZonePrompt struct {
+	Action  string
+	Current string
+	Stale   bool
+	Zones   []ZoneChoice
+}
+
+// ZoneCountLabel is the only way a zone's count reaches a page: below 3, including 0, it reads "a
+// few", so watching a zone can't show one person arriving (spec.security).
+func ZoneCountLabel(n int) string {
+	if n < 3 {
+		return "a few"
+	}
+	return strconv.Itoa(n)
+}
+
+func spotLede(v SpotView) string {
+	switch {
+	case v.ZoneCount == "":
+		return v.Spot.Where
+	case v.Spot.Where == "":
+		return fmt.Sprintf("%s people in the %s", v.ZoneCount, v.ZoneName)
+	}
+	return fmt.Sprintf("%s · %s people in the %s", v.Spot.Where, v.ZoneCount, v.ZoneName)
+}
+
+func startLine(s StartHere) string {
+	lengths := "15, 30 or 45 minutes"
+	switch {
+	case s.Fits < 30:
+		lengths = "15 minutes"
+	case s.Fits < 45:
+		lengths = "15 or 30 minutes"
+	}
+	return "Next free: " + clock(s.Slot, s.Location) + " · " + lengths
+}
+
+// SpotPage is the page a table's QR code opens, like the tablet outside a meeting room.
+templ SpotPage(p Page, v SpotView) {
+	@Layout(p) {
+		<section class="intro">
+			<h1 class="title">
+				if v.CheckedIn {
+					<span class="eyebrow">You're at </span>
+				} else {
+					<span class="eyebrow">This spot </span>
+				}
+				{ v.Spot.Name }<span class="title-zone">, { v.ZoneName }</span>
+			</h1>
+			if lede := spotLede(v); lede != "" {
+				<p class="lede">{ lede }</p>
+			}
+		</section>
+		if v.SignInURL != "" {
+			<a class="button button-quiet" href={ templ.SafeURL(v.SignInURL) }>Sign in to check in</a>
+		}
+		// hx-sync makes this refetch and the now card's requests take turns, so a join's form isn't
+		// swapped out while its answer is on the way.
+		<div class="spot-board" hx-get={ v.Board.URL } hx-trigger="sse:spaces-changed" hx-sync="this:queue last">
+			@SpotBoardBody(v.Board)
+		</div>
+	}
+}
+
+// UnknownCode is what a code from somewhere else opens.
+templ UnknownCode(p Page, text, homeURL string) {
+	@Layout(p) {
+		<section class="empty">
+			<p class="empty-text">{ text }</p>
+			<a class="button" href={ templ.SafeURL(homeURL) }>Go to the event home</a>
+		</section>
+	}
+}
+
+// SpotBoardBody is the inside of the board, also served alone for the live refetch.
+templ SpotBoardBody(b SpotBoard) {
+	if b.Now != nil {
+		@spotNow(*b.Now)
+	}
+	if len(b.Next) > 0 {
+		<section class="next-here">
+			<h2 class="eyebrow next-heading">Next here</h2>
+			for _, next := range b.Next {
+				@spotNext(next)
+			}
+		</section>
+	}
+	if b.Now == nil && len(b.Next) == 0 {
+		if b.Start != nil {
+			<p class="empty-text">Nothing here yet. Whoever comes are the right people. Start one.</p>
+		} else {
+			<section class="empty">
+				<p class="empty-text">Nothing here yet. Whoever comes are the right people.</p>
+				<a class="button" href={ templ.SafeURL(b.WallURL) }>Open the Wall</a>
+			</section>
+		}
+	}
+	if b.Start != nil {
+		<a class="start-here" href={ templ.SafeURL(b.Start.URL) }>
+			<span class="start-title">+ Start a space here</span>
+			<span class="start-line">{ startLine(*b.Start) }</span>
+		</a>
+		if b.Now != nil || len(b.Next) > 0 {
+			<p class="whoever">Whoever comes are the right people.</p>
+		}
+	}
+}
+
+// spotNow is the featured card. The seats inside repeat the status line, so CSS hides that copy.
+templ spotNow(v SpaceView) {
+	<article class={ noteClass(v.Space.Kind), "spot-now" }>
+		<div class="now-head">
+			if label := kindLabel(v.Space.Kind); label != "" {
+				<span class={ "pill pill-" + v.Space.Kind }>{ label }</span>
+			}
+			<span class="now-status">{ SpaceStatus(v.Space, v.Now, v.Location) }</span>
+		</div>
+		<h2 class="now-title"><a href={ templ.SafeURL(v.BaseURL) }>{ v.Space.Title }</a></h2>
+		@spaceHost(v)
+		// hx-sync holds a live refetch until a join or leave has its answer, as on the space page (S6).
+		// It queues on the board, whose own refetch would otherwise swap out the form mid-request.
+		<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID } hx-sync="closest .spot-board:queue last">
+			@SpaceSeats(v)
+		</div>
+	</article>
+}
+
+// spotNext is one row under "Next here". Its count takes the same counts-only fragment as every
+// other public page; the host's name is only there for people signed in.
+templ spotNext(v SpaceView) {
+	<article class="next-row">
+		<div class="next-time">
+			<span class="next-clock">{ clock(v.Space.StartsAt, v.Location) }</span>
+			<span class="next-length">{ strconv.Itoa(v.Space.Minutes) } min</span>
+		</div>
+		<div class="next-body">
+			<a class="next-title" href={ templ.SafeURL(v.BaseURL) }>{ v.Space.Title }</a>
+			if kindLabel(v.Space.Kind) != "" || v.ShowNames {
+				<div class="next-meta">
+					if label := kindLabel(v.Space.Kind); label != "" {
+						<span class={ "pill pill-" + v.Space.Kind }>{ label }</span>
+					}
+					if v.ShowNames {
+						<span class="next-host">{ v.Space.HostName }</span>
+					}
+				</div>
+			}
+			<div class="next-count" sse-swap={ "space-" + v.Space.ID }>
+				@SeatCount(v.Space.Going, v.Space.Capacity, v.Space.Waitlist, false)
+			</div>
+		</div>
+		@nextAction(v)
+	</article>
+}
+
+// nextAction is a row's Join, or the viewer's place if they already have one. A Join here is a plain
+// post that lands on the space, where Leave and any overlap question live.
+templ nextAction(v SpaceView) {
+	if v.IsHost {
+		<span class="next-state">Hosting</span>
+	} else if v.Signup.Status == store.SignupGoing {
+		<span class="next-state">Going</span>
+	} else if v.Signup.Status == store.SignupWaitlist {
+		<span class="next-state">Waitlist</span>
+	} else if v.SignInURL != "" {
+		<a class="button button-action next-join" href={ templ.SafeURL(v.SignInURL) }>{ nextJoinLabel(v.Space) }</a>
+	} else if v.CanJoin {
+		<form method="post" action={ templ.SafeURL(v.BaseURL + "/join") }>
+			<button class="button button-action next-join" type="submit">{ nextJoinLabel(v.Space) }</button>
+		</form>
+	}
+}
+
+// nextJoinLabel is joinLabel cut down to fit a row.
+func nextJoinLabel(sp store.Space) string {
+	if joinsWaitlist(sp) {
+		return "Waitlist"
+	}
+	return "Join"
+}
+
+func zoneHeading(z ZonePrompt) string {
+	if z.Stale {
+		return "Where are you now?"
+	}
+	return "Where are you?"
+}
+
+func zoneHelp(z ZonePrompt) string {
+	if z.Stale {
+		return "It's been a while since your last check-in. Tap your zone or scan a table code."
+	}
+	return "Tap your zone or scan a table code, and we'll show what's close."
+}
+
+// ZoneCheckIn asks where someone is, or, while they're checked in, tucks the question away.
+templ ZoneCheckIn(z ZonePrompt) {
+	if z.Current != "" {
+		<details class="card zone-card">
+			<summary class="zone-summary">
+				<span>You're in the { z.Current }</span>
+				<span class="zone-moved">Moved?</span>
+			</summary>
+			@zoneButtons(z)
+		</details>
+	} else {
+		<section class="card zone-card">
+			<h2 class="zone-heading">{ zoneHeading(z) }</h2>
+			<p class="lede">{ zoneHelp(z) }</p>
+			@zoneButtons(z)
+		</section>
+	}
+}
+
+templ zoneButtons(z ZonePrompt) {
+	<form class="zone-choices" method="post" action={ templ.SafeURL(z.Action) }>
+		for _, zone := range z.Zones {
+			<button class="zone-choice" type="submit" name="zone" value={ zone.ID }>
+				<span>{ zone.Name }</span>
+				<span class="zone-count">{ zone.Count }</span>
+			</button>
+		}
+	</form>
+}

@@ -85,9 +85,9 @@ func kindLabel(kind string) string {
 
 func noteClass(kind string) string {
 	if kindLabel(kind) == "" {
-		return "note"
+		return "space-card"
 	}
-	return "note note-" + kind
+	return "space-card space-card-" + kind
 }
 
 func attendeeInitial(a store.Attendee) string {

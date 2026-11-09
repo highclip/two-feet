@@ -115,16 +115,16 @@ body {
 .segment input:checked + span { background: var(--ink); border-color: var(--ink); color: var(--card); }
 .segment input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
 .button-quiet { background: transparent; color: var(--ink); border: 1px solid var(--ink); min-height: var(--tap); }
-.note {
+.space-card {
   display: flex; flex-direction: column; align-items: flex-start; gap: var(--gap);
   padding: 16px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-feature);
 }
-.note-stuck { background: var(--stuck-tint); }
-.note-curious { background: var(--curious-tint); }
-.note-offer { background: var(--offer-tint); }
+.space-card-stuck { background: var(--stuck-tint); }
+.space-card-curious { background: var(--curious-tint); }
+.space-card-offer { background: var(--offer-tint); }
 .note-status { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
 .note-live { display: flex; flex-direction: column; gap: var(--gap); width: 100%; }
 .note-actions { display: flex; gap: 8px; }
@@ -149,9 +149,9 @@ body {
   font-size: var(--text-xs); font-weight: 700;
 }
 .seat-filled { background: var(--ink); border-color: var(--ink); color: var(--card); }
-.note-stuck .seat-filled { color: var(--stuck); }
-.note-curious .seat-filled { color: var(--curious); }
-.note-offer .seat-filled { color: var(--offer); }
+.space-card-stuck .seat-filled { color: var(--stuck); }
+.space-card-curious .seat-filled { color: var(--curious); }
+.space-card-offer .seat-filled { color: var(--offer); }
 .seat-names { min-width: 0; font-size: var(--text-sm); overflow-wrap: anywhere; }
 .seat-line { margin: 0; font-variant-numeric: tabular-nums; }
 .toasts:empty { display: none; }

@@ -1,0 +1,54 @@
+package views
+
+// FeedView is the home screen's near-me feed: what's on now or soon, closest first. Located is false
+// without a fresh check-in. StartURL is empty for people who can't start a space.
+type FeedView struct {
+	URL      string
+	WallURL  string
+	StartURL string
+	Located  bool
+	Cards    []MatchCard
+}
+
+func feedHeading(v FeedView) string {
+	if v.Located {
+		return "On near you"
+	}
+	return "On soon"
+}
+
+// Feed refetches when the set of spaces changes, and each minute because time alone moves spaces
+// in and out of it and closes their Join.
+templ Feed(v FeedView) {
+	<section class="matches" hx-get={ v.URL } hx-trigger="sse:spaces-changed, every 60s" hx-sync="this:queue last">
+		@FeedBody(v)
+	</section>
+}
+
+// FeedBody is the inside of the feed, also served alone for the refetch.
+templ FeedBody(v FeedView) {
+	<h2 class="matches-head">{ feedHeading(v) }</h2>
+	if !v.Located {
+		<p class="lede feed-hint">Scan a table code to see what's close.</p>
+	}
+	for _, c := range v.Cards {
+		@MatchNote(c, -1)
+	}
+	if len(v.Cards) == 0 {
+		if v.StartURL != "" {
+			<section class="empty">
+				<p class="empty-text">Nothing on in the next 30 minutes. Whoever comes are the right people. Start one.</p>
+				<a class="button button-action" href={ templ.SafeURL(v.StartURL) }>Start a space</a>
+			</section>
+		} else {
+			<section class="empty">
+				<p class="empty-text">Nothing on in the next 30 minutes. See the rest of the day on the Wall.</p>
+				<a class="button" href={ templ.SafeURL(v.WallURL) }>Open the Wall</a>
+			</section>
+		}
+	} else if v.StartURL != "" {
+		<a class="start-here" href={ templ.SafeURL(v.StartURL) }>
+			<span class="start-title">+ Start a space</span>
+		</a>
+	}
+}

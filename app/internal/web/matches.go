@@ -168,7 +168,7 @@ func (s *Server) cardsFor(event store.Event, tint, startURL, startText string) f
 		c := views.MatchCard{Kind: m.Kind, Key: m.Kind + ":" + m.TargetID, Reasons: m.Reasons}
 		switch {
 		case m.Space != nil:
-			fillSpace(&c, event, m, tint)
+			fillSpace(&c, event, m, tint, time.Now())
 		case m.Person != nil:
 			c.Title, c.PostKind, c.Quote, c.Initial = m.Person.Name, m.Person.Kind, m.Person.Quote, initial(m.Person.Name)
 			c.StartURL, c.StartText = startURL, startText
@@ -190,7 +190,7 @@ func (s *Server) cardsFor(event store.Event, tint, startURL, startText string) f
 	}
 }
 
-func fillSpace(c *views.MatchCard, event store.Event, m search.Match, tint string) {
+func fillSpace(c *views.MatchCard, event store.Event, m search.Match, tint string, now time.Time) {
 	sp := m.Space
 	c.Title, c.Eyebrow = sp.Title, "Space · "+sp.SpotName
 	c.PostKind = sp.Kind
@@ -216,7 +216,7 @@ func fillSpace(c *views.MatchCard, event store.Event, m search.Match, tint strin
 		c.SpaceURL, c.SpaceText = page, "You're going"
 	case sp.SignupStatus == store.SignupWaitlist:
 		c.SpaceURL, c.SpaceText = page, "You're on the waitlist"
-	case !sp.Joinable(time.Now()):
+	case !sp.Joinable(now):
 		c.SpaceURL, c.SpaceText = page, "See the space"
 	default:
 		c.JoinURL, c.JoinLabel = page+"/join", "Join"

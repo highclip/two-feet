@@ -370,6 +370,10 @@ details .zone-choices { margin-top: var(--gap); }
   font-weight: 700; text-decoration: none; white-space: nowrap;
 }
 
+/* The near-me feed: match cards whose titles link to their space. */
+.feed-hint { margin: 0; }
+.match-title a { display: flex; align-items: center; min-height: var(--tap); color: var(--ink); text-decoration: none; }
+
 /* Search. */
 .search { display: flex; gap: 8px; }
 .search .input { flex: 1; min-width: 0; }

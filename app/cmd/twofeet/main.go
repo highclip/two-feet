@@ -29,7 +29,8 @@ import (
 var version = "dev"
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	log := slog.New(telemetry.RedactLogs(slog.NewJSONHandler(os.Stdout, nil)))
+	slog.SetDefault(log)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -90,13 +91,14 @@ func serve(ctx context.Context, log *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("set up telemetry: %w", err)
 	}
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pool, err := telemetry.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
-		return fmt.Errorf("connect to database: %w", err)
+		return err
 	}
 	defer pool.Close()
 
 	db := store.New(pool)
+	go telemetry.ReportSpacesOpen(ctx, db.CountOpenSpaces, log)
 	hub := live.NewHub()
 	app := web.New(web.Deps{
 		Store:     db,

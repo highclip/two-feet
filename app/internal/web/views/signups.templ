@@ -58,6 +58,15 @@ func finished(v SpaceView) bool {
 	return !v.Now.Before(v.Space.EndsAt())
 }
 
+// actionSync lets a join or leave on the spot page abort a live refetch in flight. Otherwise it would
+// wait behind that refetch, whose answer removes the form, and htmx drops a request whose form is gone.
+func actionSync(v SpaceView) templ.Attributes {
+	if !v.OnSpotBoard {
+		return nil
+	}
+	return templ.Attributes{"hx-sync": "closest .spot-board:replace"}
+}
+
 // joinControl is the viewer's own part of a space: join, leave, their place in line, or the question
 // about a space that overlaps. The overlap prompt is inline because there are no confirmation
 // dialogs (delight.rules).
@@ -69,7 +78,7 @@ templ joinControl(v SpaceView) {
 		<p class="seat-line" role="alert">{ overlapLine(v.Overlap, v.Location) }</p>
 		<div class="note-actions note-actions-stack">
 			if !v.Overlap.Hosting {
-				<form method="post" action={ templ.SafeURL(v.BaseURL + "/join") } hx-post={ v.BaseURL + "/join" } hx-target="closest .note-live" hx-swap="innerHTML">
+				<form method="post" action={ templ.SafeURL(v.BaseURL + "/join") } hx-post={ v.BaseURL + "/join" } hx-target="closest .note-live" hx-swap="innerHTML" { actionSync(v)... }>
 					<input type="hidden" name="leave" value={ v.Overlap.SpaceID }/>
 					<button class="button button-action" type="submit">Leave it and join</button>
 				</form>
@@ -90,14 +99,14 @@ templ joinControl(v SpaceView) {
 	} else if v.SignInURL != "" {
 		<a class="button button-action join-button" href={ templ.SafeURL(v.SignInURL) }>{ joinLabel(v.Space) }</a>
 	} else if v.CanJoin {
-		<form class="join-form" method="post" action={ templ.SafeURL(v.BaseURL + "/join") } hx-post={ v.BaseURL + "/join" } hx-target="closest .note-live" hx-swap="innerHTML">
+		<form class="join-form" method="post" action={ templ.SafeURL(v.BaseURL + "/join") } hx-post={ v.BaseURL + "/join" } hx-target="closest .note-live" hx-swap="innerHTML" { actionSync(v)... }>
 			<button class="button button-action join-button" type="submit">{ joinLabel(v.Space) }</button>
 		</form>
 	}
 }
 
 templ leaveForm(v SpaceView, label string) {
-	<form class="join-form" method="post" action={ templ.SafeURL(v.BaseURL + "/leave") } hx-post={ v.BaseURL + "/leave" } hx-target="closest .note-live" hx-swap="innerHTML">
+	<form class="join-form" method="post" action={ templ.SafeURL(v.BaseURL + "/leave") } hx-post={ v.BaseURL + "/leave" } hx-target="closest .note-live" hx-swap="innerHTML" { actionSync(v)... }>
 		<button class="button button-quiet join-button" type="submit">{ label }</button>
 	</form>
 }

@@ -5,9 +5,9 @@ replicas: 1
 port: 8080
 
 # Run `<binary> migrate` as a Helm pre-install/pre-upgrade hook. Off for the smoke service,
-# which has no database schema; turn it on when the app's first migration merges.
+# which has no database schema. On since the app's first migration (S1).
 migrate:
-  enabled: false
+  enabled: true
 
 eventSlug: cnh
 

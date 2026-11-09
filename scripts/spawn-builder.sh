@@ -59,14 +59,22 @@ scripts/slice-db.sh create "$slice"
 agent="builder-$slice"
 prompt="Build slice $slice ($title) from spec/spec.yaml. Follow CLAUDE.md and the builder instructions."
 if [[ ${2:-} == --fix ]]; then
-  prompt="Slice $slice ($title) came back from review. Run: python3 harness/hx.py findings $slice
-Fix every finding in your worktree, commit, and stop so the gates and reviewers run again."
   # Record it here rather than trusting the agent to: moving to building clears the old verdicts,
-  # which no longer describe the code (the fix builder in the dry run never did it).
+  # which no longer describe the code (the fix builder in the dry run never did it). That also
+  # empties `hx findings`, so they have to be read first and handed over in the prompt.
   findings=$(python3 harness/hx.py findings "$slice")
+  prompt="Slice $slice ($title) came back from review. These are the findings. They are cleared from the log once the slice is back in building, so hx findings won't show them:
+
+$findings
+
+Fix every finding in your worktree, commit, and stop so the gates and reviewers run again."
   python3 harness/hx.py --agent "builder-$slice" state "$slice" building --reason "back from review"
 fi
-cmd="cd '$wt' && HX_AGENT=$agent HX_SLICE=$slice scripts/agent.sh builder \"$prompt\""
+# Findings can hold quotes, backticks and dollar signs, and cmd is re-read by a shell (tmux's, or
+# whichever one it's pasted into). Single quotes with '\'' work in both bash and fish.
+squote="'\\''"
+quoted_prompt=${prompt//\'/$squote}
+cmd="cd '$wt' && HX_AGENT=$agent HX_SLICE=$slice scripts/agent.sh builder '$quoted_prompt'"
 
 echo "worktree: $wt"
 echo "branch:   $branch"

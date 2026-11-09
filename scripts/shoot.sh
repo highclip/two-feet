@@ -8,6 +8,9 @@
 #   SIZE=1920x1080 scripts/shoot.sh /e/cnh/wall
 #   THEME=dark scripts/shoot.sh /
 #   scripts/shoot.sh --keep-data /       # use the slice's own database instead of an empty one
+#   scripts/shoot.sh --signed-in /e/cnh  # as a temporary signed-in attendee
+#   scripts/shoot.sh --signed-in=organizer /e/cnh/codes
+#   scripts/shoot.sh --signed-in=sponsor_rep:Dash0 /e/cnh  # also: plain sponsor_rep
 #
 # By default the app runs against a fresh, empty copy of the database, so screens aren't buried
 # under test rows (the design critic saw a page at 31% scale in the CLI dry run). Empty states
@@ -16,8 +19,18 @@
 set -euo pipefail
 
 keep_data=""
-[[ ${1:-} == --keep-data ]] && { keep_data=1; shift; }
-[[ $# -ge 1 ]] || { echo "usage: shoot.sh [--keep-data] <path> [path...]" >&2; exit 1; }
+signed_in=""
+role=""
+while [[ ${1:-} == --* ]]; do
+  case $1 in
+    --keep-data) keep_data=1 ;;
+    --signed-in) signed_in=1 ;;
+    --signed-in=*) signed_in=1; role=${1#--signed-in=} ;;
+    *) echo "unknown option: $1" >&2; exit 1 ;;
+  esac
+  shift
+done
+[[ $# -ge 1 ]] || { echo "usage: shoot.sh [--keep-data] [--signed-in[=role]] <path> [path...]" >&2; exit 1; }
 root=$(git rev-parse --show-toplevel)
 cd "$root/app"
 # Clerk's keys: the app won't start without them. Loaded here so the agent running this never sees them.
@@ -42,12 +55,16 @@ if [[ -n ${DATABASE_URL:-} ]]; then
     [[ $db =~ ^[a-z0-9_]+$ ]] || { echo "unexpected database name in DATABASE_URL: $db" >&2; exit 1; }
     "${COMPOSE[@]}" exec -T -e PGOPTIONS=--client-min-messages=warning postgres psql -U twofeet -d twofeet -v ON_ERROR_STOP=1 -q \
       -c "DROP DATABASE IF EXISTS ${db}_shots WITH (FORCE)" -c "CREATE DATABASE ${db}_shots" >/dev/null
-    export DATABASE_URL=${DATABASE_URL/\/$db/\/${db}_shots}
+    # Rebuild from the end of the URL: the user can have the same name as the database.
+    url_no_query=${DATABASE_URL%%\?*}
+    export DATABASE_URL="${url_no_query%/*}/${db}_shots${DATABASE_URL#"$url_no_query"}"
   fi
   # A fresh database has no tables; without this the screens can't render.
   "$bin" migrate > "$out/migrate.log" 2>&1 || { tail -n 20 "$out/migrate.log" >&2; exit 1; }
 fi
-PORT=$port ADDR="127.0.0.1:$port" "$bin" > "$out/app.log" 2>&1 &
+# Clerk ties a session to the browser's origin, and it must match the app's PUBLIC_URL.
+base="http://localhost:$port"
+PORT=$port ADDR="127.0.0.1:$port" PUBLIC_URL=$base "$bin" > "$out/app.log" 2>&1 &
 pid=$!
 trap 'kill $pid 2>/dev/null || true' EXIT
 
@@ -60,6 +77,18 @@ done
 size=${SIZE:-390x844}
 theme=${THEME:-light}
 w=${size%x*}; h=${size#*x}
+
+if [[ -n $signed_in ]]; then
+  (
+    cd "$root/app/e2e"
+    if [[ ! -d node_modules ]]; then npm ci --ignore-scripts --silent --no-fund --no-audit; fi
+    rm -f "$out/signed-in-shots.txt"
+    SHOOT_BASE=$base SHOOT_OUT=$out SHOOT_SIZE=$size SHOOT_THEME=$theme SHOOT_ROLE=$role \
+      SHOOT_PATHS="$(printf '%s\n' "$@")" npx playwright test -c shoot/shoot.config.ts > "$out/signed-in.log" 2>&1
+  ) || { tail -n 25 "$out/signed-in.log" >&2; exit 1; }
+  cat "$out/signed-in-shots.txt"
+  exit 0
+fi
 
 # Prefer a Playwright library that's already installed with its browser; otherwise the pinned CLI
 # that scripts/setup-tools.sh installs a browser for.

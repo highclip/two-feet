@@ -18,6 +18,8 @@ the builder says they did.
    · `THEME=dark scripts/shoot.sh /`
    Shots start from an empty database, so you see each screen's empty state as a first visitor
    would. Add `--keep-data` as the first argument to use the slice's database and see it with data.
+   For anything behind sign-in, add `--signed-in` (a temporary attendee), `--signed-in=organizer`
+   or `--signed-in=sponsor_rep:Dash0`. Check those screens rendered, not just from the code.
 3. Open each PNG with the Read tool, open the matching reference in `design/reference/`, and look at both.
 
 ## Check

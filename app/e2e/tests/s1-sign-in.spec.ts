@@ -47,6 +47,9 @@ test.describe('S1 sign-in page while Clerk loads', () => {
     for (const part of ['.cl-cardBox', '.cl-card']) {
       expect(await page.locator(part).first().evaluate((el) => getComputedStyle(el).boxShadow), part).toBe('none');
     }
+    const button = page.locator('.cl-formButtonPrimary');
+    expect(await button.evaluate((el) => getComputedStyle(el).backgroundImage)).toBe('none');
+    expect(await button.evaluate((el) => getComputedStyle(el, '::after').display)).toBe('none');
     const color = await page.locator('.cl-headerTitle, .cl-formFieldLabel').first().evaluate((el) => getComputedStyle(el).color);
     expect(color).toBe('rgb(22, 25, 28)'); // --ink
   });

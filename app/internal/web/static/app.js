@@ -48,7 +48,12 @@
         card: { boxShadow: "none", border: "0", backgroundColor: token("--card") },
         footer: { background: token("--card") },
         headerTitle: title,
-        formButtonPrimary: { boxShadow: "none", minHeight: token("--tap") },
+        formButtonPrimary: {
+          boxShadow: "none",
+          backgroundImage: "none",
+          minHeight: token("--tap"),
+          "&::before, &::after": { display: "none" },
+        },
         formFieldInput: { boxShadow: "none", borderColor: token("--line"), minHeight: token("--tap") },
       },
     };

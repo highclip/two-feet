@@ -415,10 +415,10 @@ func checkSpot(ctx context.Context, tx pgx.Tx, excluding *string, in SpaceInput)
 		  AND other.id <> $1 AND other.capacity >= $2
 		  AND NOT EXISTS (
 			SELECT 1 FROM space busy
-			WHERE busy.spot_id = other.id AND busy.status = 'open'
+			WHERE busy.spot_id = other.id AND busy.status = 'open' AND busy.id IS DISTINCT FROM $5
 			  AND busy.starts_at < $3 AND busy.starts_at + busy.minutes * interval '1 minute' > $4)
 		ORDER BY other.name
-		LIMIT 1`, in.SpotID, wanted, ends, in.StartsAt).Scan(&alternative)
+		LIMIT 1`, in.SpotID, wanted, ends, in.StartsAt, excluding).Scan(&alternative)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return 0, fmt.Errorf("find another spot: %w", err)
 	}

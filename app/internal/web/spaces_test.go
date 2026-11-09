@@ -172,6 +172,21 @@ func TestS3_OverlapSuggestionSkipsBusySpotsAndSaysWhenNoneIsFree(t *testing.T) {
 	assert.Contains(t, full.Body.String(), "Long table is taken until 10:30. Pick another time.")
 }
 
+func TestEditSuggestionCanOfferTheSpotTheSpaceIsLeaving(t *testing.T) {
+	f := newFixture(t)
+	f.onboard(t, "user_jun", "Jun")
+	starts := tomorrowAt(t, 10, 0)
+	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", starts, "30", ""))
+	f.createSpace(t, "user_jun", f.spaceForm(t, "Couches", starts, "30", ""))
+	// Kitchen island sorts before Long table, so it has to be busy for Long table to be next.
+	f.createSpace(t, "user_jun", f.spaceForm(t, "Kitchen island", starts, "30", ""))
+
+	w := f.post(path+"/edit", f.spaceForm(t, "Couches", starts, "30", ""), as("user_jun"))
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), "Couches is taken until 10:30. Try Long table.")
+}
+
 func TestS3_CapacityLargerThanTheSpotIsRefused(t *testing.T) {
 	f := newFixture(t)
 	f.onboard(t, "user_jun", "Jun")
@@ -352,6 +367,33 @@ func TestUndoIsRefusedOnceTheMomentHasPassed(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(), "too late")
 	assert.Contains(t, f.get(path, as("user_jun")).Body.String(), "Cancelled by host")
+}
+
+func TestUndoThatLosesARaceToAnotherUndoStillLandsOnTheSpace(t *testing.T) {
+	f := newFixture(t)
+	f.onboard(t, "user_jun", "Jun")
+	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", tomorrowAt(t, 14, 0), "30", ""))
+	require.Equal(t, http.StatusSeeOther, f.post(path+"/cancel", nil, as("user_jun")).Code)
+	// The other tap has restored the space but hasn't closed the Undo window yet.
+	storetest.Exec(t, f.store, `UPDATE space SET status = 'open' WHERE id = $1`, spaceID(t, f, path))
+
+	w := f.post(path+"/undo", nil, as("user_jun"))
+
+	assert.Equal(t, http.StatusSeeOther, w.Code, w.Body.String())
+	assert.Equal(t, path, w.Header().Get("Location"))
+}
+
+func TestUndoTappedAgainAfterItWorkedLandsOnTheSpace(t *testing.T) {
+	f := newFixture(t)
+	f.onboard(t, "user_jun", "Jun")
+	path := f.createSpace(t, "user_jun", f.spaceForm(t, "Long table", tomorrowAt(t, 14, 0), "30", ""))
+	require.Equal(t, http.StatusSeeOther, f.post(path+"/cancel", nil, as("user_jun")).Code)
+	require.Equal(t, http.StatusSeeOther, f.post(path+"/undo", nil, as("user_jun")).Code)
+
+	w := f.post(path+"/undo", nil, as("user_jun"))
+
+	assert.Equal(t, http.StatusSeeOther, w.Code, "it's back on, so this isn't too late: %s", w.Body.String())
+	assert.Equal(t, path, w.Header().Get("Location"))
 }
 
 func TestUndoIsRefusedWhenTheSpotHasBeenTaken(t *testing.T) {

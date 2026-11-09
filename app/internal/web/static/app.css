@@ -138,8 +138,8 @@ body {
 .host-text { min-width: 0; }
 .host-quote { margin: 0; font-style: italic; overflow-wrap: anywhere; white-space: pre-line; }
 .host-name { margin: 2px 0 0; font-size: var(--text-sm); }
-.seat-row { display: flex; align-items: center; gap: var(--gap); }
-.seats { display: flex; flex-wrap: wrap; gap: 6px; }
+.seat-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
+.seats { flex: none; max-width: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
 .seat {
   flex: none;
   display: flex; align-items: center; justify-content: center;
@@ -163,7 +163,7 @@ body {
   background: var(--ink); color: var(--card);
   border-radius: var(--radius-button);
 }
-.toast-text { color: var(--card); min-width: 0; overflow-wrap: anywhere; }
+.toast-text { display: flex; align-items: center; min-height: var(--tap); color: var(--card); min-width: 0; overflow-wrap: anywhere; }
 .toast-action {
   flex: none; min-height: var(--tap); padding: 0 12px;
   border: 0; border-radius: var(--radius-button);

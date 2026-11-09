@@ -49,6 +49,23 @@ test.describe('S3 spaces', () => {
     expect(box?.height).toBeGreaterThanOrEqual(44);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
+    const dotRows = await page.locator('.seats .seat').evaluateAll(
+      (dots) => new Set(dots.map((dot) => dot.getBoundingClientRect().top)).size,
+    );
+    expect(dotRows, 'eight seats stay on one line').toBe(1);
+
+    // The notice only reaches other people's pages, so measure its link against the real stylesheet.
+    const noticeHeight = await page.evaluate(() => {
+      const link = document.createElement('a');
+      link.className = 'toast-text';
+      link.textContent = 'Cancelled by host: Collector tuning';
+      document.body.append(link);
+      const height = link.getBoundingClientRect().height;
+      link.remove();
+      return height;
+    });
+    expect(noticeHeight).toBeGreaterThanOrEqual(44);
+
     await page.goto('/e/cnh/spaces/new');
     await fillForm();
     await page.getByRole('button', { name: 'Start this space' }).click();

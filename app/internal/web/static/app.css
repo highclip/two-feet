@@ -128,7 +128,7 @@ body {
 .note-live { display: flex; flex-direction: column; gap: var(--gap); width: 100%; }
 .note-actions { display: flex; gap: 8px; }
 .note-actions > * { flex: 1; }
-.note-actions .button { width: 100%; }
+.note-actions .button { width: 100%; padding: 0 8px; white-space: nowrap; }
 .pill { padding: 3px 11px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 700; color: var(--ink); }
 .pill-stuck { background: var(--stuck); }
 .pill-curious { background: var(--curious); }

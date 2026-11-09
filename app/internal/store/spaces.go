@@ -219,18 +219,6 @@ func (s *Store) PostForSpace(ctx context.Context, postID string, now time.Time) 
 	return p, nil
 }
 
-// CountOpenSpaces counts spaces that are open and haven't finished.
-func (s *Store) CountOpenSpaces(ctx context.Context, now time.Time) (int, error) {
-	var n int
-	err := s.db.QueryRow(ctx, `
-		SELECT count(*) FROM space
-		WHERE status = 'open' AND starts_at + minutes * interval '1 minute' > $1`, now).Scan(&n)
-	if err != nil {
-		return 0, fmt.Errorf("count open spaces: %w", err)
-	}
-	return n, nil
-}
-
 // CreateSpace saves a space with the host as its first "going". The lock on the spot makes two
 // overlapping creates take turns, so the second one sees the first.
 func (s *Store) CreateSpace(ctx context.Context, hostID string, in SpaceInput) (Space, error) {

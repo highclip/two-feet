@@ -14,7 +14,6 @@ const (
 	minPhraseWords  = 2
 	maxPhraseRunes  = 40
 	sameStemRunes   = 4
-	fallbackReason  = "Close to what you wrote"
 	sharedTagPrefix = "both mention "
 )
 
@@ -47,13 +46,18 @@ func questionTerms(text string) []string {
 	return out
 }
 
-// sameWord treats "drops" and "dropping" as one word without needing a stemmer.
+// sameWord treats "drops" and "dropping" as one word without needing a stemmer: they share a stem
+// that is all but at most the last letter of the shorter word, so "config" and "conference" differ.
 func sameWord(a, b string) bool {
 	if a == b {
 		return true
 	}
 	ra, rb := []rune(a), []rune(b)
-	return len(ra) >= sameStemRunes && len(rb) >= sameStemRunes && string(ra[:sameStemRunes]) == string(rb[:sameStemRunes])
+	shared := 0
+	for shared < min(len(ra), len(rb)) && ra[shared] == rb[shared] {
+		shared++
+	}
+	return shared >= sameStemRunes && shared >= min(len(ra), len(rb))-1
 }
 
 func matchesQuestion(w string, question []string) bool {
@@ -129,8 +133,9 @@ func readable(s string) string { return strings.ToLower(strings.ReplaceAll(s, "-
 
 // Reasons is the 1-3 chips a match shows: up to two tags it shares with the question, and the
 // phrase. A longer phrase says a tag for it, and a tag says a phrase that is only that tag. A phrase
-// resting on one shared word is shown only if nothing else explains the match. It never returns an
-// empty list, because a match found only by meaning still deserves a plain word about why.
+// resting on one shared word is shown only if nothing else explains the match. It is empty when the
+// match shares no tag or word with the question, and the matcher drops such a hit: ELSER always
+// returns something, and its scores can't tell a near miss from noise.
 func Reasons(question string, questionTags, docTags []string, text string) []string {
 	best, score := bestPhrase(question, text)
 	phrase := readable(best)
@@ -152,9 +157,6 @@ func Reasons(question string, questionTags, docTags []string, text string) []str
 	}
 	if sayPhrase && (score >= minPhraseWords || len(out) == 0) {
 		out = append(out, best)
-	}
-	if len(out) == 0 {
-		out = append(out, fallbackReason)
 	}
 	return out
 }

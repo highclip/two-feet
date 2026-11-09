@@ -57,6 +57,28 @@ func TestS6_SeededDemoDataMatchesTheCollectorSpaceAPersonAndDash0(t *testing.T) 
 	}
 }
 
+func TestD25_AQueryUnrelatedToTheDemoDataFindsNothing(t *testing.T) {
+	c := liveClient(t)
+	st := storetest.Tx(t)
+	ctx := context.Background()
+	require.NoError(t, st.Seed(ctx, "cnh"))
+	queue := search.NewQueue(c, quietLog(), search.QueueOptions{})
+	t.Cleanup(func() { queue.Close(context.Background()) })
+	require.NoError(t, demo.Load(ctx, st, queue, quietLog(), "cnh", time.Now()))
+	asker := newAsker(t, st, "user_unrelated", "Sam")
+	matcher := search.NewMatcher(st, c)
+
+	nonsense, err := matcher.Find(ctx, asker, "zzzqqq xylophone", time.Now())
+	require.NoError(t, err)
+	assert.True(t, nonsense.Empty(), "%+v", nonsense)
+
+	collector, err := matcher.Find(ctx, asker, "collector", time.Now())
+	require.NoError(t, err)
+	for _, m := range collector.Sponsors {
+		assert.NotContains(t, []string{"Elastic", "Sonar", "Radar"}, m.Sponsor.Name)
+	}
+}
+
 func randomUUID(t *testing.T) string {
 	t.Helper()
 	b := make([]byte, 16)

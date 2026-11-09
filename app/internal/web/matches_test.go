@@ -189,6 +189,7 @@ func TestS6_StaleHitsAtTheTopDoNotCrowdOutPeopleRankedBelowThem(t *testing.T) {
 		finder.hits = append(finder.hits, personHit(hidden)) // stale documents holding the top slots
 	}
 	finder.hits = append(finder.hits, personHit(f.onboard(t, "user_priya", "Priya")))
+	f.createPost(t, "user_priya", "Rebuilding our OTel collector pipelines with tail sampling")
 
 	html := f.matchesHTML(t, "user_asker", postID)
 
@@ -202,7 +203,9 @@ func TestS6_EachKindStillStopsAtThreeMatchesAfterOverFetching(t *testing.T) {
 	f := newMatchFixture(t, finder)
 	_, postID := f.askerPost(t, "user_asker", "Sam")
 	for i := range 5 {
-		person := f.onboard(t, fmt.Sprintf("user_person_%d", i), fmt.Sprintf("Person %d", i))
+		who := fmt.Sprintf("user_person_%d", i)
+		person := f.onboard(t, who, fmt.Sprintf("Person %d", i))
+		f.createPost(t, who, "Rebuilding our OTel collector pipelines with tail sampling")
 		finder.hits = append(finder.hits, personHit(person))
 	}
 
@@ -404,12 +407,13 @@ func TestS6_NewMatchesAreOfferedAndNeverPushedIntoTheList(t *testing.T) {
 	f := newMatchFixture(t, finder)
 	_, postID := f.askerPost(t, "user_asker", "Sam")
 	dash0 := f.seededSponsorID(t, "Dash0")
-	elastic := f.seededSponsorID(t, "Elastic")
-	temporal := f.seededSponsorID(t, "Temporal")
+	radar := f.seededSponsorID(t, "Radar")
+	host := f.onboard(t, "user_host", "Hana")
+	sp := f.makeSpace(t, host.ID, "Long table", "Collector tuning", 6*time.Minute, 8)
 	finder.hits = []search.Hit{
 		{Type: search.TypeSponsor, ID: dash0, Text: "Dash0"},
-		{Type: search.TypeSponsor, ID: elastic, Text: "Elastic"},
-		{Type: search.TypeSponsor, ID: temporal, Text: "Temporal"},
+		{Type: search.TypeSponsor, ID: radar, Text: "Radar"},
+		spaceHit(sp),
 	}
 	base := "/e/cnh/posts/" + postID + "/matches/new?seen="
 
@@ -417,7 +421,7 @@ func TestS6_NewMatchesAreOfferedAndNeverPushedIntoTheList(t *testing.T) {
 	assert.Contains(t, body, "2 new matches")
 	assert.NotContains(t, body, "<article")
 
-	all := url.QueryEscape("sponsor:" + dash0 + ",sponsor:" + elastic + ",sponsor:" + temporal)
+	all := url.QueryEscape("sponsor:" + dash0 + ",sponsor:" + radar + ",space:" + sp.ID)
 	assert.Empty(t, strings.TrimSpace(f.get(base+all, as("user_asker"), header("HX-Request", "true")).Body.String()))
 }
 
@@ -432,13 +436,15 @@ func TestD25_SearchGroupsPeoplePostsSpacesAndSponsors(t *testing.T) {
 	host := f.onboard(t, "user_host", "Hana")
 	sp := f.makeSpace(t, host.ID, "Long table", "Collector tuning", 6*time.Minute, 8)
 	dash0 := f.seededSponsorID(t, "Dash0")
+	// The e2e suite edits this sponsor's text and the seed keeps a rep's edits, so state it here.
+	storetest.Exec(t, f.store, `UPDATE sponsor SET solves = $2 WHERE id = $1`, dash0, "OpenTelemetry-native observability: traces, metrics and logs")
 	finder.hits = []search.Hit{
 		spaceHit(sp), personHit(priya),
 		{Type: search.TypeSponsor, ID: dash0, Text: "Dash0"},
 		{Type: search.TypePost, ID: post, OwnerID: priya.ID, Text: "Rebuilding our OTel collector pipelines"},
 	}
 
-	w := f.get(searchTarget("collector"), as("user_asker"))
+	w := f.get(searchTarget("otel collector"), as("user_asker"))
 
 	require.Equal(t, http.StatusOK, w.Code)
 	got := cards(w.Body.String())
@@ -521,6 +527,53 @@ func TestD25_NothingFoundOffersOneNextAction(t *testing.T) {
 
 	assert.Contains(t, body, "Start a space")
 	assert.Contains(t, body, `href="/e/cnh/spaces/new"`)
+}
+
+func TestD25_HitsThatShareNothingWithTheQueryShowTheEmptyState(t *testing.T) {
+	finder := &fakeFinder{}
+	f := newMatchFixture(t, finder)
+	f.onboard(t, "user_asker", "Sam")
+	finder.hits = []search.Hit{
+		{Type: search.TypeSponsor, ID: f.seededSponsorID(t, "Temporal"), Text: "Temporal"},
+		{Type: search.TypeSponsor, ID: f.seededSponsorID(t, "Sonar"), Text: "Sonar"},
+	}
+
+	body := f.get(searchTarget("zzzqqq xylophone"), as("user_asker")).Body.String()
+
+	assert.Empty(t, cards(body))
+	assert.NotContains(t, body, "Close to what you wrote")
+	assert.Contains(t, body, "No one's on this yet. Start a space and let it find people.")
+	assert.Contains(t, body, `href="/e/cnh/spaces/new"`)
+}
+
+func TestS6_HitsThatShareNothingWithThePostShowTheEmptyState(t *testing.T) {
+	finder := &fakeFinder{}
+	f := newMatchFixture(t, finder)
+	_, postID := f.askerPost(t, "user_asker", "Sam")
+	finder.hits = []search.Hit{{Type: search.TypeSponsor, ID: f.seededSponsorID(t, "Temporal"), Text: "Temporal"}}
+
+	html := f.matchesHTML(t, "user_asker", postID)
+
+	assert.Empty(t, cards(html))
+	assert.Contains(t, html, "No one's on this yet. Start a space and let it find people.")
+}
+
+func TestS6_AHitWithNoReasonDoesNotTakeASlotFromOneBelowIt(t *testing.T) {
+	finder := &fakeFinder{}
+	f := newMatchFixture(t, finder)
+	_, postID := f.askerPost(t, "user_asker", "Sam")
+	dash0 := f.seededSponsorID(t, "Dash0")
+	finder.hits = []search.Hit{
+		{Type: search.TypeSponsor, ID: f.seededSponsorID(t, "Temporal"), Text: "Temporal"},
+		{Type: search.TypeSponsor, ID: f.seededSponsorID(t, "Sonar"), Text: "Sonar"},
+		{Type: search.TypeSponsor, ID: f.seededSponsorID(t, "Tailscale"), Text: "Tailscale"},
+		{Type: search.TypeSponsor, ID: dash0, Text: "Dash0"},
+	}
+
+	got := cards(f.matchesHTML(t, "user_asker", postID))
+
+	assert.Len(t, got, 1)
+	assert.Contains(t, got, "sponsor:"+dash0)
 }
 
 func TestD25_TheHomeScreenHasOneSearchBox(t *testing.T) {

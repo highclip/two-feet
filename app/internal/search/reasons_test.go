@@ -46,8 +46,7 @@ func TestReasonsAreOneToThree(t *testing.T) {
 	tags := []string{"otel", "postgres", "helm", "docker", "go"}
 
 	three := search.Reasons("kafka consumers rebalance on restart", tags, tags, "kafka consumers rebalance constantly")
-	assert.Equal(t, []string{"both mention otel", "both mention postgres", "kafka consumers rebalance constantly"}, three)
-	assert.Equal(t, []string{"Close to what you wrote"}, search.Reasons("anything", nil, nil, ""))
+	assert.Equal(t, []string{"both mention otel", "both mention postgres", "kafka consumers rebalance"}, three)
 }
 
 func TestReasonsDropAOneWordPhraseWhenATagExplainsTheMatch(t *testing.T) {
@@ -57,8 +56,12 @@ func TestReasonsDropAOneWordPhraseWhenATagExplainsTheMatch(t *testing.T) {
 	assert.Equal(t, []string{"both mention kubernetes"}, got)
 }
 
-func TestReasonsSayAMatchWasFoundByMeaningWhenNoWordsLineUp(t *testing.T) {
-	got := search.Reasons("our trace pipeline", nil, nil, "OpenTelemetry-native observability")
+func TestReasonsAreEmptyWhenNothingLinesUp(t *testing.T) {
+	assert.Empty(t, search.Reasons("our trace pipeline", nil, nil, "OpenTelemetry-native observability"))
+	assert.Empty(t, search.Reasons("anything", nil, nil, ""))
+}
 
-	assert.Equal(t, []string{"Close to what you wrote"}, got)
+func TestReasonsDoNotCountWordsThatOnlyStartAlike(t *testing.T) {
+	assert.Empty(t, search.Reasons("config drift", nil, nil, "Conference swag and stickers"))
+	assert.Equal(t, []string{"retries"}, search.Reasons("retry storms", nil, nil, "retries"))
 }

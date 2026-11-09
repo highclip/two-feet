@@ -75,5 +75,13 @@ test.describe('S6 matching with reasons', () => {
     await expect(page.getByRole('heading', { name: 'People' })).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('article.match-person').first()).toContainText('Priya (sample)');
     await page.screenshot({ path: `${shots}/search.png`, fullPage: true });
+
+    await page.getByRole('searchbox').fill('zzzqqq xylophone');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+
+    await expect(page.getByText("No one's on this yet. Start a space and let it find people.")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('article.match')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Start a space' })).toBeVisible();
+    await page.screenshot({ path: `${shots}/search-empty.png`, fullPage: true });
   });
 });

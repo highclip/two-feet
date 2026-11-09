@@ -230,10 +230,14 @@ func (h *hydration) spaces(ctx context.Context) ([]Match, error) {
 			!sp.EndsAt().After(h.now) || sp.StartsAt.After(h.now.Add(spaceHorizon)) {
 			continue
 		}
+		reasons := Reasons(h.text, h.tags, hit.Tags, sp.Title+". "+sp.Blurb)
+		if len(reasons) == 0 {
+			continue
+		}
 		starts := startsIn(sp.StartsAt, h.now)
 		out = append(out, Match{
 			Kind: TypeSpace, TargetID: sp.ID, Score: hit.Score,
-			Reasons:         Reasons(h.text, h.tags, hit.Tags, sp.Title+". "+sp.Blurb),
+			Reasons:         reasons,
 			WalkMinutes:     h.walk(sp.ZoneID),
 			StartsInMinutes: &starts,
 			Space:           &SpaceMatch{Space: sp, SignupStatus: signups[sp.ID]},
@@ -296,11 +300,11 @@ func (h *hydration) people(ctx context.Context) ([]Match, error) {
 		if best := bestPost(posts[p.ID], question); best != nil {
 			person.Kind, person.Quote, text = best.Kind, best.Text, best.Text
 		}
-		out = append(out, Match{
-			Kind: TypePerson, TargetID: p.ID, Score: hit.Score,
-			Reasons: Reasons(h.text, h.tags, unionTags(p.Tags, posts[p.ID]), text),
-			Person:  person,
-		})
+		reasons := Reasons(h.text, h.tags, unionTags(p.Tags, posts[p.ID]), text)
+		if len(reasons) == 0 {
+			continue
+		}
+		out = append(out, Match{Kind: TypePerson, TargetID: p.ID, Score: hit.Score, Reasons: reasons, Person: person})
 	}
 	return out, nil
 }
@@ -323,10 +327,14 @@ func (h *hydration) sponsors(ctx context.Context) ([]Match, error) {
 		if !ok {
 			continue
 		}
+		reasons := Reasons(h.text, h.tags, hit.Tags, row.Sponsor.Solves)
+		if len(reasons) == 0 {
+			continue
+		}
 		m := Match{
 			Kind: TypeSponsor, TargetID: row.Sponsor.ID, Score: hit.Score,
-			Reasons: Reasons(h.text, h.tags, hit.Tags, row.Sponsor.Solves),
-			Sponsor: &SponsorMatch{ID: row.Sponsor.ID, Name: row.Sponsor.Name, Solves: row.Sponsor.Solves, Booth: row.Booth},
+			Reasons: reasons,
+			Sponsor:&SponsorMatch{ID: row.Sponsor.ID, Name: row.Sponsor.Name, Solves: row.Sponsor.Solves, Booth: row.Booth},
 		}
 		if row.Booth != nil {
 			m.WalkMinutes = h.walk(row.Booth.ZoneID)
@@ -355,15 +363,15 @@ func (h *hydration) posts(ctx context.Context) ([]Match, error) {
 		if !ok || row.Post.AuthorID == h.asker.ID {
 			continue
 		}
+		reasons := Reasons(h.text, h.tags, row.Post.Tags, row.Post.Text)
+		if len(reasons) == 0 {
+			continue
+		}
 		post := &PostMatch{ID: row.Post.ID, Kind: row.Post.Kind, Text: row.Post.Text}
 		if row.Discoverable {
 			post.AuthorName = row.AuthorName
 		}
-		out = append(out, Match{
-			Kind: TypePost, TargetID: row.Post.ID, Score: hit.Score,
-			Reasons: Reasons(h.text, h.tags, row.Post.Tags, row.Post.Text),
-			Post:    post,
-		})
+		out = append(out, Match{Kind: TypePost, TargetID: row.Post.ID, Score: hit.Score, Reasons: reasons, Post: post})
 	}
 	return out, nil
 }

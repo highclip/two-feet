@@ -5,7 +5,7 @@ cluster:
   region: sfo3
 
 # Public hostname, served through the Cloudflare tunnel in 40-platform.
-publicHost: twofeet.highclip.dev            # confirm the domain before creating the tunnel
+publicHost: twofeet.highclip.dev            # CNAME to the two-feet tunnel, created 2026-11-08
 
 image:
   repository: registry.digitalocean.com/honk-app/two-feet   # the Highclip team's one registry (sfo2)
@@ -13,7 +13,7 @@ image:
   tag: ""
 
 cloudflare:
-  tunnelId: ""                               # from: cloudflared tunnel create two-feet
+  tunnelId: b83a3144-3c74-4696-9857-dc61086516e6   # cloudflared tunnel create two-feet; credentials in ~/.cloudflared/<id>.json
 
 dash0:
   # app.dash0.com → Organization settings → Endpoints. Region-specific.

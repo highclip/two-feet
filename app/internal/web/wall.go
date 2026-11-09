@@ -145,7 +145,7 @@ func (s *Server) buildWall(ctx context.Context, e store.Event) (views.WallBoard,
 }
 
 // eventQRPath draws a QR code as one SVG path, so the Wall adds a single node however dense the code
-// is. size is its width in modules, without a quiet zone: the page's padding is that.
+// is. size is its width in modules, without a quiet zone: the view adds that around it.
 func eventQRPath(target string) (path string, size int, err error) {
 	code, err := qrcode.New(target, qrcode.Medium)
 	if err != nil {

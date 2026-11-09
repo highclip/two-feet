@@ -3,6 +3,7 @@ package web_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -206,6 +207,16 @@ func TestD42_WallHeaderHasAQRForTheEventWithNothingPersonalInIt(t *testing.T) {
 			assert.Contains(t, body, "Scan to post or start a space")
 		})
 	}
+}
+
+func TestD45_WallQRHasAFourModuleQuietZone(t *testing.T) {
+	f := newFixture(t)
+	_, size, err := web.EventQRPath("https://twofeet.test/e/cnh")
+	require.NoError(t, err)
+
+	body := f.wallBody(t, boardPath)
+
+	assert.Contains(t, body, fmt.Sprintf(`viewBox="-4 -4 %d %d"`, size+8, size+8))
 }
 
 func TestD26_WallShowsTopTagsWithCountsOnly(t *testing.T) {

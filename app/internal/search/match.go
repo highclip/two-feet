@@ -14,6 +14,10 @@ import (
 // perType is how many of each kind of result a request gets (spec.search_index.query).
 const perType = 3
 
+// candidatesPerType is how many hits of each kind to check against Postgres. It's more than perType
+// because the index can lag: hits Postgres rejects mustn't use up the slots of the ones below them.
+const candidatesPerType = perType * 4
+
 // matchTypes are what a post is matched against; findTypes also include posts, for the search box.
 var (
 	matchTypes = []string{TypeSpace, TypePerson, TypeSponsor}
@@ -127,7 +131,7 @@ func (m *Matcher) run(ctx context.Context, asker store.Person, text string, tags
 		return Results{}, nil
 	}
 	tags = withParents(tags)
-	hits, err := m.finder.SearchEach(ctx, Query{Text: text, Tags: tags, ExcludeOwner: asker.ID, Now: now}, types, perType)
+	hits, err := m.finder.SearchEach(ctx, Query{Text: text, Tags: tags, ExcludeOwner: asker.ID, Now: now}, types, candidatesPerType)
 	if err != nil {
 		return Results{}, fmt.Errorf("find matches: %w", err)
 	}
@@ -218,6 +222,9 @@ func (h *hydration) spaces(ctx context.Context) ([]Match, error) {
 	}
 	var out []Match
 	for _, hit := range h.hits[TypeSpace] {
+		if len(out) == perType {
+			break
+		}
 		sp, ok := spaces[hit.ID]
 		if !ok || sp.Status != store.SpaceOpen || sp.HostID == h.asker.ID ||
 			!sp.EndsAt().After(h.now) || sp.StartsAt.After(h.now.Add(spaceHorizon)) {
@@ -277,6 +284,9 @@ func (h *hydration) people(ctx context.Context) ([]Match, error) {
 	question := questionTerms(h.text)
 	var out []Match
 	for _, hit := range h.hits[TypePerson] {
+		if len(out) == perType {
+			break
+		}
 		p, ok := people[hit.ID]
 		if !ok || p.ID == h.asker.ID {
 			continue
@@ -306,6 +316,9 @@ func (h *hydration) sponsors(ctx context.Context) ([]Match, error) {
 	}
 	var out []Match
 	for _, hit := range h.hits[TypeSponsor] {
+		if len(out) == perType {
+			break
+		}
 		row, ok := sponsors[hit.ID]
 		if !ok {
 			continue
@@ -335,6 +348,9 @@ func (h *hydration) posts(ctx context.Context) ([]Match, error) {
 	}
 	var out []Match
 	for _, hit := range h.hits[TypePost] {
+		if len(out) == perType {
+			break
+		}
 		row, ok := posts[hit.ID]
 		if !ok || row.Post.AuthorID == h.asker.ID {
 			continue

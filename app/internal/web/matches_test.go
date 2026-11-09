@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -32,9 +33,17 @@ type fakeFinder struct {
 	queries []search.Query
 }
 
-func (f *fakeFinder) SearchEach(_ context.Context, q search.Query, _ []string, _ int) ([]search.Hit, error) {
+// SearchEach keeps the first each hits of every type, as the real finder does.
+func (f *fakeFinder) SearchEach(_ context.Context, q search.Query, _ []string, each int) ([]search.Hit, error) {
 	f.queries = append(f.queries, q)
-	return f.hits, f.err
+	seen := map[string]int{}
+	var kept []search.Hit
+	for _, hit := range f.hits {
+		if seen[hit.Type]++; seen[hit.Type] <= each {
+			kept = append(kept, hit)
+		}
+	}
+	return kept, f.err
 }
 
 func newMatchFixture(t *testing.T, finder search.Finder) *fixture {
@@ -168,6 +177,38 @@ func TestS6_APersonWhoIsNotDiscoverableNeverAppearsAsAMatch(t *testing.T) {
 
 	assert.NotContains(t, html, "Hidden Person")
 	assert.Empty(t, cards(html))
+}
+
+func TestS6_StaleHitsAtTheTopDoNotCrowdOutPeopleRankedBelowThem(t *testing.T) {
+	finder := &fakeFinder{}
+	f := newMatchFixture(t, finder)
+	_, postID := f.askerPost(t, "user_asker", "Sam")
+	for i := range 3 {
+		hidden := f.onboard(t, fmt.Sprintf("user_hidden_%d", i), "Hidden Person")
+		require.NoError(t, f.store.SetDiscoverable(context.Background(), hidden.ID, false))
+		finder.hits = append(finder.hits, personHit(hidden)) // stale documents holding the top slots
+	}
+	finder.hits = append(finder.hits, personHit(f.onboard(t, "user_priya", "Priya")))
+
+	html := f.matchesHTML(t, "user_asker", postID)
+
+	assert.NotContains(t, html, "Hidden Person")
+	assert.Contains(t, html, "Priya")
+	assert.Len(t, cards(html), 1)
+}
+
+func TestS6_EachKindStillStopsAtThreeMatchesAfterOverFetching(t *testing.T) {
+	finder := &fakeFinder{}
+	f := newMatchFixture(t, finder)
+	_, postID := f.askerPost(t, "user_asker", "Sam")
+	for i := range 5 {
+		person := f.onboard(t, fmt.Sprintf("user_person_%d", i), fmt.Sprintf("Person %d", i))
+		finder.hits = append(finder.hits, personHit(person))
+	}
+
+	got := cards(f.matchesHTML(t, "user_asker", postID))
+
+	assert.Len(t, got, 3)
 }
 
 func TestS6_AnAttendeesOwnPostsAndSpacesNeverAppearInTheirOwnMatches(t *testing.T) {

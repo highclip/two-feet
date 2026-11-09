@@ -218,9 +218,6 @@ body {
   overflow-wrap: anywhere;
 }
 .pill { padding: 3px 11px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 700; color: var(--ink); }
-.pill-stuck { background: var(--stuck); }
-.pill-curious { background: var(--curious); }
-.pill-offer { background: var(--offer); }
 
 /* Matches. Dealt onto the screen 80 ms apart; reduced motion turns it off and everything stays visible. */
 .matches { display: flex; flex-direction: column; gap: var(--gap); }
@@ -252,11 +249,15 @@ body {
   background: var(--chip);
   font-family: var(--font-title); font-weight: 800;
 }
+/* After .match-avatar, so an avatar takes its kind color and --chip is only the no-kind fallback. */
+.pill-stuck { background: var(--stuck); }
+.pill-curious { background: var(--curious); }
+.pill-offer { background: var(--offer); }
 .match-quote { margin: 0; font-style: italic; line-height: 1.35; overflow-wrap: anywhere; }
 .match-body { margin: 0; overflow-wrap: anywhere; }
 .match-byline { margin: 0; font-size: var(--text-sm); }
 .match .tags { margin: 0; }
-.match-tint-stuck .tag, .match-tint-curious .tag, .match-tint-offer .tag { background: rgba(22, 25, 28, 0.08); }
+.match-tint-stuck .tag, .match-tint-curious .tag, .match-tint-offer .tag { background: var(--chip-on-tint); }
 .logistics { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
 .starts { font-weight: 700; }
 .starts-soon { padding: 1px 8px; border-radius: var(--radius-pill); background: var(--action); color: var(--on-action); }

@@ -129,6 +129,8 @@ body {
 .note-actions { display: flex; gap: 8px; }
 .note-actions > * { flex: 1; }
 .note-actions .button { width: 100%; padding: 0 8px; white-space: nowrap; }
+.note-actions-stack { flex-direction: column; }
+.note-actions-stack > * { flex: none; }
 .host-row { display: flex; align-items: flex-start; gap: 10px; }
 .host-text { min-width: 0; }
 .host-quote { margin: 0; font-style: italic; overflow-wrap: anywhere; white-space: pre-line; }
@@ -149,6 +151,25 @@ body {
 .space-card-offer .seat-filled { color: var(--offer); }
 .seat-names { min-width: 0; font-size: var(--text-sm); overflow-wrap: anywhere; }
 .seat-line { margin: 0; font-variant-numeric: tabular-nums; }
+.seat-joined { font-family: var(--font-title); font-weight: 700; font-size: var(--text-lg); }
+.join-form { width: 100%; }
+.join-button { width: 100%; }
+.note-live .form-error { color: var(--ink); }
+.seat-pop { animation: seat-pop 200ms ease-out; }
+@keyframes seat-pop {
+  from { transform: translateY(-14px) scale(1.25); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.live-note {
+  position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 11;
+  margin: 0; padding: 4px 12px;
+  background: var(--ink); color: var(--card);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .seat-pop { animation: none; }
+}
 .toasts:empty { display: none; }
 .toast {
   position: fixed; left: var(--gutter); right: var(--gutter); bottom: var(--gutter); z-index: 10;

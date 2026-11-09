@@ -20,6 +20,7 @@ async function signInAndOnboard(page: Page, email: string, name: string): Promis
 
 test.describe('S6 matching with reasons', () => {
   const email = testEmail('s6-asker');
+  const searcher = testEmail('s6-searcher');
 
   test.beforeAll(() => {
     // The real seed subcommand, against the server this run started (D8, D21).
@@ -27,7 +28,11 @@ test.describe('S6 matching with reasons', () => {
   });
 
   test.afterAll(async () => {
+    // The sample spaces are committed and hold their spots for the next hour, which would refuse
+    // spaces made by the Go tests that share this database.
+    execFileSync('./.bin/twofeet', ['clear-demo'], { stdio: 'inherit' });
     await deleteClerkUser(email);
+    await deleteClerkUser(searcher);
   });
 
   test('a post gets a space, a person and a sponsor, each with reasons', async ({ page }) => {
@@ -61,7 +66,7 @@ test.describe('S6 matching with reasons', () => {
   });
 
   test('the home screen searches the room, grouped by kind', async ({ page }) => {
-    await signInAndOnboard(page, testEmail('s6-searcher'), 'Noor');
+    await signInAndOnboard(page, searcher, 'Noor');
 
     await page.getByRole('searchbox').fill('collector pipelines');
     await page.getByRole('button', { name: 'Search', exact: true }).click();

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -287,9 +286,5 @@ func (s *Server) searchPage(w http.ResponseWriter, r *http.Request) {
 			v.Groups = append(v.Groups, group("Sponsors", results.Sponsors, card)...)
 		}
 	}
-	title := "Search"
-	if n := len(v.Groups); n > 0 {
-		title += " (" + strconv.Itoa(n) + ")"
-	}
-	s.render(w, r, http.StatusOK, views.SearchPage(s.livePage(r, event, title, live.EventTopic), v))
+	s.render(w, r, http.StatusOK, views.SearchPage(s.livePage(r, event, "Search", live.EventTopic), v))
 }

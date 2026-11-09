@@ -196,7 +196,7 @@ templ MatchList(v MatchesView) {
 			<a class="button button-action" href={ templ.SafeURL(v.StartURL) }>Start a space</a>
 		</section>
 	} else {
-		<h2 class="matches-head">{ LeadCount(len(v.Top) + len(v.More)) }</h2>
+		<h2 class="matches-head">{ LeadCount(len(v.Top)) }</h2>
 		for i, c := range v.Top {
 			@MatchNote(c, i)
 		}

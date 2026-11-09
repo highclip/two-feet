@@ -18,6 +18,12 @@ import (
 
 func quiet() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
+// Sample rows only, because the e2e tests commit rows of their own to this database.
+const (
+	samplePosts = `SELECT count(*)::text FROM post p JOIN person a ON a.id = p.author_id WHERE a.display_name LIKE '%(sample)'`
+	sampleSpace = `SELECT count(*)::text FROM space sp JOIN person h ON h.id = sp.host_id WHERE h.display_name LIKE '%(sample)'`
+)
+
 func count(t *testing.T, s *store.Store, query string) string {
 	t.Helper()
 	return storetest.QueryString(t, s, query)
@@ -25,7 +31,8 @@ func count(t *testing.T, s *store.Store, query string) string {
 
 func collector(t *testing.T, s *store.Store, now time.Time) store.Space {
 	t.Helper()
-	id := count(t, s, `SELECT id::text FROM space WHERE title LIKE 'Collector tuning%'`)
+	id := count(t, s, `SELECT sp.id::text FROM space sp JOIN person h ON h.id = sp.host_id
+		WHERE sp.title LIKE 'Collector tuning%' AND h.display_name LIKE '%(sample)'`)
 	sp, err := s.SpaceByID(context.Background(), id)
 	require.NoError(t, err)
 	return sp
@@ -40,8 +47,8 @@ func TestDemoSeedLoadsTheCountsAndMustIncludeRows(t *testing.T) {
 	require.NoError(t, demo.Load(ctx, s, search.Noop{}, quiet(), "cnh", now))
 
 	assert.Equal(t, "12", count(t, s, `SELECT count(*)::text FROM person WHERE display_name LIKE '%(sample)'`))
-	assert.Equal(t, "20", count(t, s, `SELECT count(*)::text FROM post`))
-	assert.Equal(t, "6", count(t, s, `SELECT count(*)::text FROM space`))
+	assert.Equal(t, "20", count(t, s, samplePosts))
+	assert.Equal(t, "6", count(t, s, sampleSpace))
 	assert.Equal(t, "1", count(t, s, `SELECT count(*)::text FROM post p JOIN person a ON a.id = p.author_id
 		WHERE a.display_name = 'Priya (sample)'
 		  AND p.text = 'Rebuilding our OTel collector pipelines with tail sampling, happy to compare notes'`))
@@ -64,8 +71,8 @@ func TestDemoSeedRerunsWithFreshTimesAndNoDuplicates(t *testing.T) {
 	require.NoError(t, demo.Load(ctx, s, search.Noop{}, quiet(), "cnh", later))
 
 	assert.Equal(t, "12", count(t, s, `SELECT count(*)::text FROM person WHERE display_name LIKE '%(sample)'`))
-	assert.Equal(t, "20", count(t, s, `SELECT count(*)::text FROM post`))
-	assert.Equal(t, "6", count(t, s, `SELECT count(*)::text FROM space`))
+	assert.Equal(t, "20", count(t, s, samplePosts))
+	assert.Equal(t, "6", count(t, s, sampleSpace))
 	assert.WithinDuration(t, later.Add(6*time.Minute), collector(t, s, later).StartsAt, time.Minute)
 }
 

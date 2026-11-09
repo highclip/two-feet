@@ -1,5 +1,6 @@
 // Command twofeet is the Two Feet server. With "migrate" it applies migrations and loads the venue;
-// with "seed" it loads the venue only; with "seed-demo" it also loads the sample demo data.
+// with "seed" it loads the venue only; "seed-demo" also loads the sample demo data and "clear-demo"
+// removes it.
 package main
 
 import (
@@ -43,6 +44,8 @@ func main() {
 		err = seed(ctx)
 	case "seed-demo":
 		err = seedDemo(ctx, log)
+	case "clear-demo":
+		err = clearDemo(ctx)
 	default:
 		err = serve(ctx, log)
 	}
@@ -116,6 +119,21 @@ func seedDemo(ctx context.Context, log *slog.Logger) error {
 		return errors.New("some sample documents didn't reach Elasticsearch; run seed-demo again")
 	}
 	return nil
+}
+
+// clearDemo deletes the sample people and everything they made. Their documents stay in the index
+// until the next rebuild, and matching drops them meanwhile because their rows are gone.
+func clearDemo(ctx context.Context) error {
+	databaseURL, err := config.DatabaseOnly()
+	if err != nil {
+		return err
+	}
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		return fmt.Errorf("connect to database: %w", err)
+	}
+	defer pool.Close()
+	return store.New(pool).ClearSamples(ctx)
 }
 
 func serve(ctx context.Context, log *slog.Logger) error {

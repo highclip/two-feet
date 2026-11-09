@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -124,6 +125,35 @@ func TestSetSponsorBoothRefusesAnUnknownSpotOrSponsor(t *testing.T) {
 	assert.ErrorIs(t, s.SetSponsorBooth(ctx, "Dash0", "No such spot"), store.ErrNotFound)
 	assert.ErrorIs(t, s.SetSponsorBooth(ctx, "No such sponsor", "Couches"), store.ErrNotFound)
 	assert.Nil(t, seededSponsor(t, s, "Dash0").BoothSpotID)
+}
+
+const boothSeed = `{
+  "event": {"name": "E", "timezone": "America/Denver", "starts_at": "2026-11-09T09:00:00-07:00", "ends_at": "2026-11-09T17:30:00-07:00"},
+  "zones": [{"id": "booths", "name": "Sponsor row"}],
+  "walks": [],
+  "spots": [{"name": "Dash0 booth", "zone": "booths", "where": "", "capacity": 4}],
+  "sponsors": [{"name": "Dash0", "solves": "Traces", "booth": "%s"}]
+}`
+
+func TestSeedAppliesABoothNamedInTheSeedFile(t *testing.T) {
+	s := storetest.Tx(t)
+	ctx := context.Background()
+	emptyVenue(t, s)
+	defer store.SwapSeedDataForTest(fmt.Appendf(nil, boothSeed, "Dash0 booth"))()
+
+	require.NoError(t, s.Seed(ctx, "cnh"))
+	require.NoError(t, s.Seed(ctx, "cnh"))
+
+	assert.NotNil(t, seededSponsor(t, s, "Dash0").BoothSpotID)
+	assert.Equal(t, 1, count(t, s, "sponsor"))
+}
+
+func TestSeedFailsLoudlyOnABoothThatNamesNoSpot(t *testing.T) {
+	s := storetest.Tx(t)
+	emptyVenue(t, s)
+	defer store.SwapSeedDataForTest(fmt.Appendf(nil, boothSeed, "Typo booth"))()
+
+	assert.ErrorIs(t, s.Seed(context.Background(), "cnh"), store.ErrNotFound)
 }
 
 func TestSeedingTwiceKeepsAManualBoothWhenTheSeedNamesNone(t *testing.T) {

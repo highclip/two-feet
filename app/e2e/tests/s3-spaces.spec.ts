@@ -44,6 +44,7 @@ test.describe('S3 spaces', () => {
     await expect(page.getByText('1 of 8 going')).toBeVisible();
     const spacePage = page.url();
 
+    await page.waitForLoadState('load'); // sizes mean nothing until the stylesheet has applied
     const box = await page.getByRole('link', { name: 'Edit' }).boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);

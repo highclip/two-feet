@@ -33,8 +33,8 @@ type Deps struct {
 	Store     *store.Store
 	Hub       *live.Hub
 	Search    search.Indexer
-	Finder    search.Finder     // reads the index for matches; nil finds nothing
-	Tags      search.TagCounter // the Wall's tag strip; nil hides it
+	Finder    search.Finder      // reads the index for matches; nil finds nothing
+	Tags      search.TagCounter  // the Wall's tag strip; nil hides it
 	Topics    search.TopicLister // stories from online, for the Wall and the Start a space form; nil hides them
 	Limiter   *Limiter
 	Auth      *auth.Authenticator

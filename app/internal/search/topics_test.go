@@ -147,7 +147,7 @@ func TestS12_TopicTextIsPlainAndCutTo80CharactersAndStoriesWithNoVocabularyTagAr
 	source := &fakeSource{stories: []search.Story{
 		story("A cosy guide to sourdough starters"),
 		story("<b>Why we left</b> K8s &amp; came back"),
-		story("Postgres‮\tinternals\n<script>alert(1)</script>"),
+		story("Postgres" + string(rune(0x202e)) + "\tinternals\n<script>alert(1)</script>"),
 		story(long),
 	}}
 

@@ -53,6 +53,7 @@ test.describe('S12 topics from online', () => {
     }));
     expect(fit.scroll).toBeLessThanOrEqual(390);
     expect(fit.smallest).toBeGreaterThanOrEqual(44);
+    await page.screenshot({ path: test.info().outputPath('form.png'), fullPage: true });
   });
 
   test('the Wall shows the strip, with no names, and still fits a 1080p screen', async ({ browser }) => {
@@ -76,6 +77,7 @@ test.describe('S12 topics from online', () => {
     expect(fit.width).toBeLessThanOrEqual(1920);
     expect(fit.height).toBeLessThanOrEqual(1080);
     expect(fit.bottom).toBeLessThanOrEqual(1080);
+    await wall.screenshot({ path: test.info().outputPath('wall.png') });
     await wallContext.close();
   });
 });

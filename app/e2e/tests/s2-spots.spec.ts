@@ -65,13 +65,13 @@ test.describe('S2 spot pages', () => {
   });
 
   test('scan, sign in, check in, start a space here, and watch it arrive and fill on another phone', async ({ browser }, testInfo) => {
-    const spotPath = `/e/cnh?spot=${qrSlug('Couches')}`;
+    const spotPath = `/e/cnh?spot=${qrSlug('Corner couches')}`;
 
     // A visitor sees the spot with no names and no zone counts.
     const visitorContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const visitor = await visitorContext.newPage();
     await visitor.goto(spotPath);
-    await expect(visitor.getByRole('heading', { level: 1 })).toContainText('Couches');
+    await expect(visitor.getByRole('heading', { level: 1 })).toContainText('Corner couches');
     await expect(visitor.getByText('The couches around the low table')).toBeVisible();
     await expect(visitor.getByText("You're at")).toHaveCount(0);
     await expect(visitor.getByText(/people in the/)).toHaveCount(0);
@@ -79,16 +79,16 @@ test.describe('S2 spot pages', () => {
 
     // Signing in comes back to the same spot and checks you in.
     const ana = await signInFrom(browser, spotPath, emails.ana, 'Ana');
-    await expect(ana.page).toHaveURL(new RegExp(`spot=${qrSlug('Couches')}`));
+    await expect(ana.page).toHaveURL(new RegExp(`spot=${qrSlug('Corner couches')}`));
     await expect(ana.page.getByRole('heading', { level: 1 })).toContainText("You're at");
-    await expect(ana.page.getByRole('heading', { level: 1 })).toContainText('Couches, Lounge');
+    await expect(ana.page.getByRole('heading', { level: 1 })).toContainText('Corner couches, Lounge');
     await expect(ana.page.getByText(/people in the Lounge/)).toBeVisible();
 
     // Start a space here opens the form with this spot and a free slot filled in.
     await ana.page.getByRole('link', { name: /Start a space here/ }).click();
     await expect(ana.page).toHaveURL(/\/spaces\/new/);
     const where = ana.page.getByLabel('Where');
-    await expect(where.locator('option:checked')).toContainText('Couches');
+    await expect(where.locator('option:checked')).toContainText('Corner couches');
     const starts = await ana.page.getByLabel('Starts').inputValue();
     expect(Number(starts.slice(-2)) % 15).toBe(0);
     const title = `Spot check ${Date.now()}`;
@@ -110,16 +110,16 @@ test.describe('S2 spot pages', () => {
 
     // Someone joins from their own phone, and the count moves on the open page.
     const ben = await signInFrom(browser, spotPath, emails.ben, 'Ben');
-    await expect(ben.page.getByRole('heading', { level: 1 })).toContainText('Couches, Lounge');
+    await expect(ben.page.getByRole('heading', { level: 1 })).toContainText('Corner couches, Lounge');
     await ben.page.screenshot({ path: testInfo.outputPath('next-here.png'), fullPage: true });
 
     // A space under way is the featured card, and joining it stays on the spot page.
-    const windowPath = `/e/cnh?spot=${qrSlug('Window table')}`;
+    const windowPath = `/e/cnh?spot=${qrSlug('Window bench')}`;
     const underWay = `Under way ${Date.now()}`;
     await ana.page.goto('/e/cnh/spaces/new');
     await ana.page.getByLabel("What's it about?").fill(underWay);
     await ana.page.getByLabel('A line from you').fill('Bring your worst collector config.');
-    await ana.page.getByLabel('Where').selectOption({ label: 'Window table · Main room · seats 6' });
+    await ana.page.getByLabel('Where').selectOption({ label: 'Window bench · Main room · seats 6' });
     await ana.page.getByLabel('Starts').fill(denverMinutesAgo(1));
     await ana.page.getByText('15 min').click();
     await ana.page.getByLabel('How many people').fill('5');
@@ -161,8 +161,8 @@ test.describe('S2 spot pages', () => {
     await ben.page.goto('/e/cnh');
     await expect(ben.page.getByText('You\'re in the Lounge')).toBeVisible();
     await ben.page.getByText('Moved?').click();
-    await ben.page.getByRole('button', { name: /Patio/ }).click();
-    await expect(ben.page.getByText('You\'re in the Patio')).toBeVisible();
+    await ben.page.getByRole('button', { name: /Cafe/ }).click();
+    await expect(ben.page.getByText('You\'re in the Cafe')).toBeVisible();
 
     await visitorContext.close();
     await ana.context.close();

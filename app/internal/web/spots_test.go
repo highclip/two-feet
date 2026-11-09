@@ -80,13 +80,13 @@ func (f *fixture) checkInAt(t *testing.T, p store.Person, zone string, at time.T
 func TestS2_SignedInAttendeeOpensSpotQRZoneIsSetAndPageSaysYoureAt(t *testing.T) {
 	f := newFixture(t)
 	f.onboard(t, "user_a", "Ana")
-	spot := f.spot(t, "Kitchen island")
+	spot := f.spot(t, "Kitchen counter")
 
 	before := time.Now()
 	w := f.get(spotPath(spot), as("user_a"))
 
 	require.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, visible(w.Body.String()), "You're at Kitchen island, Kitchen")
+	assert.Contains(t, visible(w.Body.String()), "You're at Kitchen counter, Kitchen")
 	p := f.person(t, "user_a")
 	require.NotNil(t, p.ZoneID)
 	assert.Equal(t, "kitchen", *p.ZoneID)
@@ -100,7 +100,7 @@ func TestS2_SpotPageShowsNameWhereNowAndNextTwoTodayWithCountsAndJoin(t *testing
 	f.at = now
 	host := f.onboard(t, "user_host", "Dana")
 	f.onboard(t, "user_a", "Ana")
-	spot := f.spot(t, "Kitchen island")
+	spot := f.spot(t, "Kitchen counter")
 	f.spaceAt(t, host, spot, "Happening right now", now.Add(-10*time.Minute), 30)
 	f.spaceAt(t, host, spot, "First one next", now.Add(30*time.Minute), 30)
 	f.spaceAt(t, host, spot, "Second one next", now.Add(90*time.Minute), 30)
@@ -113,7 +113,7 @@ func TestS2_SpotPageShowsNameWhereNowAndNextTwoTodayWithCountsAndJoin(t *testing
 	body := f.get(spotPath(spot), as("user_a")).Body.String()
 	text := visible(body)
 
-	assert.Contains(t, text, "Kitchen island")
+	assert.Contains(t, text, "Kitchen counter")
 	assert.Contains(t, text, "The tall table by the coffee machine")
 	assert.Contains(t, text, "Happening right now")
 	assert.Contains(t, text, "Happening now · until 12:20")
@@ -136,7 +136,7 @@ func TestNextHereRowPutsThePillAndHostOnOneLineAndTheCountOnItsOwn(t *testing.T)
 	f.at = now
 	host := f.onboard(t, "user_host", "Dana")
 	f.onboard(t, "user_a", "Ana")
-	spot := f.spot(t, "Couches")
+	spot := f.spot(t, "Corner couches")
 	f.spaceAt(t, host, spot, "First one next", now.Add(30*time.Minute), 30)
 
 	body := f.get(spotPath(spot), as("user_a")).Body.String()
@@ -151,7 +151,7 @@ func TestNextHereRowSaysWaitlistWhenTheSpaceIsFull(t *testing.T) {
 	f.at = now
 	host := f.onboard(t, "user_host", "Dana")
 	f.onboard(t, "user_a", "Ana")
-	spot := f.spot(t, "Couches")
+	spot := f.spot(t, "Corner couches")
 	sp := f.spaceAt(t, host, spot, "First one next", now.Add(30*time.Minute), 30)
 	path := "/e/cnh/spaces/" + sp.Slug
 	for _, id := range []string{"user_b", "user_c", "user_d"} {
@@ -174,7 +174,7 @@ func TestSpotPageWithNothingOnSaysSoAndOffersToStart(t *testing.T) {
 	f.at = noon(t)
 	f.onboard(t, "user_a", "Ana")
 
-	text := visible(f.get(spotPath(f.spot(t, "Couches")), as("user_a")).Body.String())
+	text := visible(f.get(spotPath(f.spot(t, "Corner couches")), as("user_a")).Body.String())
 
 	assert.Contains(t, text, "Nothing here yet. Whoever comes are the right people. Start one.")
 	assert.Contains(t, text, "Start a space here")
@@ -186,7 +186,7 @@ func TestSpotPageWithNothingOnSendsOrganizersToTheWallInsteadOfOfferingToStart(t
 	f.meta["user_org"] = auth.Metadata{Role: "organizer"}
 	f.onboard(t, "user_org", "Olu")
 
-	body := f.get(spotPath(f.spot(t, "Couches")), as("user_org")).Body.String()
+	body := f.get(spotPath(f.spot(t, "Corner couches")), as("user_org")).Body.String()
 
 	assert.Contains(t, visible(body), "Nothing here yet. Whoever comes are the right people.")
 	assert.NotContains(t, visible(body), "Start one")
@@ -199,7 +199,7 @@ func TestS2_StartASpaceHereOpensFormWithThisSpotAndNextFreeSlot(t *testing.T) {
 	f.at = now
 	host := f.onboard(t, "user_host", "Dana")
 	f.onboard(t, "user_a", "Ana")
-	spot := f.spot(t, "Kitchen island")
+	spot := f.spot(t, "Kitchen counter")
 	f.spaceAt(t, host, spot, "Happening right now", now.Add(-8*time.Minute), 30)                         // until 3:00
 	f.spaceAt(t, host, spot, "Three o'clock one", time.Date(2031, 3, 12, 15, 0, 0, 0, denver(t)), 30)    // until 3:30
 	f.spaceAt(t, host, spot, "Quarter to four one", time.Date(2031, 3, 12, 15, 45, 0, 0, denver(t)), 30) // leaves a 15-minute gap
@@ -275,7 +275,7 @@ func spotBoardPath(spot store.Spot) string {
 func TestBoardRefetchDoesNotCheckAnyoneIn(t *testing.T) {
 	f := newFixture(t)
 	f.onboard(t, "user_a", "Ana")
-	spot := f.spot(t, "Couches")
+	spot := f.spot(t, "Corner couches")
 
 	require.Equal(t, http.StatusOK, f.get(spotBoardPath(spot), as("user_a")).Code)
 
@@ -288,7 +288,7 @@ func TestS2_VisitorSeesNowAndNextWithoutNamesAndSignInReturnsToSameSpot(t *testi
 	now := noon(t)
 	f.at = now
 	host := f.onboard(t, "user_host", "Dana")
-	spot := f.spot(t, "Kitchen island")
+	spot := f.spot(t, "Kitchen counter")
 	f.spaceAt(t, host, spot, "Happening right now", now.Add(-10*time.Minute), 30)
 	next := f.spaceAt(t, host, spot, "First one next", now.Add(30*time.Minute), 30)
 	f.checkInAt(t, host, "kitchen", now)
@@ -313,7 +313,7 @@ func TestS2_VisitorSeesNowAndNextWithoutNamesAndSignInReturnsToSameSpot(t *testi
 
 	f.onboard(t, "user_a", "Ana")
 	returned := f.get(spotPath(spot), as("user_a"))
-	assert.Contains(t, visible(returned.Body.String()), "You're at Kitchen island, Kitchen")
+	assert.Contains(t, visible(returned.Body.String()), "You're at Kitchen counter, Kitchen")
 	zone := f.person(t, "user_a").ZoneID
 	require.NotNil(t, zone)
 	assert.Equal(t, "kitchen", *zone)
@@ -333,7 +333,7 @@ func TestSeatsIgnoresTheSpotParameterForSignedInPeople(t *testing.T) {
 func TestS2_UnknownCodeSaysNotFromThisEventAndZoneUnchanged(t *testing.T) {
 	f := newFixture(t)
 	p := f.onboard(t, "user_a", "Ana")
-	f.checkInAt(t, p, "patio", time.Now())
+	f.checkInAt(t, p, "cafe", time.Now())
 
 	w := f.get("/e/cnh?spot=not-a-real-code", as("user_a"))
 
@@ -342,7 +342,7 @@ func TestS2_UnknownCodeSaysNotFromThisEventAndZoneUnchanged(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `<a class="button" href="/e/cnh">Go to the event home</a>`)
 	zone := f.person(t, "user_a").ZoneID
 	require.NotNil(t, zone)
-	assert.Equal(t, "patio", *zone)
+	assert.Equal(t, "cafe", *zone)
 }
 
 func TestCodeFromAnotherEventIsUnknown(t *testing.T) {
@@ -395,7 +395,7 @@ func TestS2_ZoneWithFewerThanThreeShowsAFew(t *testing.T) {
 		f.onboard(t, "user_b", "Ben"),
 		f.onboard(t, "user_c", "Cal"),
 	}
-	spot := f.spot(t, "Kitchen island")
+	spot := f.spot(t, "Kitchen counter")
 
 	f.checkInAt(t, people[0], "kitchen", f.at)
 	f.checkInAt(t, people[1], "kitchen", f.at)
@@ -406,7 +406,7 @@ func TestS2_ZoneWithFewerThanThreeShowsAFew(t *testing.T) {
 	assert.Contains(t, visible(f.get(spotPath(spot), as("user_a")).Body.String()), "3 people in the Kitchen")
 	home := visible(f.get("/e/cnh", as("user_a")).Body.String())
 	assert.Contains(t, home, "Kitchen 3")
-	assert.Contains(t, home, "Patio a few", "an empty zone looks the same as one with one person in it")
+	assert.Contains(t, home, "Cafe a few", "an empty zone looks the same as one with one person in it")
 }
 
 func TestManualZonePickerChecksYouIn(t *testing.T) {
@@ -414,14 +414,14 @@ func TestManualZonePickerChecksYouIn(t *testing.T) {
 	f.onboard(t, "user_a", "Ana")
 	assert.Contains(t, visible(f.get("/e/cnh", as("user_a")).Body.String()), "Where are you?")
 
-	w := f.post("/e/cnh/checkin", url.Values{"zone": {"patio"}}, as("user_a"))
+	w := f.post("/e/cnh/checkin", url.Values{"zone": {"cafe"}}, as("user_a"))
 
 	assert.Equal(t, http.StatusSeeOther, w.Code)
 	assert.Equal(t, "/e/cnh", w.Header().Get("Location"))
 	zone := f.person(t, "user_a").ZoneID
 	require.NotNil(t, zone)
-	assert.Equal(t, "patio", *zone)
-	assert.Contains(t, visible(f.get("/e/cnh", as("user_a")).Body.String()), "You're in the Patio")
+	assert.Equal(t, "cafe", *zone)
+	assert.Contains(t, visible(f.get("/e/cnh", as("user_a")).Body.String()), "You're in the Cafe")
 }
 
 func TestManualCheckInRefusesAnUnknownZoneVisitorsAndCrossSiteRequests(t *testing.T) {
@@ -430,8 +430,8 @@ func TestManualCheckInRefusesAnUnknownZoneVisitorsAndCrossSiteRequests(t *testin
 
 	assert.Equal(t, http.StatusUnprocessableEntity, f.post("/e/cnh/checkin", url.Values{"zone": {"mars"}}, as("user_a")).Code)
 	assert.Nil(t, f.person(t, "user_a").ZoneID)
-	assert.Equal(t, http.StatusUnauthorized, f.post("/e/cnh/checkin", url.Values{"zone": {"patio"}}).Code)
-	assert.Equal(t, http.StatusForbidden, f.post("/e/cnh/checkin", url.Values{"zone": {"patio"}}, as("user_a"),
+	assert.Equal(t, http.StatusUnauthorized, f.post("/e/cnh/checkin", url.Values{"zone": {"cafe"}}).Code)
+	assert.Equal(t, http.StatusForbidden, f.post("/e/cnh/checkin", url.Values{"zone": {"cafe"}}, as("user_a"),
 		header("Sec-Fetch-Site", "cross-site")).Code)
 	assert.Nil(t, f.person(t, "user_a").ZoneID)
 }
@@ -440,7 +440,7 @@ func TestManualCheckInNeedsAName(t *testing.T) {
 	f := newFixture(t)
 	f.get("/e/cnh", as("user_new"))
 
-	w := f.post("/e/cnh/checkin", url.Values{"zone": {"patio"}}, as("user_new"))
+	w := f.post("/e/cnh/checkin", url.Values{"zone": {"cafe"}}, as("user_new"))
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
 	assert.Nil(t, f.person(t, "user_new").ZoneID)
@@ -465,7 +465,7 @@ func TestSpotPageChecksInOnlyWhenTheBrowserIsOpeningThePage(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.onboard(t, "user_a", "Ana")
-			spot := f.spot(t, "Couches")
+			spot := f.spot(t, "Corner couches")
 
 			w := f.get(spotPath(spot), append(tc.opts, as("user_a"))...)
 
@@ -483,12 +483,12 @@ func TestOrganizersCheckInButAreNotOfferedJoinOrStart(t *testing.T) {
 	f.meta["user_org"] = auth.Metadata{Role: "organizer"}
 	host := f.onboard(t, "user_host", "Dana")
 	f.onboard(t, "user_org", "Olu")
-	spot := f.spot(t, "Couches")
+	spot := f.spot(t, "Corner couches")
 	f.spaceAt(t, host, spot, "First one next", now.Add(30*time.Minute), 30)
 
 	body := f.get(spotPath(spot), as("user_org")).Body.String()
 
-	assert.Contains(t, visible(body), "You're at Couches, Lounge")
+	assert.Contains(t, visible(body), "You're at Corner couches, Lounge")
 	assert.NotContains(t, body, "/join")
 	assert.NotContains(t, body, "/spaces/new")
 }
@@ -498,7 +498,7 @@ func TestHostAndGoingPeopleSeeTheirPlaceInsteadOfJoin(t *testing.T) {
 	now := noon(t)
 	f.at = now
 	host := f.onboard(t, "user_host", "Dana")
-	spot := f.spot(t, "Couches")
+	spot := f.spot(t, "Corner couches")
 	f.spaceAt(t, host, spot, "First one next", now.Add(30*time.Minute), 30)
 
 	body := f.get(spotPath(spot), as("user_host")).Body.String()
@@ -512,7 +512,7 @@ func TestSpotTitlesAreEscaped(t *testing.T) {
 	now := noon(t)
 	f.at = now
 	host := f.onboard(t, "user_host", "<b>Dana</b>")
-	spot := f.spot(t, "Couches")
+	spot := f.spot(t, "Corner couches")
 	f.spaceAt(t, host, spot, "<script>alert(1)</script>", now.Add(30*time.Minute), 30)
 
 	body := f.get(spotPath(spot), as("user_host")).Body.String()
@@ -531,8 +531,8 @@ func TestS2_NoResponseContainsAnotherPersonsZone(t *testing.T) {
 	spot := f.spot(t, "Long table")
 	sp := f.spaceAt(t, host, spot, "A space Zeb is going to", now.Add(30*time.Minute), 30)
 	addSignup(t, f, sp.ID, other.ID, store.SignupGoing)
-	f.checkInAt(t, other, "patio", now)
-	f.checkInAt(t, host, "booths", now)
+	f.checkInAt(t, other, "cafe", now)
+	f.checkInAt(t, host, "lounge", now)
 
 	updates := f.subscribe(t, live.SpotTopic(spot.ID))
 	require.Equal(t, http.StatusSeeOther, f.post("/e/cnh/spaces/"+sp.Slug+"/join", nil, as("user_a")).Code)
@@ -546,9 +546,9 @@ func TestS2_NoResponseContainsAnotherPersonsZone(t *testing.T) {
 		"live update": fragment,
 	}
 	for name, body := range responses {
-		assert.NotContains(t, body, "Patio", name)
-		assert.NotContains(t, body, "patio", name)
-		assert.NotContains(t, body, "Sponsor row", name)
-		assert.NotContains(t, body, "booths", name)
+		assert.NotContains(t, body, "Cafe", name)
+		assert.NotContains(t, body, "cafe", name)
+		assert.NotContains(t, body, "Lounge", name)
+		assert.NotContains(t, body, "lounge", name)
 	}
 }

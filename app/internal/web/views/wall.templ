@@ -1,0 +1,233 @@
+package views
+
+import (
+	"fmt"
+	"strconv"
+)
+
+// WallBoard is everything the projector view draws. It holds titles, spots, counts and tags, and has
+// nowhere to put a name.
+type WallBoard struct {
+	QRPath   string // the event's QR code as an SVG path; empty hides it
+	QRSize   int    // its width in modules
+	Clock    string
+	Date     string
+	Slots    []string // the eight 15-minute column headings
+	NowPct   float64  // how far across the two hours now is
+	Rows     []WallRow
+	Empty    bool
+	StartURL string
+	Dense    bool // too many rows for two-line titles
+	Tags     []WallTag
+	Posts    []WallPost
+}
+
+// WallRow is one spot and what's on there.
+type WallRow struct {
+	Spot  string
+	Zone  string
+	Notes []WallNote
+}
+
+// WallNote is one space, placed by minute within the two hours.
+type WallNote struct {
+	ID       string
+	Title    string
+	Kind     string
+	Going    int
+	Capacity int
+	From, To int
+	ShowDots bool
+	Chip     string
+	ChipHot  bool
+}
+
+// WallTag is one entry in the strip of what the room is stuck on.
+type WallTag struct {
+	Tag   string
+	Count int
+}
+
+// WallPost is one ticker entry.
+type WallPost struct {
+	Kind string
+	Text string
+}
+
+func wallNoteClass(n WallNote) string {
+	if kindLabel(n.Kind) == "" {
+		return "wall-note"
+	}
+	return "wall-note wall-note-" + n.Kind
+}
+
+func wallNoteStyle(n WallNote) string {
+	return fmt.Sprintf("grid-column:%d / %d", n.From+1, n.To+1)
+}
+
+func wallNowStyle(pct float64) string {
+	return fmt.Sprintf("left:%.2f%%", pct)
+}
+
+// wallRowStyle places a row past the time headings, in a grid the now-line also spans.
+func wallRowStyle(i int) string {
+	return fmt.Sprintf("grid-row:%d", i+2)
+}
+
+func wallGridStyle(rows int) string {
+	return fmt.Sprintf("grid-template-rows:40px repeat(%d, minmax(0, 1fr))", rows)
+}
+
+func wallGridClass(b WallBoard) string {
+	if b.Dense {
+		return "wall-grid wall-grid-dense"
+	}
+	return "wall-grid"
+}
+
+func wallChipClass(n WallNote) string {
+	if n.ChipHot {
+		return "wall-chip wall-chip-hot"
+	}
+	return "wall-chip"
+}
+
+func wallPostLine(p WallPost) string {
+	if label := kindLabel(p.Kind); p.Kind == "offer" {
+		return label + ": " + p.Text
+	}
+	return "“" + p.Text + "”"
+}
+
+// WallPage is its own document: a dark projector board with no phone chrome, no account and no
+// person's topic on the connection. The board element is never replaced, only its contents, so the
+// page holds one SSE listener however long it stays open.
+templ WallPage(p Page, boardURL string, b WallBoard) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ p.Title }</title>
+			<link rel="stylesheet" href={ static(p, "tokens.css") }/>
+			<link rel="stylesheet" href={ static(p, "wall.css") }/>
+			<script defer src={ static(p, "htmx.min.js") }></script>
+			<script defer src={ static(p, "sse.js") }></script>
+			<script defer src={ static(p, "live.js") }></script>
+			<script defer src={ static(p, "wall.js") }></script>
+		</head>
+		<body class="wall" hx-ext="sse" sse-connect={ p.LiveURL }>
+			<div id="wall-board" class="wall-board" hx-get={ boardURL } hx-trigger="sse:wall-changed delay:150ms, every 15s" hx-swap="innerHTML">
+				@WallBoardContents(b)
+			</div>
+			<p class="live-note" data-live-note role="status" hidden>Reconnecting…</p>
+		</body>
+	</html>
+}
+
+// WallBoardContents is the refetched fragment. It must stay free of sse-swap and hx-trigger: the SSE
+// extension only drops a listener when its event fires again, so listeners here would pile up with
+// every refresh.
+templ WallBoardContents(b WallBoard) {
+	<header class="wall-head">
+		<div class="wall-brand">
+			<span class="wall-eyebrow">Two Feet · open spaces, all day</span>
+			<h1 class="wall-heading">What's on, and where</h1>
+		</div>
+		<div class="wall-head-right">
+			<div class="wall-now-block">
+				<span class="wall-clock">{ b.Clock }</span>
+				<span class="wall-date">{ b.Date }</span>
+			</div>
+			if b.QRPath != "" {
+				<div class="wall-scan">
+					<div class="wall-qr">
+						<svg viewBox={ fmt.Sprintf("0 0 %d %d", b.QRSize, b.QRSize) } role="img" aria-label="QR code for this event" shape-rendering="crispEdges"><path d={ b.QRPath }></path></svg>
+					</div>
+					<div class="wall-scan-text">
+						<span class="wall-scan-title">Scan to post or start a space</span>
+						<span class="wall-scan-sub">or any code taped up around the room</span>
+					</div>
+				</div>
+			}
+		</div>
+	</header>
+	<div class={ wallGridClass(b) } style={ wallGridStyle(len(b.Rows)) }>
+		<div class="wall-slots">
+			for i, slot := range b.Slots {
+				if i == 0 {
+					<span class="wall-slot wall-slot-now" data-slot>{ slot }</span>
+				} else {
+					<span class="wall-slot" data-slot>{ slot }</span>
+				}
+			}
+		</div>
+		<div class="wall-lines" aria-hidden="true" style={ "grid-row: 2 / " + strconv.Itoa(len(b.Rows)+2) }>
+			for range b.Slots {
+				<span class="wall-line"></span>
+			}
+			<span class="wall-now" style={ wallNowStyle(b.NowPct) }></span>
+		</div>
+		for i, row := range b.Rows {
+			<div class="wall-spot" style={ wallRowStyle(i) }>
+				<span class="wall-spot-name">{ row.Spot }</span>
+				<span class="wall-spot-zone">{ row.Zone }</span>
+			</div>
+			<div class="wall-lane" style={ wallRowStyle(i) }>
+				for _, n := range row.Notes {
+					@wallNote(n)
+				}
+			</div>
+		}
+		if b.Empty {
+			<div class="wall-empty">
+				<p>Nothing on yet. Whoever comes are the right people.</p>
+				<a class="wall-start" href={ templ.SafeURL(b.StartURL) }>Start a space</a>
+			</div>
+		}
+	</div>
+	if len(b.Tags) > 0 {
+		<section class="wall-tags" aria-label="What the room is stuck on">
+			<span class="wall-label">What the room is stuck on</span>
+			<ul class="wall-tag-list">
+				for _, t := range b.Tags {
+					<li class="wall-tag">{ t.Tag } <b>{ strconv.Itoa(t.Count) }</b></li>
+				}
+			</ul>
+		</section>
+	}
+	<footer class="wall-foot">
+		<div class="wall-ticker">
+			if len(b.Posts) > 0 {
+				<span class="wall-label wall-label-ticker">Just posted</span>
+				for _, p := range b.Posts {
+					<span class="wall-ticker-item">{ wallPostLine(p) }</span>
+				}
+			}
+		</div>
+		<span class="wall-motto">Whoever comes are the right people.</span>
+	</footer>
+}
+
+templ wallNote(n WallNote) {
+	<article class={ wallNoteClass(n) } style={ wallNoteStyle(n) } data-space={ n.ID } data-going={ strconv.Itoa(n.Going) }>
+		if n.Chip != "" {
+			<span class={ wallChipClass(n) }>{ n.Chip }</span>
+		}
+		<h2 class="wall-note-title">{ n.Title }</h2>
+		<div class="wall-note-foot">
+			if n.ShowDots {
+				<span class="wall-dots" aria-hidden="true">
+					for _, i := range seatRange(n.Capacity) {
+						if i < n.Going {
+							<span class="wall-dot wall-dot-filled"></span>
+						} else {
+							<span class="wall-dot"></span>
+						}
+					}
+				</span>
+			}
+			<span class="wall-count">{ fmt.Sprintf("%d of %d", n.Going, n.Capacity) }</span>
+		</div>
+	</article>
+}

@@ -44,6 +44,7 @@ type fixture struct {
 	hub   *live.Hub
 	srv   http.Handler
 	index *spaceIndexer
+	tags  *fakeTags
 	meta  map[string]auth.Metadata
 }
 
@@ -55,16 +56,19 @@ func newFixture(t *testing.T) *fixture {
 	t.Cleanup(hub.Close)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	index := &spaceIndexer{}
+	tags := &fakeTags{}
 	meta := map[string]auth.Metadata{}
-	return &fixture{store: s, hub: hub, index: index, meta: meta, srv: web.New(web.Deps{
+	return &fixture{store: s, hub: hub, index: index, tags: tags, meta: meta, srv: web.New(web.Deps{
 		Store:     s,
 		Hub:       hub,
 		Search:    index,
+		Tags:      tags,
 		Limiter:   web.NewLimiter(),
 		Auth:      auth.New(s, fakeClerk{meta: meta}, log),
 		Log:       log,
 		Version:   "test-version",
 		EventSlug: "cnh",
+		PublicURL: "https://twofeet.test",
 		ClerkKey:  "pk_test_" + base64.RawStdEncoding.EncodeToString([]byte("clerk.example.com$")),
 		Ready:     func(context.Context) error { return nil },
 	}).Handler()}

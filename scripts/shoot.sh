@@ -20,6 +20,8 @@ keep_data=""
 [[ $# -ge 1 ]] || { echo "usage: shoot.sh [--keep-data] <path> [path...]" >&2; exit 1; }
 root=$(git rev-parse --show-toplevel)
 cd "$root/app"
+# Clerk's keys: the app won't start without them. Loaded here so the agent running this never sees them.
+if [[ -f $root/.env ]]; then set -a; source "$root/.env"; set +a; fi
 # shellcheck disable=SC1091
 source "$root/scripts/slice-env.sh"
 COMPOSE=(docker compose -f "$root/infra/local/compose.yaml")

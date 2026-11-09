@@ -70,7 +70,11 @@ app/
 - Playwright runs against the real binary built from `app/cmd/twofeet`. A test-only server is allowed
   only for what the real binary can't do, and the demo path always runs against the real binary.
 - Playwright servers read `DATABASE_URL` and `PORT` from the environment too, and `app/e2e` depends
-  only on `@playwright/test`. The e2e gate installs it; commit the `package-lock.json` it creates.
+  only on `@playwright/test` and `@clerk/testing`. The e2e gate installs them; commit the `package-lock.json` it creates.
+- Sign-in tests use Clerk's testing mode: `clerkSetup` and `setupClerkTestingToken` from `@clerk/testing`,
+  with a test address like `name+clerk_test@example.com` and the fixed code `424242`. Never stub the sign-in
+  in Playwright. The Clerk keys reach tests only through the gates: run `harness/gates.sh </dev/null` to
+  check sign-in tests, and never read `.env`.
 - Playwright tests live in `app/e2e/`, run at 390x844 unless the test is about the Wall.
 - `go test -race ./...` must pass. No `t.Skip` to get past a gate.
 

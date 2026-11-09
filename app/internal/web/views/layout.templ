@@ -9,6 +9,7 @@ type Page struct {
 	Initial     string
 	ClerkKey    string
 	ClerkScript string
+	LiveURL     string // the page's one SSE connection; empty for none
 }
 
 func static(p Page, file string) string {
@@ -31,7 +32,13 @@ templ Layout(p Page) {
 			}
 			<script defer src={ static(p, "app.js") }></script>
 		</head>
-		<body data-signed-in={ boolAttr(p.SignedIn) }>
+		<body
+			data-signed-in={ boolAttr(p.SignedIn) }
+			if p.LiveURL != "" {
+				hx-ext="sse"
+				sse-connect={ p.LiveURL }
+			}
+		>
 			<main class="page">
 				<header class="top">
 					<div class="brand">
@@ -46,6 +53,9 @@ templ Layout(p Page) {
 				</header>
 				{ children... }
 			</main>
+			if p.LiveURL != "" {
+				<div class="toasts" sse-swap="notice" aria-live="polite"></div>
+			}
 		</body>
 	</html>
 }

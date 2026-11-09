@@ -55,6 +55,7 @@ type Server struct {
 	eventSlug string
 	clerkKey  string
 	ready     func(context.Context) error
+	undo      *undoWindows
 }
 
 // New returns a Server.
@@ -62,6 +63,7 @@ func New(d Deps) *Server {
 	return &Server{
 		store: d.Store, hub: d.Hub, search: d.Search, limiter: d.Limiter, authn: d.Auth, log: d.Log,
 		version: d.Version, eventSlug: d.EventSlug, clerkKey: d.ClerkKey, ready: d.Ready,
+		undo: newUndoWindows(),
 	}
 }
 
@@ -164,6 +166,22 @@ func (s *Server) page(r *http.Request, e store.Event, title string) views.Page {
 	if person, ok := auth.Current(r.Context()); ok {
 		p.SignedIn = true
 		p.Initial = initial(person.DisplayName)
+		if e.Slug != "" {
+			p.LiveURL = live.URL(e.Slug, live.PersonTopic(person.ID))
+		}
+	}
+	return p
+}
+
+// livePage is page plus the topics this page follows. Every page has one SSE connection, set up by
+// the layout, and a signed-in person's own topic is always on it so their notices reach any page.
+func (s *Server) livePage(r *http.Request, e store.Event, title string, topics ...string) views.Page {
+	p := s.page(r, e, title)
+	if person, ok := auth.Current(r.Context()); ok && e.Slug != "" {
+		topics = append(topics, live.PersonTopic(person.ID))
+	}
+	if len(topics) > 0 {
+		p.LiveURL = live.URL(e.Slug, topics...)
 	}
 	return p
 }

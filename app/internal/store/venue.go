@@ -70,6 +70,27 @@ func (s *Store) SpotByQRSlug(ctx context.Context, qrSlug string) (Spot, error) {
 	return sp, nil
 }
 
+// ZoneNames maps an event's zone ids to their names.
+func (s *Store) ZoneNames(ctx context.Context, eventID string) (map[string]string, error) {
+	rows, err := s.db.Query(ctx, `SELECT id, name FROM zone WHERE event_id = $1`, eventID)
+	if err != nil {
+		return nil, fmt.Errorf("list zones: %w", err)
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var id, name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, fmt.Errorf("scan zone: %w", err)
+		}
+		out[id] = name
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list zones: %w", err)
+	}
+	return out, nil
+}
+
 // Sponsors lists every sponsor by name.
 func (s *Store) Sponsors(ctx context.Context) ([]Sponsor, error) {
 	rows, err := s.db.Query(ctx, `SELECT id::text, name, solves, booth_spot_id::text FROM sponsor ORDER BY name`)

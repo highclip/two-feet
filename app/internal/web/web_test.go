@@ -353,6 +353,22 @@ func TestSignInPageIgnoresOffsiteReturn(t *testing.T) {
 	assert.Contains(t, offsite.Body.String(), `data-return="/"`)
 }
 
+func TestSignInPageDropsTheReturnPathOnCrossSiteRequests(t *testing.T) {
+	f := newFixture(t)
+	const path = "/sign-in?return=%2Fe%2Fcnh%3Fspot%3Dtable-code"
+	const kept = `data-return="/e/cnh?spot=table-code"`
+
+	for _, site := range []string{"cross-site", "same-site"} {
+		body := f.get(path, header("Sec-Fetch-Site", site)).Body.String()
+		assert.NotContains(t, body, "table-code", site)
+		assert.Contains(t, body, `data-return="/"`, site)
+	}
+	for _, site := range []string{"same-origin", "none"} {
+		assert.Contains(t, f.get(path, header("Sec-Fetch-Site", site)).Body.String(), kept, site)
+	}
+	assert.Contains(t, f.get(path).Body.String(), kept, "browsers without fetch metadata keep it")
+}
+
 func TestRoleAndSponsorComeFromClerkMetadata(t *testing.T) {
 	s := storetest.Tx(t)
 	ctx := context.Background()

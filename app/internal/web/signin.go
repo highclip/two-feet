@@ -52,9 +52,13 @@ func onboardingURL(eventSlug, returnTo string) string {
 }
 
 // signIn renders Clerk's sign-in on the page. It comes back to a same-origin path afterwards.
+// A return path only survives when this page was reached from our own origin or directly: app.js
+// forwards someone already signed in to it from our origin, which would let another site check
+// them in at a table by linking here.
 func (s *Server) signIn(w http.ResponseWriter, r *http.Request) {
 	returnTo := r.URL.Query().Get("return")
-	if !auth.SafeReturn(returnTo) {
+	site := r.Header.Get("Sec-Fetch-Site")
+	if !auth.SafeReturn(returnTo) || site == "cross-site" || site == "same-site" {
 		returnTo = "/"
 	}
 	s.render(w, r, http.StatusOK, views.SignIn(s.page(r, store.Event{}, "Sign in"), returnTo))

@@ -5,15 +5,24 @@ import { type Browser, type BrowserContext, expect, type Page, test } from '@pla
 
 import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin';
 
-// A printed code's slug exists only in the database until S11's page prints it, so read it from the
-// local Postgres the way scripts/shoot.sh reaches it.
-function qrSlug(spot: string): string {
+// Runs SQL on the local Postgres the way scripts/shoot.sh reaches it.
+function sql(statement: string): string {
   const database = new URL(process.env.DATABASE_URL ?? '').pathname.slice(1);
   return execFileSync('docker', [
     'compose', '-f', '../../infra/local/compose.yaml', 'exec', '-T', 'postgres',
-    'psql', '-U', 'twofeet', '-d', database, '-At',
-    '-c', `SELECT qr_slug FROM spot WHERE name = '${spot}'`,
+    'psql', '-U', 'twofeet', '-d', database, '-At', '-c', statement,
   ]).toString().trim();
+}
+
+// A printed code's slug exists only in the database until S11's page prints it.
+function qrSlug(spot: string): string {
+  return sql(`SELECT qr_slug FROM spot WHERE name = '${spot}'`);
+}
+
+// This test has to book real times today, unlike the others that take a day far in the future. Left
+// behind, those spaces would fill the spot's next slots and collide with tests that book "soon".
+function removeTodaysSpaces(): void {
+  sql(`DELETE FROM space WHERE title LIKE 'Spot check %' OR title LIKE 'Under way %'`);
 }
 
 // A datetime-local value in the event's timezone, whatever the machine's own is.
@@ -48,7 +57,10 @@ test.describe('S2 spot pages', () => {
 
   const emails = { ana: testEmail('s2-ana'), ben: testEmail('s2-ben') };
 
+  test.beforeAll(removeTodaysSpaces); // a run that was killed can't clean up after itself
+
   test.afterAll(async () => {
+    removeTodaysSpaces();
     await Promise.all(Object.values(emails).map(deleteClerkUser));
   });
 

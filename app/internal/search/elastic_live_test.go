@@ -134,6 +134,27 @@ func TestSearchWindowsSpacesToTheNextNinetyMinutes(t *testing.T) {
 	assert.Equal(t, []string{"soon"}, hitIDs(hits))
 }
 
+func TestKeysListsEveryDocumentAcrossPages(t *testing.T) {
+	c := liveClient(t)
+	c.SetKeysPageSize(2)
+	ctx := context.Background()
+	want := []search.DocKey{
+		{Type: search.TypePerson, ID: "p1"},
+		{Type: search.TypePost, ID: "a"},
+		{Type: search.TypePost, ID: "b"},
+		{Type: search.TypePost, ID: "c"},
+		{Type: search.TypeSponsor, ID: "s1"},
+	}
+	for _, k := range want {
+		require.NoError(t, c.Index(ctx, search.Doc{Type: k.Type, ID: k.ID, Text: "some words"}))
+	}
+
+	got, err := c.Keys(ctx)
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, want, got)
+}
+
 func TestDeleteRemovesTheDocumentAndToleratesMissingOnes(t *testing.T) {
 	c := liveClient(t)
 	ctx := context.Background()

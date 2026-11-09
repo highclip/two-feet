@@ -33,6 +33,24 @@ type Indexer interface {
 	Delete(ctx context.Context, docType, id string) error
 }
 
+// DocKey names one document in the index.
+type DocKey struct {
+	Type string
+	ID   string
+}
+
+// KeyLister reports every document an index holds.
+type KeyLister interface {
+	Keys(ctx context.Context) ([]DocKey, error)
+}
+
+// Reconciler is an Indexer a rebuild can also remove stale documents through. Flush returns once
+// the writes already handed over have been made, so Keys sees them.
+type Reconciler interface {
+	KeyLister
+	Flush(ctx context.Context) error
+}
+
 // Noop is an Indexer that does nothing.
 type Noop struct{}
 

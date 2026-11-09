@@ -126,6 +126,27 @@ func (c *contextChecking) Index(ctx context.Context, _ search.Doc) error {
 
 func (c *contextChecking) Delete(context.Context, string, string) error { return nil }
 
+func TestQueueFlushWaitsForWorkAlreadyQueued(t *testing.T) {
+	release := make(chan struct{})
+	q := search.NewQueue(blocking{release}, quietLog(), fast())
+	t.Cleanup(func() { q.Close(context.Background()) })
+	ctx := context.Background()
+	require.NoError(t, q.Index(ctx, search.Doc{Type: search.TypePost, ID: "a"}))
+
+	short, cancel := context.WithTimeout(ctx, 20*time.Millisecond)
+	defer cancel()
+	require.Error(t, q.Flush(short), "the write is still running")
+
+	close(release)
+	require.NoError(t, q.Flush(ctx))
+}
+
+func TestQueueFlushFailsOnceClosed(t *testing.T) {
+	q := search.NewQueue(&flaky{}, quietLog(), fast())
+	q.Close(context.Background())
+	assert.Error(t, q.Flush(context.Background()))
+}
+
 func TestQueueRefusesNothingAfterClose(t *testing.T) {
 	q := search.NewQueue(&flaky{}, quietLog(), fast())
 	q.Close(context.Background())

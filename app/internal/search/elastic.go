@@ -25,6 +25,8 @@ const (
 	rankConstant      = 60
 	maxQueryRunes     = 500
 
+	defaultKeysPageSize = 1000
+
 	// spaceHorizon is how far ahead a space can start and still match.
 	spaceHorizon = 90 * time.Minute
 )
@@ -62,6 +64,8 @@ type Config struct {
 type Client struct {
 	es    *elasticsearch.Client
 	index string
+
+	keysPageSize int
 
 	mu      sync.Mutex
 	created bool
@@ -188,6 +192,78 @@ func (c *Client) Delete(ctx context.Context, docType, id string) error {
 		return fmt.Errorf("delete %s %s: %w", docType, id, responseError(res))
 	}
 	return nil
+}
+
+// Keys lists every document in the index by type and id, a page at a time. Paging sorts on the two
+// keyword fields so it needs no scroll state on the cluster.
+func (c *Client) Keys(ctx context.Context) ([]DocKey, error) {
+	size := c.keysPageSize
+	if size <= 0 {
+		size = defaultKeysPageSize
+	}
+	var keys []DocKey
+	var after []any
+	for {
+		page, last, err := c.keysPage(ctx, size, after)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, page...)
+		if len(page) < size {
+			return keys, nil
+		}
+		after = last
+	}
+}
+
+func (c *Client) keysPage(ctx context.Context, size int, after []any) (keys []DocKey, last []any, err error) {
+	query := map[string]any{
+		"size":    size,
+		"_source": []string{"type", "id"},
+		"query":   map[string]any{"match_all": map[string]any{}},
+		"sort":    []any{map[string]any{"type": "asc"}, map[string]any{"id": "asc"}},
+	}
+	if after != nil {
+		query["search_after"] = after
+	}
+	body, err := json.Marshal(query)
+	if err != nil {
+		return nil, nil, fmt.Errorf("encode key listing: %w", err)
+	}
+	res, err := c.es.Search(
+		c.es.Search.WithIndex(c.index),
+		c.es.Search.WithBody(bytes.NewReader(body)),
+		c.es.Search.WithContext(ctx))
+	if err != nil {
+		return nil, nil, fmt.Errorf("list keys: %w", err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode == http.StatusNotFound {
+		return nil, nil, nil // nothing has been indexed yet
+	}
+	if res.IsError() {
+		return nil, nil, fmt.Errorf("list keys: %w", responseError(res))
+	}
+	var parsed struct {
+		Hits struct {
+			Hits []struct {
+				Source struct {
+					Type string `json:"type"`
+					ID   string `json:"id"`
+				} `json:"_source"`
+				Sort []any `json:"sort"`
+			} `json:"hits"`
+		} `json:"hits"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&parsed); err != nil {
+		return nil, nil, fmt.Errorf("decode key listing: %w", err)
+	}
+	keys = make([]DocKey, 0, len(parsed.Hits.Hits))
+	for _, h := range parsed.Hits.Hits {
+		keys = append(keys, DocKey{Type: h.Source.Type, ID: h.Source.ID})
+		last = h.Sort
+	}
+	return keys, last, nil
 }
 
 // Query asks for the documents closest to some text. It is the minimal search S6 builds matching on.

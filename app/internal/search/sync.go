@@ -13,6 +13,8 @@ const (
 	sweepEvery = 30 * time.Second
 	// personPostLimit caps how many open posts go into a person's document.
 	personPostLimit = 10
+	// flushTimeout bounds how long a rebuild waits for its own writes before trying again later.
+	flushTimeout = 2 * time.Minute
 )
 
 // Sync keeps the index in step with Postgres. Failures are logged and never reach the caller's
@@ -93,36 +95,91 @@ func (s *Sync) ExpirePosts(ctx context.Context, now time.Time) error {
 	return nil
 }
 
-// All writes every document Postgres says should be in the index.
-func (s *Sync) All(ctx context.Context) error {
-	now := time.Now()
+// wanted builds every document Postgres says should be in the index. Any read error fails the whole
+// call, because a partial answer would make the documents it missed look stale.
+func (s *Sync) wanted(ctx context.Context, now time.Time) ([]Doc, error) {
+	var docs []Doc
 	sponsors, err := s.store.SponsorsForIndex(ctx)
 	if err != nil {
-		return fmt.Errorf("reindex: %w", err)
+		return nil, err
 	}
 	for _, sp := range sponsors {
-		s.indexDoc(ctx, SponsorDoc(sp.ID, sp.Name, sp.Solves, sp.ZoneID))
+		docs = append(docs, SponsorDoc(sp.ID, sp.Name, sp.Solves, sp.ZoneID))
 	}
 	spaces, err := s.store.OpenSpacesForIndex(ctx, now)
 	if err != nil {
-		return fmt.Errorf("reindex: %w", err)
+		return nil, err
 	}
 	for _, sp := range spaces {
-		s.indexDoc(ctx, SpaceDoc(sp.ID, sp.Title, sp.Blurb, sp.HostID, sp.ZoneID, sp.StartsAt, sp.Minutes))
+		docs = append(docs, SpaceDoc(sp.ID, sp.Title, sp.Blurb, sp.HostID, sp.ZoneID, sp.StartsAt, sp.Minutes))
 	}
 	posts, err := s.store.OpenPosts(ctx, now)
 	if err != nil {
-		return fmt.Errorf("reindex: %w", err)
+		return nil, err
 	}
 	for _, p := range posts {
-		s.indexDoc(ctx, PostDoc(p))
+		docs = append(docs, PostDoc(p))
 	}
 	people, err := s.store.DiscoverablePeople(ctx)
 	if err != nil {
-		return fmt.Errorf("reindex: %w", err)
+		return nil, err
 	}
 	for _, p := range people {
-		s.indexPerson(ctx, p, now)
+		open, err := s.store.OpenPostsByAuthor(ctx, p.ID, now, personPostLimit)
+		if err != nil {
+			return nil, err
+		}
+		if d, ok := PersonDoc(p, open); ok {
+			docs = append(docs, d)
+		}
+	}
+	return docs, nil
+}
+
+// All makes the index match Postgres: it writes every document that should be there, then removes
+// every document that shouldn't, which is what repairs a lost delete.
+func (s *Sync) All(ctx context.Context) error {
+	docs, err := s.wanted(ctx, time.Now())
+	if err != nil {
+		return fmt.Errorf("reindex: %w", err)
+	}
+	for _, d := range docs {
+		s.indexDoc(ctx, d)
+	}
+	if r, ok := s.index.(Reconciler); ok {
+		if err := s.prune(ctx, r); err != nil {
+			return fmt.Errorf("reindex: %w", err)
+		}
+	}
+	return nil
+}
+
+// prune deletes what the index holds and Postgres doesn't want. The order is what makes it safe
+// while people keep posting. Writes follow the Postgres commit, so a listed document's row is
+// already committed, and reading Postgres after the listing can't miss it. Flushing first means the
+// listing also catches a document this rebuild has just written from a row closed since.
+func (s *Sync) prune(ctx context.Context, r Reconciler) error {
+	flushCtx, cancel := context.WithTimeout(ctx, flushTimeout)
+	defer cancel()
+	if err := r.Flush(flushCtx); err != nil {
+		return err
+	}
+	held, err := r.Keys(ctx)
+	if err != nil {
+		return err
+	}
+	docs, err := s.wanted(ctx, time.Now())
+	if err != nil {
+		return err
+	}
+	keep := make(map[DocKey]bool, len(docs))
+	for _, d := range docs {
+		keep[DocKey{Type: d.Type, ID: d.ID}] = true
+	}
+	for _, k := range held {
+		if !keep[k] {
+			s.deleteDoc(ctx, k.Type, k.ID)
+		}
 	}
 	return nil
 }

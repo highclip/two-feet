@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"log/slog"
@@ -17,6 +18,8 @@ const (
 	defaultBackoff        = 200 * time.Millisecond
 	defaultAttemptTimeout = 20 * time.Second
 )
+
+var errQueueClosed = errors.New("search queue is closed")
 
 // QueueOptions tunes a Queue. Zero values take the defaults.
 type QueueOptions struct {
@@ -82,6 +85,46 @@ func (q *Queue) Index(ctx context.Context, d Doc) error {
 // Delete queues a document to be removed.
 func (q *Queue) Delete(ctx context.Context, docType, id string) error {
 	q.enqueue(ctx, "delete", docType, id, func(ctx context.Context) error { return q.inner.Delete(ctx, docType, id) })
+	return nil
+}
+
+// Keys lists what the index behind the queue holds, or nothing if it can't say.
+func (q *Queue) Keys(ctx context.Context) ([]DocKey, error) {
+	lister, ok := q.inner.(KeyLister)
+	if !ok {
+		return nil, nil
+	}
+	return lister.Keys(ctx)
+}
+
+// Flush returns once everything queued before the call has been attempted. It puts a marker at the
+// back of each lane and waits for the workers to reach them all.
+func (q *Queue) Flush(ctx context.Context) error {
+	marks := make([]chan struct{}, 0, len(q.lanes))
+	for _, lane := range q.lanes {
+		mark := make(chan struct{})
+		j := job{ctx: context.WithoutCancel(ctx), action: "flush", run: func(context.Context) error {
+			close(mark)
+			return nil
+		}}
+		select {
+		case lane <- j:
+			marks = append(marks, mark)
+		case <-ctx.Done():
+			return fmt.Errorf("flush search queue: %w", ctx.Err())
+		case <-q.done:
+			return errQueueClosed
+		}
+	}
+	for _, mark := range marks {
+		select {
+		case <-mark:
+		case <-ctx.Done():
+			return fmt.Errorf("flush search queue: %w", ctx.Err())
+		case <-q.done:
+			return errQueueClosed
+		}
+	}
 	return nil
 }
 

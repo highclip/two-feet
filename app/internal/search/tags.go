@@ -97,6 +97,11 @@ func ExtractTags(text string) []string {
 			add(tag)
 			continue
 		}
+		for _, part := range wordPart.Split(words[i], -1) {
+			if tag, ok := vocabulary[part]; ok {
+				add(tag)
+			}
+		}
 		if utf8.RuneCountInString(words[i]) >= minWordRunes && !stopwords[words[i]] {
 			others = append(others, words[i])
 		}

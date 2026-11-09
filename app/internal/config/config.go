@@ -58,6 +58,15 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
+// DatabaseOnly reads the database URL alone, for a command that names no event.
+func DatabaseOnly() (string, error) {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		return "", fmt.Errorf("DATABASE_URL must be set")
+	}
+	return databaseURL, nil
+}
+
 // DatabaseURL reads only what the migrate and seed commands need. It returns the database URL and
 // the event slug to seed.
 func DatabaseURL() (databaseURL, eventSlug string, err error) {

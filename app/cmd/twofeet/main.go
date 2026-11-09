@@ -1,5 +1,6 @@
 // Command twofeet is the Two Feet server. With "migrate" it applies migrations and loads the venue;
-// with "seed" it loads the venue only.
+// with "seed" it loads the venue only; "seed-demo" also loads the sample demo data and "clear-demo"
+// removes it.
 package main
 
 import (
@@ -18,6 +19,7 @@ import (
 
 	"github.com/highclip/two-feet/app/internal/auth"
 	"github.com/highclip/two-feet/app/internal/config"
+	"github.com/highclip/two-feet/app/internal/demo"
 	"github.com/highclip/two-feet/app/internal/live"
 	"github.com/highclip/two-feet/app/internal/search"
 	"github.com/highclip/two-feet/app/internal/store"
@@ -40,6 +42,10 @@ func main() {
 		err = migrate(ctx)
 	case "seed":
 		err = seed(ctx)
+	case "seed-demo":
+		err = seedDemo(ctx, log)
+	case "clear-demo":
+		err = clearDemo(ctx)
 	default:
 		err = serve(ctx, log)
 	}
@@ -82,6 +88,54 @@ func seed(ctx context.Context) error {
 	return store.New(pool).Seed(ctx, eventSlug)
 }
 
+// seedDemo loads the sample data just before presenting. It runs through the same queue as the
+// server, so a slow ELSER gets the same retries, and reports a lost write instead of a quiet gap.
+func seedDemo(ctx context.Context, log *slog.Logger) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	if err := seed(ctx); err != nil {
+		return err
+	}
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("connect to database: %w", err)
+	}
+	defer pool.Close()
+	elastic, err := search.NewClient(search.Config{URL: cfg.ElasticURL, APIKey: cfg.ElasticAPIKey, Index: cfg.ElasticIndexPrefix})
+	if err != nil {
+		return err
+	}
+	if err := elastic.Ready(ctx); err != nil {
+		return fmt.Errorf("elasticsearch isn't ready: %w", err)
+	}
+	indexer := search.NewQueue(elastic, log, search.QueueOptions{})
+	defer indexer.Close(ctx)
+	if err := demo.Load(ctx, store.New(pool), indexer, log, cfg.EventSlug, time.Now()); err != nil {
+		return err
+	}
+	if indexer.Failed() {
+		return errors.New("some sample documents didn't reach Elasticsearch; run seed-demo again")
+	}
+	return nil
+}
+
+// clearDemo deletes the sample people and everything they made. Their documents stay in the index
+// until the next rebuild, and matching drops them meanwhile because their rows are gone.
+func clearDemo(ctx context.Context) error {
+	databaseURL, err := config.DatabaseOnly()
+	if err != nil {
+		return err
+	}
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		return fmt.Errorf("connect to database: %w", err)
+	}
+	defer pool.Close()
+	return store.New(pool).ClearSamples(ctx)
+}
+
 func serve(ctx context.Context, log *slog.Logger) error {
 	cfg, err := config.Load()
 	if err != nil {
@@ -113,6 +167,7 @@ func serve(ctx context.Context, log *slog.Logger) error {
 		Store:     db,
 		Hub:       hub,
 		Search:    indexer,
+		Finder:    elastic,
 		Limiter:   web.NewLimiter(),
 		Auth:      auth.New(db, auth.NewClerk(cfg.ClerkSecretKey, cfg.PublicURL), log),
 		Log:       log,

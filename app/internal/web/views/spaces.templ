@@ -228,7 +228,9 @@ templ SpacePage(p Page, v SpaceView, undo bool, startURL string) {
 			} else if v.Space.Blurb != "" {
 				<p class="host-quote">{ v.Space.Blurb }</p>
 			}
-			<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID }>
+			// hx-sync holds a live refetch until a join or leave has its answer. Swapping that form out
+			// mid-request would make htmx lose the toast the answer carries.
+			<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID } hx-sync="this:queue last">
 				@SpaceSeats(v)
 			</div>
 		</article>

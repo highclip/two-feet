@@ -47,9 +47,10 @@ test.describe('S5 posts', () => {
     await expect(page).toHaveURL(/\/e\/cnh\/posts\/[0-9a-f-]{36}$/);
     await expect(page.locator('.post-text')).toHaveText(text);
     await expect(page.locator('.post-text b')).toHaveCount(0);
-    await expect(page.locator('.pill')).toHaveText('Stuck on');
-    await expect(page.locator('.tag', { hasText: 'otel-collector' })).toBeVisible();
-    await expect(page.getByText("No one's on this yet.")).toBeVisible();
+    await expect(page.locator('.post .pill')).toHaveText('Stuck on');
+    await expect(page.locator('.post .tag', { hasText: 'otel-collector' })).toBeVisible();
+    // Matches land under the post (S6); which ones depends on what else is indexed.
+    await expect(page.locator('.matches')).toContainText(/good lead|No one's on this yet|Still looking/);
 
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(390);

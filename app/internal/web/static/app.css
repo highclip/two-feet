@@ -239,6 +239,74 @@ body {
   overflow-wrap: anywhere;
 }
 .pill { padding: 3px 11px; border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 700; color: var(--ink); }
+
+/* Matches. Dealt onto the screen 80 ms apart; reduced motion turns it off and everything stays visible. */
+.matches { display: flex; flex-direction: column; gap: var(--gap); }
+.matches-head { margin: 4px 0 0; font-family: var(--font-title); font-weight: 800; font-size: var(--text-lg); line-height: 1.15; }
+.note-outline { height: 132px; border: 1px dashed var(--ink-soft); border-radius: var(--radius-card); }
+.match {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  min-width: 0;
+}
+.match-tint-stuck { background: var(--stuck-tint); }
+.match-tint-curious { background: var(--curious-tint); }
+.match-tint-offer { background: var(--offer-tint); }
+.deal { animation: deal 200ms ease-out both; }
+.deal-1 { animation-delay: 80ms; }
+.deal-2 { animation-delay: 160ms; }
+@keyframes deal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.match-head { display: flex; align-items: center; gap: 10px; }
+.match-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.match-eyebrow { font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; }
+.match-title { margin: 0; font-family: var(--font-title); font-weight: 800; font-size: var(--text-lg); line-height: 1.15; overflow-wrap: anywhere; }
+.match-avatar {
+  flex: none; width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+  font-family: var(--font-title); font-weight: 800;
+}
+/* After .match-avatar, so an avatar takes its kind color and --chip is only the no-kind fallback. */
 .pill-stuck { background: var(--stuck); }
 .pill-curious { background: var(--curious); }
 .pill-offer { background: var(--offer); }
+.match-quote { margin: 0; font-style: italic; line-height: 1.35; overflow-wrap: anywhere; }
+.match-body { margin: 0; overflow-wrap: anywhere; }
+.match-byline { margin: 0; font-size: var(--text-sm); }
+.match .tags { margin: 0; }
+.match-tint-stuck .tag, .match-tint-curious .tag, .match-tint-offer .tag { background: var(--chip-on-tint); }
+.logistics { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.starts { font-weight: 700; }
+.starts-soon { padding: 1px 8px; border-radius: var(--radius-pill); background: var(--action); color: var(--on-action); }
+.starts-now { animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.55; } }
+.match-seats { gap: 8px; }
+.match-action { display: flex; }
+.match-action .button, a.match-action { flex: 1; }
+.booth > summary { list-style: none; }
+.booth > summary::-webkit-details-marker { display: none; }
+.booth-where { margin: 8px 0 0; overflow-wrap: anywhere; }
+.more-leads { display: flex; flex-direction: column; gap: var(--gap); }
+.more-leads > summary { list-style: none; }
+.more-leads > summary::-webkit-details-marker { display: none; }
+.more-leads[open] > summary { margin-bottom: var(--gap); }
+.more-leads .match + .match { margin-top: var(--gap); }
+.nothing-fits { display: flex; align-items: center; justify-content: center; min-height: var(--tap); color: var(--ink-soft); font-size: var(--text-sm); text-align: center; }
+.new-matches {
+  position: fixed; left: 50%; bottom: var(--gutter); z-index: 9;
+  transform: translateX(-50%);
+  display: flex; align-items: center; min-height: var(--tap); padding: 0 18px;
+  background: var(--ink); color: var(--card);
+  border-radius: var(--radius-pill);
+  font-weight: 700; text-decoration: none; white-space: nowrap;
+}
+
+/* Search. */
+.search { display: flex; gap: 8px; }
+.search .input { flex: 1; min-width: 0; }
+.search .button { min-height: var(--tap); }
+.search-group { display: flex; flex-direction: column; gap: var(--gap); }

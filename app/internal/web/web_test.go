@@ -68,6 +68,7 @@ func newFixture(t *testing.T) *fixture {
 		Log:       log,
 		Version:   "test-version",
 		EventSlug: "cnh",
+		PublicURL: "https://twofeet.test",
 		ClerkKey:  "pk_test_" + base64.RawStdEncoding.EncodeToString([]byte("clerk.example.com$")),
 		Ready:     func(context.Context) error { return nil },
 	}).Handler()}

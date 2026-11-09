@@ -39,6 +39,7 @@ type Deps struct {
 	Log       *slog.Logger
 	Version   string
 	EventSlug string
+	PublicURL string // where people reach the app, for QR codes
 	ClerkKey  string // publishable key
 	// Ready reports whether the process can serve, for /readyz.
 	Ready func(context.Context) error
@@ -55,8 +56,9 @@ type Server struct {
 	log       *slog.Logger
 	version   string
 	eventSlug string
+	publicURL string
 	clerkKey  string
-	ready     func(context.Context) error
+	ready    func(context.Context) error
 	undo      *undoWindows
 	wallTags  *wallTagStrip
 }
@@ -66,7 +68,7 @@ func New(d Deps) *Server {
 	return &Server{
 		store: d.Store, hub: d.Hub, search: d.Search, limiter: d.Limiter, authn: d.Auth, log: d.Log,
 		sync:    search.NewSync(d.Store, d.Search, d.Log),
-		version: d.Version, eventSlug: d.EventSlug, clerkKey: d.ClerkKey, ready: d.Ready,
+		version: d.Version, eventSlug: d.EventSlug, publicURL: strings.TrimRight(d.PublicURL, "/"), clerkKey: d.ClerkKey, ready: d.Ready,
 		undo:     newUndoWindows(),
 		wallTags: &wallTagStrip{counter: d.Tags, log: d.Log},
 	}

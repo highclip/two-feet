@@ -16,6 +16,14 @@ html, body { margin: 0; height: 100%; }
 .wall-brand { display: flex; flex-direction: column; gap: 6px; }
 .wall-eyebrow { font-size: 20px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--wall-muted); }
 .wall-heading { margin: 0; font-family: var(--font-title); font-weight: 800; font-size: 64px; line-height: 1; letter-spacing: -0.02em; }
+.wall-head-right { display: flex; align-items: center; gap: 36px; }
+.wall-scan { display: flex; align-items: center; gap: 16px; }
+.wall-qr { width: 126px; height: 126px; box-sizing: border-box; padding: 8px; background: var(--card); border-radius: var(--radius-button); flex: none; }
+.wall-qr svg { display: block; width: 100%; height: 100%; }
+.wall-qr path { fill: var(--ink); }
+.wall-scan-text { display: flex; flex-direction: column; gap: 2px; max-width: 220px; }
+.wall-scan-title { font-size: 22px; font-weight: 700; line-height: 1.15; }
+.wall-scan-sub { font-size: 18px; color: var(--wall-muted); }
 .wall-now-block { display: flex; flex-direction: column; align-items: flex-end; }
 .wall-clock { font-family: var(--font-title); font-weight: 800; font-size: 76px; line-height: 0.95; font-variant-numeric: tabular-nums; }
 .wall-date { font-size: 20px; color: var(--wall-muted); }

@@ -119,6 +119,7 @@ func serve(ctx context.Context, log *slog.Logger) error {
 		Log:       log,
 		Version:   version,
 		EventSlug: cfg.EventSlug,
+		PublicURL: cfg.PublicURL,
 		ClerkKey:  cfg.ClerkPublishableKey,
 		Ready:     pool.Ping,
 	})

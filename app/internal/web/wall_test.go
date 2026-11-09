@@ -15,6 +15,7 @@ import (
 
 	"github.com/highclip/two-feet/app/internal/live"
 	"github.com/highclip/two-feet/app/internal/search"
+	"github.com/highclip/two-feet/app/internal/web"
 )
 
 const (
@@ -181,6 +182,21 @@ func TestWallNamesTheNextActionWhenNothingIsOn(t *testing.T) {
 	assert.Contains(t, body, "Whoever comes are the right people.")
 	assert.Contains(t, body, `href="/e/cnh/spaces/new"`)
 	assert.NotContains(t, body, "Just posted", "an empty ticker has nothing to label")
+}
+
+func TestD42_WallHeaderHasAQRForTheEventWithNothingPersonalInIt(t *testing.T) {
+	f := newFixture(t)
+	f.onboard(t, "user_a", "Ansel")
+	want, _, err := web.EventQRPath("https://twofeet.test/e/cnh")
+	require.NoError(t, err)
+
+	for name, opts := range map[string][]requestOpt{"visitor": nil, "signed in": {as("user_a")}} {
+		t.Run(name, func(t *testing.T) {
+			body := f.wallBody(t, boardPath, opts...)
+			assert.Contains(t, body, want, "the code encodes the event's own URL for everyone")
+			assert.Contains(t, body, "Scan to post or start a space")
+		})
+	}
 }
 
 func TestD26_WallShowsTopTagsWithCountsOnly(t *testing.T) {

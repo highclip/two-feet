@@ -7,8 +7,11 @@ import (
 	"math"
 	"net/http"
 	"slices"
+	"strings"
 	"sync"
 	"time"
+
+	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/highclip/two-feet/app/internal/live"
 	"github.com/highclip/two-feet/app/internal/search"
@@ -101,7 +104,14 @@ func (s *Server) buildWall(ctx context.Context, e store.Event) (views.WallBoard,
 		return views.WallBoard{}, err
 	}
 
+	qrPath, qrSize, err := eventQRPath(s.publicURL + "/e/" + e.Slug)
+	if err != nil {
+		s.log.Error("wall qr", "err", err) // the Wall still works without it
+	}
+
 	board := views.WallBoard{
+		QRPath:   qrPath,
+		QRSize:   qrSize,
 		Clock:    now.In(loc).Format("3:04"),
 		Date:     now.In(loc).Format("Monday, Jan 2"),
 		NowPct:   100 * now.Sub(window).Minutes() / wallMinutes,
@@ -132,6 +142,26 @@ func (s *Server) buildWall(ctx context.Context, e store.Event) (views.WallBoard,
 		})
 	}
 	return board, nil
+}
+
+// eventQRPath draws a QR code as one SVG path, so the Wall adds a single node however dense the code
+// is. size is its width in modules, without a quiet zone: the page's padding is that.
+func eventQRPath(target string) (path string, size int, err error) {
+	code, err := qrcode.New(target, qrcode.Medium)
+	if err != nil {
+		return "", 0, fmt.Errorf("encode qr: %w", err)
+	}
+	code.DisableBorder = true
+	modules := code.Bitmap()
+	var b strings.Builder
+	for y, row := range modules {
+		for x, dark := range row {
+			if dark {
+				fmt.Fprintf(&b, "M%d %dh1v1h-1z", x, y)
+			}
+		}
+	}
+	return b.String(), len(modules), nil
 }
 
 func wallTagViews(tags []search.TagCount) []views.WallTag {

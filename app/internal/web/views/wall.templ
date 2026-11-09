@@ -8,6 +8,8 @@ import (
 // WallBoard is everything the projector view draws. It holds titles, spots, counts and tags, and has
 // nowhere to put a name.
 type WallBoard struct {
+	QRPath   string // the event's QR code as an SVG path; empty hides it
+	QRSize   int    // its width in modules
 	Clock    string
 	Date     string
 	Slots    []string // the eight 15-minute column headings
@@ -65,6 +67,11 @@ func wallNoteStyle(n WallNote) string {
 
 func wallNowStyle(pct float64) string {
 	return fmt.Sprintf("left:%.2f%%", pct)
+}
+
+// wallRowStyle places a row past the time headings, in a grid the now-line also spans.
+func wallRowStyle(i int) string {
+	return fmt.Sprintf("grid-row:%d", i+2)
 }
 
 func wallGridStyle(rows int) string {
@@ -127,9 +134,22 @@ templ WallBoardContents(b WallBoard) {
 			<span class="wall-eyebrow">Two Feet · open spaces, all day</span>
 			<h1 class="wall-heading">What's on, and where</h1>
 		</div>
-		<div class="wall-now-block">
-			<span class="wall-clock">{ b.Clock }</span>
-			<span class="wall-date">{ b.Date }</span>
+		<div class="wall-head-right">
+			<div class="wall-now-block">
+				<span class="wall-clock">{ b.Clock }</span>
+				<span class="wall-date">{ b.Date }</span>
+			</div>
+			if b.QRPath != "" {
+				<div class="wall-scan">
+					<div class="wall-qr">
+						<svg viewBox={ fmt.Sprintf("0 0 %d %d", b.QRSize, b.QRSize) } role="img" aria-label="QR code for this event" shape-rendering="crispEdges"><path d={ b.QRPath }></path></svg>
+					</div>
+					<div class="wall-scan-text">
+						<span class="wall-scan-title">Scan to post or start a space</span>
+						<span class="wall-scan-sub">or any code taped up around the room</span>
+					</div>
+				</div>
+			}
 		</div>
 	</header>
 	<div class={ wallGridClass(b) } style={ wallGridStyle(len(b.Rows)) }>
@@ -148,12 +168,12 @@ templ WallBoardContents(b WallBoard) {
 			}
 			<span class="wall-now" style={ wallNowStyle(b.NowPct) }></span>
 		</div>
-		for _, row := range b.Rows {
-			<div class="wall-spot">
+		for i, row := range b.Rows {
+			<div class="wall-spot" style={ wallRowStyle(i) }>
 				<span class="wall-spot-name">{ row.Spot }</span>
 				<span class="wall-spot-zone">{ row.Zone }</span>
 			</div>
-			<div class="wall-lane">
+			<div class="wall-lane" style={ wallRowStyle(i) }>
 				for _, n := range row.Notes {
 					@wallNote(n)
 				}

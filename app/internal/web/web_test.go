@@ -410,7 +410,7 @@ func TestCrossOriginPostIsRefused(t *testing.T) {
 
 func TestStaticAssetsAreServedFromTheBinary(t *testing.T) {
 	f := newFixture(t)
-	for _, path := range []string{"/static/tokens.css", "/static/app.css", "/static/app.js", "/static/htmx.min.js", "/static/sse.js"} {
+	for _, path := range []string{"/static/tokens.css", "/static/app.css", "/static/app.js", "/static/htmx.min.js", "/static/sse.js", "/static/live.js"} {
 		assert.Equal(t, http.StatusOK, f.get(path).Code, path)
 	}
 }

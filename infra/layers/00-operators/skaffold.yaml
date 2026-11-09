@@ -28,8 +28,10 @@ deploy:
           operator.clusterName: "{{.CLUSTER_NAME}}"
 
       # Radar (skyhook-io/radar): Kubernetes UI with topology and a built-in MCP server, so
-      # agents can inspect the cluster through it. Public only at radar.highclip.dev, behind a
-      # Cloudflare Access application (see 40-platform); Radar's own auth is off.
+      # agents can inspect the cluster through it. Connected to Radar Cloud (app.radarhq.io) over an
+      # outbound tunnel. Requires the radar-cloud-config secret in the radar namespace, holding the
+      # cluster token under the key "token". Left out of the wizard's flags on purpose: Helm writes,
+      # Secret viewing, pod exec, port-forward and self-upgrade.
       - name: radar
         remoteChart: radar
         repo: https://skyhook-io.github.io/helm-charts
@@ -39,6 +41,11 @@ deploy:
         createNamespace: true
         setValues:
           allowedHosts[0]: radar.highclip.dev
+          cloud.enabled: "true"
+          cloud.url: wss://api.radarhq.io/agent
+          cloud.clusterName: "-jsn8Wj4Zhk"   # hub-assigned cluster id, not a secret
+          cloud.existingSecret: radar-cloud-config
+          auth.mode: proxy
     flags:
       install: [--wait, --timeout=10m]
       upgrade: [--wait, --timeout=10m]

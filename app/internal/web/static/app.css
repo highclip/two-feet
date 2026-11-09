@@ -300,6 +300,7 @@ body {
 .next-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .next-title { display: flex; align-items: center; min-height: var(--tap); font-family: var(--font-title); font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
 .next-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: var(--text-sm); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.next-count { font-size: var(--text-sm); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .next-count .seats { display: none; } /* the same fragment draws dots on bigger cards */
 .next-join { min-height: var(--tap); padding: 0 14px; }
 .next-state { font-size: var(--text-sm); font-weight: 700; }

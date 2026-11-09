@@ -126,7 +126,47 @@ func TestS2_SpotPageShowsNameWhereNowAndNextTwoTodayWithCountsAndJoin(t *testing
 	assert.Len(t, regexp.MustCompile(`action="[^"]*/join"`).FindAllString(body, -1), 3, "one Join form per space")
 	assert.Contains(t, text, "Join · 3 seats left")
 	assert.Contains(t, text, "Dana", "signed-in people see hosts")
-	assert.Contains(t, body, `hx-sync="this:queue last"`, "a live refetch waits for a join's answer")
+	assert.Contains(t, body, `class="spot-board" hx-get="`+boardPath(spot)+`" hx-trigger="sse:spaces-changed" hx-sync="this:queue last"`, "a board refetch waits for a join's answer")
+	assert.Contains(t, body, `hx-sync="closest .spot-board:queue last"`, "a join holds off the board swap")
+}
+
+func TestNextHereRowPutsThePillAndHostOnOneLineAndTheCountOnItsOwn(t *testing.T) {
+	f := newFixture(t)
+	now := noon(t)
+	f.at = now
+	host := f.onboard(t, "user_host", "Dana")
+	f.onboard(t, "user_a", "Ana")
+	spot := f.spot(t, "Couches")
+	f.spaceAt(t, host, spot, "First one next", now.Add(30*time.Minute), 30)
+
+	body := f.get(spotPath(spot), as("user_a")).Body.String()
+
+	assert.Regexp(t, `<span class="next-host">Dana</span>\s*</div>\s*<div class="next-count"`, body)
+	assert.NotContains(t, visible(body), "Dana ·")
+}
+
+func TestNextHereRowSaysWaitlistWhenTheSpaceIsFull(t *testing.T) {
+	f := newFixture(t)
+	now := noon(t)
+	f.at = now
+	host := f.onboard(t, "user_host", "Dana")
+	f.onboard(t, "user_a", "Ana")
+	spot := f.spot(t, "Couches")
+	sp := f.spaceAt(t, host, spot, "First one next", now.Add(30*time.Minute), 30)
+	path := "/e/cnh/spaces/" + sp.Slug
+	for _, id := range []string{"user_b", "user_c", "user_d"} {
+		f.onboard(t, id, "Guest")
+		require.Equal(t, http.StatusSeeOther, f.post(path+"/join", nil, as(id)).Code)
+	}
+	joinButton := regexp.MustCompile(`next-join"[^>]*>([^<]*)<`)
+
+	signedIn := joinButton.FindStringSubmatch(f.get(spotPath(spot), as("user_a")).Body.String())
+	require.NotNil(t, signedIn)
+	assert.Equal(t, "Waitlist", signedIn[1])
+
+	visitor := joinButton.FindStringSubmatch(f.get(spotPath(spot)).Body.String())
+	require.NotNil(t, visitor)
+	assert.Equal(t, "Waitlist", visitor[1])
 }
 
 func TestSpotPageWithNothingOnSaysSoAndOffersToStart(t *testing.T) {
@@ -138,6 +178,19 @@ func TestSpotPageWithNothingOnSaysSoAndOffersToStart(t *testing.T) {
 
 	assert.Contains(t, text, "Nothing here yet. Whoever comes are the right people. Start one.")
 	assert.Contains(t, text, "Start a space here")
+}
+
+func TestSpotPageWithNothingOnSendsOrganizersToTheEventInsteadOfOfferingToStart(t *testing.T) {
+	f := newFixture(t)
+	f.at = noon(t)
+	f.meta["user_org"] = auth.Metadata{Role: "organizer"}
+	f.onboard(t, "user_org", "Olu")
+
+	body := f.get(spotPath(f.spot(t, "Couches")), as("user_org")).Body.String()
+
+	assert.Contains(t, visible(body), "Nothing here yet. Whoever comes are the right people.")
+	assert.NotContains(t, visible(body), "Start one")
+	assert.Contains(t, body, `<a class="button" href="/e/cnh">Go to the event home</a>`)
 }
 
 func TestS2_StartASpaceHereOpensFormWithThisSpotAndNextFreeSlot(t *testing.T) {
@@ -285,7 +338,8 @@ func TestS2_UnknownCodeSaysNotFromThisEventAndZoneUnchanged(t *testing.T) {
 	w := f.get("/e/cnh?spot=not-a-real-code", as("user_a"))
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
-	assert.Contains(t, visible(w.Body.String()), "That code isn't from this event")
+	assert.Contains(t, visible(w.Body.String()), "That code isn't from this event, so try another one at the venue.")
+	assert.Contains(t, w.Body.String(), `<a class="button" href="/e/cnh">Go to the event home</a>`)
 	zone := f.person(t, "user_a").ZoneID
 	require.NotNil(t, zone)
 	assert.Equal(t, "patio", *zone)
@@ -399,7 +453,10 @@ func TestSpotPageChecksInOnlyWhenTheBrowserIsOpeningThePage(t *testing.T) {
 		checkedIn bool
 	}{
 		{"a scanned code", []requestOpt{header("Sec-Fetch-Dest", "document"), header("Sec-Fetch-Site", "none")}, true},
+		{"a link inside the app", []requestOpt{header("Sec-Fetch-Dest", "document"), header("Sec-Fetch-Site", "same-origin")}, true},
 		{"an old browser with no fetch metadata", nil, true},
+		{"a cross-site link", []requestOpt{header("Sec-Fetch-Dest", "document"), header("Sec-Fetch-Site", "cross-site")}, false},
+		{"a link from a sibling site", []requestOpt{header("Sec-Fetch-Dest", "document"), header("Sec-Fetch-Site", "same-site")}, false},
 		{"an image tag on another site", []requestOpt{header("Sec-Fetch-Dest", "image"), header("Sec-Fetch-Site", "cross-site")}, false},
 		{"an iframe", []requestOpt{header("Sec-Fetch-Dest", "iframe"), header("Sec-Fetch-Site", "cross-site")}, false},
 		{"a browser prefetch", []requestOpt{header("Sec-Fetch-Dest", "document"), header("Sec-Purpose", "prefetch")}, false},

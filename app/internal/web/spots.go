@@ -22,6 +22,8 @@ const (
 	formDefault   = 30 // minutes, what the create form picks unless told otherwise
 	nextHereCount = 2
 	maxCheckInLen = 1 << 10
+
+	unknownCodeText = "That code isn't from this event, so try another one at the venue."
 )
 
 func (s *Server) registerSpots(mux *http.ServeMux) {
@@ -29,8 +31,10 @@ func (s *Server) registerSpots(mux *http.ServeMux) {
 	mux.Handle("POST /e/{slug}/checkin", auth.RequirePerson(http.HandlerFunc(s.checkIn)))
 }
 
+func eventURL(eventSlug string) string { return "/e/" + eventSlug }
+
 func spotURL(eventSlug, qrSlug string) string {
-	return "/e/" + eventSlug + "?spot=" + url.QueryEscape(qrSlug)
+	return eventURL(eventSlug) + "?spot=" + url.QueryEscape(qrSlug)
 }
 
 // canCheckIn is the check_in_at_spot permission.
@@ -39,10 +43,15 @@ func canCheckIn(p store.Person) bool {
 }
 
 // opensThePage reports whether a browser is really showing this spot to someone. Opening a code
-// checks you in on a GET, so an image or frame on another site, or a prefetch, mustn't be able to
-// move you. Browsers without fetch metadata send neither header and count as opening it.
+// checks you in on a GET, so an image or frame on another site, a link from one, or a prefetch
+// mustn't be able to move you. A scanned code arrives with Sec-Fetch-Site none, and the return from
+// sign-in with same-origin. Browsers without fetch metadata send neither header and count as
+// opening it.
 func opensThePage(r *http.Request) bool {
 	if dest := r.Header.Get("Sec-Fetch-Dest"); dest != "" && dest != "document" {
+		return false
+	}
+	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "none" && site != "same-origin" {
 		return false
 	}
 	return !strings.Contains(r.Header.Get("Sec-Purpose"), "prefetch") && r.Header.Get("Purpose") != "prefetch"
@@ -53,8 +62,7 @@ func (s *Server) spotPage(w http.ResponseWriter, r *http.Request, event store.Ev
 	ctx := r.Context()
 	spot, err := s.store.SpotInEvent(ctx, event.ID, r.URL.Query().Get("spot"))
 	if errors.Is(err, store.ErrNotFound) {
-		s.render(w, r, http.StatusNotFound, views.Message(s.page(r, event, "Unknown code"),
-			"That code isn't from this event. Try another code at the venue."))
+		s.render(w, r, http.StatusNotFound, views.UnknownCode(s.page(r, event, "Unknown code"), unknownCodeText, eventURL(event.Slug)))
 		return
 	}
 	if err != nil {
@@ -104,7 +112,7 @@ func (s *Server) spotBoard(w http.ResponseWriter, r *http.Request) {
 	}
 	spot, err := s.store.SpotInEvent(r.Context(), event.ID, r.PathValue("qr"))
 	if errors.Is(err, store.ErrNotFound) {
-		http.Error(w, "That code isn't from this event. Try another code at the venue.", http.StatusNotFound)
+		http.Error(w, unknownCodeText, http.StatusNotFound)
 		return
 	}
 	if err != nil {
@@ -127,7 +135,7 @@ func (s *Server) boardView(ctx context.Context, e store.Event, spot store.Spot, 
 	if err != nil {
 		return views.SpotBoard{}, err
 	}
-	board := views.SpotBoard{URL: "/e/" + e.Slug + "/spots/" + url.PathEscape(spot.QRSlug) + "/board"}
+	board := views.SpotBoard{URL: eventURL(e.Slug) + "/spots/" + url.PathEscape(spot.QRSlug) + "/board", Home: eventURL(e.Slug)}
 	for _, sp := range schedule {
 		if sp.StartsAt.After(now) && len(board.Next) == nextHereCount {
 			break

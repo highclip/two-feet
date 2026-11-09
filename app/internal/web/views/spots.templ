@@ -22,6 +22,7 @@ type SpotView struct {
 // SpotBoard is the part of a spot's page that refetches when its spaces change.
 type SpotBoard struct {
 	URL   string
+	Home  string // the event's home, where an empty board sends people who can't start a space
 	Now   *SpaceView
 	Next  []SpaceView
 	Start *StartHere // nil for people who can't start a space
@@ -101,9 +102,21 @@ templ SpotPage(p Page, v SpotView) {
 		if v.SignInURL != "" {
 			<a class="button button-quiet" href={ templ.SafeURL(v.SignInURL) }>Sign in to check in</a>
 		}
-		<div class="spot-board" hx-get={ v.Board.URL } hx-trigger="sse:spaces-changed">
+		// hx-sync makes this refetch and the now card's requests take turns, so a join's form isn't
+		// swapped out while its answer is on the way.
+		<div class="spot-board" hx-get={ v.Board.URL } hx-trigger="sse:spaces-changed" hx-sync="this:queue last">
 			@SpotBoardBody(v.Board)
 		</div>
+	}
+}
+
+// UnknownCode is what a code from somewhere else opens.
+templ UnknownCode(p Page, text, homeURL string) {
+	@Layout(p) {
+		<section class="empty">
+			<p class="empty-text">{ text }</p>
+			<a class="button" href={ templ.SafeURL(homeURL) }>Go to the event home</a>
+		</section>
 	}
 }
 
@@ -121,7 +134,14 @@ templ SpotBoardBody(b SpotBoard) {
 		</section>
 	}
 	if b.Now == nil && len(b.Next) == 0 {
-		<p class="empty-text">Nothing here yet. Whoever comes are the right people. Start one.</p>
+		if b.Start != nil {
+			<p class="empty-text">Nothing here yet. Whoever comes are the right people. Start one.</p>
+		} else {
+			<section class="empty">
+				<p class="empty-text">Nothing here yet. Whoever comes are the right people.</p>
+				<a class="button" href={ templ.SafeURL(b.Home) }>Go to the event home</a>
+			</section>
+		}
 	}
 	if b.Start != nil {
 		<a class="start-here" href={ templ.SafeURL(b.Start.URL) }>
@@ -146,7 +166,8 @@ templ spotNow(v SpaceView) {
 		<h2 class="now-title"><a href={ templ.SafeURL(v.BaseURL) }>{ v.Space.Title }</a></h2>
 		@spaceHost(v)
 		// hx-sync holds a live refetch until a join or leave has its answer, as on the space page (S6).
-		<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID } hx-sync="this:queue last">
+		// It queues on the board, whose own refetch would otherwise swap out the form mid-request.
+		<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID } hx-sync="closest .spot-board:queue last">
 			@SpaceSeats(v)
 		</div>
 	</article>
@@ -162,16 +183,18 @@ templ spotNext(v SpaceView) {
 		</div>
 		<div class="next-body">
 			<a class="next-title" href={ templ.SafeURL(v.BaseURL) }>{ v.Space.Title }</a>
-			<div class="next-meta">
-				if label := kindLabel(v.Space.Kind); label != "" {
-					<span class={ "pill pill-" + v.Space.Kind }>{ label }</span>
-				}
-				if v.ShowNames {
-					<span class="next-host">{ v.Space.HostName } · </span>
-				}
-				<span class="next-count" sse-swap={ "space-" + v.Space.ID }>
-					@SeatCount(v.Space.Going, v.Space.Capacity, v.Space.Waitlist, false)
-				</span>
+			if kindLabel(v.Space.Kind) != "" || v.ShowNames {
+				<div class="next-meta">
+					if label := kindLabel(v.Space.Kind); label != "" {
+						<span class={ "pill pill-" + v.Space.Kind }>{ label }</span>
+					}
+					if v.ShowNames {
+						<span class="next-host">{ v.Space.HostName }</span>
+					}
+				</div>
+			}
+			<div class="next-count" sse-swap={ "space-" + v.Space.ID }>
+				@SeatCount(v.Space.Going, v.Space.Capacity, v.Space.Waitlist, false)
 			</div>
 		</div>
 		@nextAction(v)
@@ -188,12 +211,20 @@ templ nextAction(v SpaceView) {
 	} else if v.Signup.Status == store.SignupWaitlist {
 		<span class="next-state">Waitlist</span>
 	} else if v.SignInURL != "" {
-		<a class="button button-action next-join" href={ templ.SafeURL(v.SignInURL) }>Join</a>
+		<a class="button button-action next-join" href={ templ.SafeURL(v.SignInURL) }>{ nextJoinLabel(v.Space) }</a>
 	} else if v.CanJoin {
 		<form method="post" action={ templ.SafeURL(v.BaseURL + "/join") }>
-			<button class="button button-action next-join" type="submit">Join</button>
+			<button class="button button-action next-join" type="submit">{ nextJoinLabel(v.Space) }</button>
 		</form>
 	}
+}
+
+// nextJoinLabel is joinLabel cut down to fit a row.
+func nextJoinLabel(sp store.Space) string {
+	if joinsWaitlist(sp) {
+		return "Waitlist"
+	}
+	return "Join"
 }
 
 func zoneHeading(z ZonePrompt) string {

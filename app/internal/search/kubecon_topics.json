@@ -1,0 +1,8 @@
+[
+  { "title": "Why Kubernetes can't tell which AI agent took an action", "source": "Tech Times" },
+  { "title": "AI agent observability with OpenTelemetry", "source": "OpenTelemetry" },
+  { "title": "Kubernetes for AI inference and agentic workflows", "source": "CNCF" },
+  { "title": "Kubernetes as the operating platform for production AI and agents", "source": "DEV Community" },
+  { "title": "eBPF instrumentation in OpenTelemetry", "source": "OpenTelemetry" },
+  { "title": "Kubeflow graduated: running AI operations on Kubernetes", "source": "CNCF" }
+]

@@ -7,7 +7,7 @@ import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin
 const GATEWAY = 'Kubernetes gateway API reaches a new milestone';
 const SAMPLING = 'Tail sampling in the OTel collector, explained';
 const SOURDOUGH = 'A cosy guide to sourdough starters';
-const COUNT = /Hacker News · \d+ posts? in the room/;
+const COUNT = /Hacker News/;
 
 test.describe('S12 topics from online', () => {
   const email = testEmail('s12-host');
@@ -43,6 +43,15 @@ test.describe('S12 topics from online', () => {
 
     await expect(title).toHaveValue(SAMPLING);
     await expect(page).toHaveURL(/\/spaces\/new/); // filled in, not submitted
+
+    // One tap chooses the spot and time too, and they can still be changed.
+    const where = page.getByLabel('Where');
+    await expect(page.locator('.quick-start')).toBeVisible();
+    await expect(where).toBeHidden();
+    await page.getByRole('button', { name: 'Change' }).click();
+    await expect(where).toBeVisible();
+    await expect(page.locator('.quick-start')).toBeHidden();
+
     await title.fill('Tail sampling, our way');
     await expect(title).toHaveValue('Tail sampling, our way');
 

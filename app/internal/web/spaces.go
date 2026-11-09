@@ -240,6 +240,7 @@ func (s *Server) newSpaceForm(w http.ResponseWriter, r *http.Request) {
 	if minutes := r.URL.Query().Get("minutes"); minutes == "15" || minutes == "30" || minutes == "45" {
 		form.Minutes = minutes
 	}
+	s.offerQuickStart(r.Context(), e, &form, starts)
 	if post := r.URL.Query().Get("post"); uuidShape.MatchString(post) {
 		summary, err := s.store.PostForSpace(r.Context(), post, time.Now())
 		switch {

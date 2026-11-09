@@ -3,8 +3,10 @@ package web_test
 import (
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,9 +52,9 @@ func TestS12_WallShowsTopicsMostRelatedFirstWithSourceAndHowManyPostsRelate(t *t
 		assert.Less(t, second, third)
 		assert.Equal(t, 3, strings.Count(strip, "wall-topic-title"))
 		assert.Equal(t, 3, strings.Count(strip, "Hacker News"))
-		assert.Contains(t, strip, "3 posts in the room")
-		assert.Contains(t, strip, "1 post in the room")
-		assert.Contains(t, strip, "0 posts in the room")
+		assert.Contains(t, strip, "3 posts here relate · Hacker News")
+		assert.Contains(t, strip, "1 post here relates · Hacker News")
+		assert.NotContains(t, strip, "0 posts", "a topic nobody here has posted about just names its source")
 	}
 }
 
@@ -68,7 +70,7 @@ func TestS12_StartASpaceFormOffersTheSameTopics(t *testing.T) {
 	for _, topic := range someTopics {
 		assert.Contains(t, body, `data-fill-title="`+topic.Title+`"`)
 	}
-	assert.Contains(t, body, "3 posts in the room")
+	assert.Contains(t, body, "3 posts here relate")
 	assert.Regexp(t, `name="title"[^>]*required`, body, "the title is still an ordinary field to edit")
 	assert.Equal(t, 3, strings.Count(body, `type="button" class="suggestion"`), "a tap fills the field and doesn't submit the form")
 }
@@ -151,4 +153,29 @@ func TestS12_TheWallStillWorksBesideTheStrip(t *testing.T) {
 
 	assert.NotContains(t, board, "hx-trigger", "the strip adds no listeners to the refetched fragment")
 	assert.NotContains(t, board, "sse-swap")
+}
+
+func TestS12_TappingATopicOffersTheRoomiestFreeSpotForTheNextSlot(t *testing.T) {
+	f := newFixture(t)
+	f.topics.list = someTopics
+	host := f.onboard(t, "user_a", "Ansel")
+
+	body := f.get(newSpacePath, as("user_a")).Body.String()
+	assert.Contains(t, body, `data-fill-spot="`+f.spot(t, "Table rows").ID+`"`)
+	assert.Contains(t, body, "Table rows · Main room · seats 16")
+
+	next := time.Now().Truncate(15 * time.Minute).Add(15 * time.Minute)
+	f.spaceAt(t, host, f.spot(t, "Table rows"), "Already happening", next, 30)
+	body = f.get(newSpacePath, as("user_a")).Body.String()
+	assert.Contains(t, body, `data-fill-spot="`+f.spot(t, "Long table").ID+`"`, "the next roomiest, by name")
+
+	fromASpot := f.get(newSpacePath+"?spot="+f.spot(t, "Kitchen counter").ID, as("user_a")).Body.String()
+	assert.NotContains(t, fromASpot, "data-quick-summary", "a spot already chosen stays chosen")
+}
+
+func TestS12_TheWallShowsAtMostThreeTopics(t *testing.T) {
+	f := newFixture(t)
+	f.topics.list = append(slices.Clone(someTopics), search.Topic{Title: "A fourth about Kubernetes", Source: "CNCF"})
+
+	assert.Equal(t, 3, strings.Count(topicStrip(t, f.wallBody(t, wallPath)), "wall-topic-title"))
 }

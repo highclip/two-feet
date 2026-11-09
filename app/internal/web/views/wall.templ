@@ -207,8 +207,8 @@ templ WallBoardContents(b WallBoard) {
 		</section>
 	}
 	if len(b.Topics) > 0 {
-		<section class="wall-topics" aria-label="Talked about online">
-			<span class="wall-label">Talked about online</span>
+		<section class="wall-topics" aria-label="KubeCon and online">
+			<span class="wall-label wall-topics-label">KubeCon and online</span>
 			<ol class="wall-topic-list">
 				for _, t := range b.Topics {
 					<li class="wall-topic">

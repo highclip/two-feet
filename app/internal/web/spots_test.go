@@ -126,6 +126,7 @@ func TestS2_SpotPageShowsNameWhereNowAndNextTwoTodayWithCountsAndJoin(t *testing
 	assert.Len(t, regexp.MustCompile(`action="[^"]*/join"`).FindAllString(body, -1), 3, "one Join form per space")
 	assert.Contains(t, text, "Join · 3 seats left")
 	assert.Contains(t, text, "Dana", "signed-in people see hosts")
+	assert.Contains(t, body, `hx-sync="this:queue last"`, "a live refetch waits for a join's answer")
 }
 
 func TestSpotPageWithNothingOnSaysSoAndOffersToStart(t *testing.T) {

@@ -145,7 +145,8 @@ templ spotNow(v SpaceView) {
 		</div>
 		<h2 class="now-title"><a href={ templ.SafeURL(v.BaseURL) }>{ v.Space.Title }</a></h2>
 		@spaceHost(v)
-		<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID }>
+		// hx-sync holds a live refetch until a join or leave has its answer, as on the space page (S6).
+		<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID } hx-sync="this:queue last">
 			@SpaceSeats(v)
 		</div>
 	</article>

@@ -12,7 +12,13 @@ export async function enterEmailAndCode(page: Page, email: string): Promise<void
   const identifier = page.locator('input[name="identifier"]');
   await expect(identifier).toBeVisible({ timeout: 30_000 });
   await identifier.fill(email);
+  // Clerk draws the code screen before it has sent the code, and refuses a code typed in that gap.
+  const codeSent = page.waitForResponse(
+    (res) => res.request().method() === 'POST' && /\/prepare_(verification|first_factor)/.test(res.url()),
+    { timeout: 30_000 },
+  );
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await codeSent;
   await expect(page.getByText(/verification code|Check your email/i).first()).toBeVisible({ timeout: 30_000 });
   await page.keyboard.type('424242', { delay: 50 });
 }

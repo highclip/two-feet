@@ -7,3 +7,7 @@ cloudflared:
 
 # Where the tunnel sends public traffic.
 appService: http://two-feet.two-feet.svc.cluster.local
+
+# Radar's UI, reachable only through the Cloudflare Access application on this hostname.
+radarHost: radar.highclip.dev
+radarService: http://radar.radar.svc.cluster.local:9280

@@ -16,6 +16,10 @@ data:
         originRequest:
           keepAliveTimeout: 10m
           disableChunkedEncoding: false
+      # Radar has no login of its own (auth.mode: none). This hostname must stay behind its
+      # Cloudflare Access application; nothing else protects it.
+      - hostname: {{ .Values.radarHost }}
+        service: {{ .Values.radarService }}
       - service: http_status:404
 ---
 apiVersion: apps/v1

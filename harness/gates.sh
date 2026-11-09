@@ -88,6 +88,11 @@ else
 fi
 
 for g in "${GATES[@]}"; do
+  # The browser tests take minutes, and a slice that already failed something goes around again anyway.
+  if [ "$g" = e2e ] && [ "${#failed[@]}" -gt 0 ]; then
+    report+=$'\n\n'"--- e2e (skipped) ---"$'\n'"Not run, because the gates above failed. Fix those and it runs next time."
+    continue
+  fi
   out="$(bash -c "${CMD[$g]}" 2>&1)"; code=$?
   if [ "$code" -eq 0 ]; then
     "${HX[@]}" --agent gates gate "$SLICE" "$g" pass

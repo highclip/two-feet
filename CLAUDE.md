@@ -75,6 +75,8 @@ app/
   with a test address like `name+clerk_test@example.com` and the fixed code `424242`. Never stub the sign-in
   in Playwright. The Clerk keys reach tests only through the gates: run `harness/gates.sh </dev/null` to
   check sign-in tests, and never read `.env`.
+- New Playwright specs sign in once per file (`beforeAll`, reusing the browser context), not once per test.
+  Signing in through Clerk's UI is most of the suite's run time.
 - Playwright tests live in `app/e2e/`, run at 390x844 unless the test is about the Wall.
 - `go test -race ./...` must pass. No `t.Skip` to get past a gate.
 

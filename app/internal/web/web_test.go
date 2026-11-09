@@ -43,7 +43,7 @@ type fixture struct {
 	store *store.Store
 	hub   *live.Hub
 	srv   http.Handler
-	index *recordingIndexer
+	index *spaceIndexer
 	meta  map[string]auth.Metadata
 }
 
@@ -54,7 +54,7 @@ func newFixture(t *testing.T) *fixture {
 	hub := live.NewHub()
 	t.Cleanup(hub.Close)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	index := &recordingIndexer{}
+	index := &spaceIndexer{}
 	meta := map[string]auth.Metadata{}
 	return &fixture{store: s, hub: hub, index: index, meta: meta, srv: web.New(web.Deps{
 		Store:     s,

@@ -21,15 +21,15 @@ import (
 	"github.com/highclip/two-feet/app/internal/store/storetest"
 )
 
-// recordingIndexer stands in for Elasticsearch and can be told to fail.
-type recordingIndexer struct {
+// spaceIndexer stands in for Elasticsearch and can be told to fail.
+type spaceIndexer struct {
 	mu      sync.Mutex
 	docs    map[string]search.Doc
 	deleted []string
 	fail    bool
 }
 
-func (i *recordingIndexer) Index(_ context.Context, d search.Doc) error {
+func (i *spaceIndexer) Index(_ context.Context, d search.Doc) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if i.fail {
@@ -42,14 +42,14 @@ func (i *recordingIndexer) Index(_ context.Context, d search.Doc) error {
 	return nil
 }
 
-func (i *recordingIndexer) Delete(_ context.Context, docType, id string) error {
+func (i *spaceIndexer) Delete(_ context.Context, docType, id string) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.deleted = append(i.deleted, docType+"/"+id)
 	return nil
 }
 
-func (i *recordingIndexer) doc(docType, id string) (search.Doc, bool) {
+func (i *spaceIndexer) doc(docType, id string) (search.Doc, bool) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	d, ok := i.docs[docType+"/"+id]

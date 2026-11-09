@@ -73,6 +73,8 @@ type SpaceView struct {
 	Overlap   *store.OverlapError // ask before moving them
 	Problem   string              // one sentence, when an action was refused
 	Toast     SpaceToast          // shown on a full page load after leaving
+
+	OnSpotBoard bool // inside a spot page's board, whose refetches a join or leave has to beat (S2)
 }
 
 var minuteChoices = []string{"15", "30", "45"}

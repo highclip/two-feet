@@ -81,6 +81,7 @@ func (s *Server) answer(w http.ResponseWriter, r *http.Request, e store.Event, s
 		edit(&v)
 	}
 	if isHtmx(r) {
+		v.OnSpotBoard = fromSpotPage(r, e)
 		// htmx doesn't swap error statuses, and a refusal here is a sentence in place, not a failure.
 		s.render(w, r, http.StatusOK, views.SeatsResponse(v, toast))
 		return

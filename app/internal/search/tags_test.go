@@ -29,6 +29,9 @@ func TestExtractTags(t *testing.T) {
 		{"html doesn't become a tag",
 			"<script>alert(1)</script> breaks our helm chart",
 			[]string{"helm", "alert", "breaks", "chart"}},
+		{"a known technology inside a hyphenated word",
+			"OpenTelemetry-native observability: traces, metrics and logs",
+			[]string{"otel", "opentelemetry-native", "observability", "traces", "metrics", "logs"}},
 		{"only stopwords gives no tags", "I am so very stuck on this", []string{}},
 	}
 	for _, tc := range cases {

@@ -90,6 +90,13 @@ test.describe('S4 live signups', () => {
     await ben.page.getByRole('button', { name: 'Join the waitlist' }).click();
     await expect(ben.page.getByText("Full. You're 1st on the waitlist; we'll move you in if a seat opens.")).toBeVisible();
 
+    // The answer arrives late, so the live refetch this leave sets off is the first to come back. It
+    // must not cost Ana her toast.
+    await ana.page.route('**/leave', async (route) => {
+      const response = await route.fetch();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await route.fulfill({ response });
+    });
     await ana.page.getByRole('button', { name: 'Leave', exact: true }).click();
     await expect(ana.page.getByRole('status').getByText('your seat went to the next person')).toBeVisible();
     await expect(ana.page.getByRole('button', { name: 'Undo' })).toHaveCount(0); // D2: the seat has gone

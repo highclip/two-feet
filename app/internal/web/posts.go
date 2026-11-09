@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/highclip/two-feet/app/internal/auth"
+	"github.com/highclip/two-feet/app/internal/live"
 	"github.com/highclip/two-feet/app/internal/search"
 	"github.com/highclip/two-feet/app/internal/store"
 	"github.com/highclip/two-feet/app/internal/telemetry"
@@ -214,13 +215,21 @@ func (s *Server) showPost(w http.ResponseWriter, r *http.Request) {
 			"That post isn't here. It may have been yours on another account."))
 		return
 	}
-	s.render(w, r, http.StatusOK, views.PostPage(s.page(r, event, "Your post"), views.PostView{
+	v := views.PostView{
 		Post:       post,
 		Posted:     clock(event, post.CreatedAt),
 		HomeURL:    "/e/" + event.Slug,
 		ResolveURL: postURL(event.Slug, post.ID) + "/resolve",
-		StartURL:   "/e/" + event.Slug + "/spaces/new?post=" + post.ID,
-	}))
+	}
+	switch {
+	case !postIsOpen(post, time.Now()):
+		if v.Post.Status == store.PostOpen {
+			v.Post.Status = store.PostExpired // past its time, and the sweep hasn't reached it yet
+		}
+	case canSeeMatches(person):
+		v.MatchesURL = matchesURL(event.Slug, post.ID)
+	}
+	s.render(w, r, http.StatusOK, views.PostPage(s.livePage(r, event, "Your post", live.EventTopic), v))
 }
 
 // resolvePost closes the author's own post and takes it out of matches.

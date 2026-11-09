@@ -11,6 +11,7 @@
   --line: #DDE2E0;         /* card borders */
   --line-soft: #E6EAE8;    /* row dividers */
   --chip: #EDF0EF;         /* neutral tag chips */
+  --chip-on-tint: rgba(22, 25, 28, 0.08);  /* tag chips on tinted cards; design-critic note: same value as design/reference/matches.html */
 
   /* Text */
   --ink: #16191C;          /* all text on notes and tints; 11:1 or better */

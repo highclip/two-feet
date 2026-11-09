@@ -33,6 +33,7 @@ type Deps struct {
 	Store     *store.Store
 	Hub       *live.Hub
 	Search    search.Indexer
+	Finder    search.Finder // reads the index for matches; nil finds nothing
 	Limiter   *Limiter
 	Auth      *auth.Authenticator
 	Log       *slog.Logger
@@ -51,6 +52,7 @@ type Server struct {
 	hub       *live.Hub
 	search    search.Indexer
 	sync      *search.Sync
+	matcher   *search.Matcher
 	limiter   *Limiter
 	authn     *auth.Authenticator
 	log       *slog.Logger
@@ -71,6 +73,7 @@ func New(d Deps) *Server {
 	return &Server{
 		store: d.Store, hub: d.Hub, search: d.Search, limiter: d.Limiter, authn: d.Auth, log: d.Log,
 		sync:    search.NewSync(d.Store, d.Search, d.Log),
+		matcher: search.NewMatcher(d.Store, d.Finder),
 		version: d.Version, eventSlug: d.EventSlug, clerkKey: d.ClerkKey, ready: d.Ready,
 		undo: newUndoWindows(), now: now,
 	}
@@ -105,6 +108,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerSpots(mux)
 	s.registerSpaces(mux)
 	s.registerPosts(mux)
+	s.registerMatches(mux)
 	s.registerSponsors(mux)
 	s.registerFeed(mux)
 	s.registerWall(mux)

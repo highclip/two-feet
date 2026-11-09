@@ -1,0 +1,283 @@
+package views
+
+import (
+	"strconv"
+
+	"github.com/highclip/two-feet/app/internal/search"
+)
+
+// MatchCard is one note in a list of matches, flattened from a search.Match. A field left empty
+// draws nothing.
+type MatchCard struct {
+	Kind       string // space, person, sponsor or post
+	Key        string // kind:id, also used to spot new matches
+	Title      string
+	Eyebrow    string
+	PostKind   string // colors the pill and tint
+	Quote      string
+	Body       string
+	Reasons    []string
+	Walk       string
+	Booth      string
+	BoothWhere string
+
+	Starts     string
+	StartsAt   string // RFC3339, for the live countdown
+	StartsSoon bool
+	Happening  bool
+
+	SpaceID      string
+	SeatCountURL string
+	Going        int
+	Capacity     int
+	Waitlist     int
+
+	JoinURL   string
+	JoinLabel string
+	SpaceURL  string
+	SpaceText string
+	StartURL  string
+	StartText string
+	ByLine    string
+	Initial   string
+}
+
+// MatchesView is everything the matches fragment needs.
+type MatchesView struct {
+	Top      []MatchCard
+	More     []MatchCard
+	StartURL string
+	NewURL   string
+	Retry    string // set when matching couldn't run; the URL to try again
+}
+
+// LeadCount reads like "3 good leads". It says nothing about being close, because a person's match
+// must not imply where they are (D29).
+func LeadCount(n int) string {
+	if n == 1 {
+		return "1 good lead"
+	}
+	return strconv.Itoa(n) + " good leads"
+}
+
+func moreLabel(n int) string {
+	if n == 1 {
+		return "1 more lead"
+	}
+	return strconv.Itoa(n) + " more leads"
+}
+
+func newMatchesLabel(n int) string {
+	if n == 1 {
+		return "1 new match"
+	}
+	return strconv.Itoa(n) + " new matches"
+}
+
+func matchClass(c MatchCard, deal int) string {
+	class := "match match-" + c.Kind
+	if deal >= 0 {
+		class += " deal deal-" + strconv.Itoa(deal)
+	}
+	if c.Kind == search.TypeSpace && c.PostKind != "" {
+		class += " match-tint-" + c.PostKind
+	}
+	return class
+}
+
+func startsClass(c MatchCard) string {
+	switch {
+	case c.Happening:
+		return "starts starts-now"
+	case c.StartsSoon:
+		return "starts starts-soon"
+	}
+	return "starts"
+}
+
+// NoteOutline holds the place of a match while it loads, so nothing waits behind a spinner.
+templ NoteOutline() {
+	<div class="note-outline" aria-hidden="true"></div>
+}
+
+// MatchNote is one match: a space, a person, a sponsor or a post. deal is its place in the dealt
+// hand, or -1 for a card that isn't dealt.
+templ MatchNote(c MatchCard, deal int) {
+	<article class={ matchClass(c, deal) } data-key={ c.Key }>
+		<div class="match-head">
+			if c.Kind == search.TypePerson {
+				<span class={ "match-avatar", "pill-" + c.PostKind } aria-hidden="true">{ c.Initial }</span>
+			}
+			<div class="match-who">
+				if c.Eyebrow != "" {
+					<span class="match-eyebrow">{ c.Eyebrow }</span>
+				}
+				if c.Title != "" {
+					<h3 class="match-title">{ c.Title }</h3>
+				}
+			</div>
+			if c.PostKind != "" && c.Kind != search.TypeSpace {
+				<span class={ "pill", "pill-" + c.PostKind }>{ KindLabel(c.PostKind) }</span>
+			}
+		</div>
+		if c.Quote != "" {
+			<p class="match-quote">{ "“" + c.Quote + "”" }</p>
+		}
+		if c.Body != "" {
+			<p class="match-body">{ c.Body }</p>
+		}
+		if len(c.Reasons) > 0 {
+			<ul class="tags">
+				for _, r := range c.Reasons {
+					<li class="tag reason">{ r }</li>
+				}
+			</ul>
+		}
+		if c.ByLine != "" {
+			<p class="match-byline">{ c.ByLine }</p>
+		}
+		if c.Walk != "" || c.Starts != "" || c.Booth != "" {
+			<p class="logistics">
+				if c.Booth != "" {
+					<span>{ c.Booth }</span>
+				}
+				if c.Walk != "" && c.Booth == "" {
+					<span>{ c.Walk }</span>
+				}
+				if c.Starts != "" {
+					if c.Walk != "" && c.Booth == "" {
+						<span aria-hidden="true">·</span>
+					}
+					<span class={ startsClass(c) } data-starts-at={ c.StartsAt }>{ c.Starts }</span>
+				}
+			</p>
+		}
+		if c.SpaceID != "" {
+			<div class="seat-row match-seats" hx-get={ c.SeatCountURL } hx-trigger={ "sse:space-" + c.SpaceID }>
+				@SeatCount(c.Going, c.Capacity, c.Waitlist, false)
+			</div>
+		}
+		if c.JoinURL != "" {
+			<form class="match-action" method="post" action={ templ.SafeURL(c.JoinURL) }>
+				<button class="button button-action" type="submit">{ c.JoinLabel }</button>
+			</form>
+		}
+		if c.SpaceURL != "" {
+			<a class="button button-quiet match-action" href={ templ.SafeURL(c.SpaceURL) }>{ c.SpaceText }</a>
+		}
+		if c.StartURL != "" {
+			<a class="button button-quiet match-action" href={ templ.SafeURL(c.StartURL) }>{ c.StartText }</a>
+		}
+		if c.Kind == search.TypeSponsor && c.Booth != "" {
+			<details class="booth">
+				<summary class="button button-quiet">Show me the booth</summary>
+				<p class="booth-where">
+					{ c.Booth }
+					if c.BoothWhere != "" {
+						<br/>
+						{ c.BoothWhere }
+					}
+				</p>
+			</details>
+		}
+	</article>
+}
+
+// MatchList is what arrives in place of the outlines: the best of each kind dealt as notes, and the
+// rest folded away so the screen still reads at a glance.
+templ MatchList(v MatchesView) {
+	if v.Retry != "" {
+		<section class="empty">
+			<p class="empty-text">Still looking for matches. Check back in a moment.</p>
+			<a class="button" href={ templ.SafeURL(v.Retry) }>Look again</a>
+		</section>
+	} else if len(v.Top) == 0 {
+		<section class="empty">
+			<p class="empty-text">No one's on this yet. Start a space and let it find people.</p>
+			<a class="button button-action" href={ templ.SafeURL(v.StartURL) }>Start a space</a>
+		</section>
+	} else {
+		<h2 class="matches-head">{ LeadCount(len(v.Top)) }</h2>
+		for i, c := range v.Top {
+			@MatchNote(c, i)
+		}
+		if len(v.More) > 0 {
+			<details class="more-leads">
+				<summary class="button button-quiet">{ moreLabel(len(v.More)) }</summary>
+				for _, c := range v.More {
+					@MatchNote(c, -1)
+				}
+			</details>
+		}
+		<a class="nothing-fits" href={ templ.SafeURL(v.StartURL) }>Nothing fits? Start a space and let it find people.</a>
+		<div hx-get={ v.NewURL } hx-trigger="every 60s" hx-swap="innerHTML"></div>
+	}
+}
+
+// NewMatches offers the matches that have appeared since the list was drawn. It floats over the
+// page, so the list never moves under someone's thumb.
+templ NewMatches(n int, href string) {
+	if n > 0 {
+		<a class="new-matches" href={ templ.SafeURL(href) }>{ newMatchesLabel(n) }</a>
+	}
+}
+
+// SearchBox is the home screen's one search box. An empty action draws nothing.
+templ SearchBox(action string) {
+	if action != "" {
+		<form class="search" role="search" method="get" action={ templ.SafeURL(action) }>
+			<label class="sr-only" for="search-q">Search people, posts, spaces and sponsors</label>
+			<input id="search-q" class="input" type="search" name="q" maxlength="200" placeholder="Search the room" autocomplete="off"/>
+			<button class="button" type="submit">Search</button>
+		</form>
+	}
+}
+
+// SearchGroup is one kind of result on the search page.
+type SearchGroup struct {
+	Heading string
+	Cards   []MatchCard
+}
+
+// SearchView is what the search page shows. An empty Query shows the box alone.
+type SearchView struct {
+	Query    string
+	Action   string
+	Home     string
+	StartURL string
+	Groups   []SearchGroup
+	Failed   bool
+	Retry    string
+}
+
+// SearchPage is the search box and what it found, grouped by kind.
+templ SearchPage(p Page, v SearchView) {
+	@Layout(p) {
+		<a class="back" href={ templ.SafeURL(v.Home) }>← Home</a>
+		<form class="search" role="search" method="get" action={ templ.SafeURL(v.Action) }>
+			<label class="sr-only" for="search-q">Search people, posts, spaces and sponsors</label>
+			<input id="search-q" class="input" type="search" name="q" maxlength="200" value={ v.Query } placeholder="Search the room" autocomplete="off"/>
+			<button class="button" type="submit">Search</button>
+		</form>
+		if v.Failed {
+			<section class="empty">
+				<p class="empty-text">Search isn't answering right now. Try again in a moment.</p>
+				<a class="button" href={ templ.SafeURL(v.Retry) }>Try again</a>
+			</section>
+		} else if v.Query != "" && len(v.Groups) == 0 {
+			<section class="empty">
+				<p class="empty-text">No one's on this yet. Start a space and let it find people.</p>
+				<a class="button button-action" href={ templ.SafeURL(v.StartURL) }>Start a space</a>
+			</section>
+		}
+		for _, g := range v.Groups {
+			<section class="search-group">
+				<h2 class="matches-head">{ g.Heading }</h2>
+				for _, c := range g.Cards {
+					@MatchNote(c, -1)
+				}
+			</section>
+		}
+		<script defer src={ static(p, "countdown.js") }></script>
+	}
+}

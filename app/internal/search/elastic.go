@@ -485,15 +485,25 @@ func (c *Client) SearchEach(ctx context.Context, q Query, types []string, each i
 	q.types = types
 	q.Type = ""
 	filter := searchFilter(q, now)
+
+	// Side by side, so the tag ranking doesn't add its time to ELSER's.
+	var tagged []Hit
+	var tagErr error
+	var wg sync.WaitGroup
+	if len(q.Tags) > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tagged, tagErr = c.rankedList(ctx, tagOverlap(q.Tags), filter)
+		}()
+	}
 	semantic, err := c.rankedList(ctx, semanticQuery(q), filter)
+	wg.Wait()
 	if err != nil {
 		return nil, err
 	}
-	var tagged []Hit
-	if len(q.Tags) > 0 {
-		if tagged, err = c.rankedList(ctx, tagOverlap(q.Tags), filter); err != nil {
-			return nil, err
-		}
+	if tagErr != nil {
+		return nil, tagErr
 	}
 	return fuse(semantic, tagged, each), nil
 }

@@ -1,0 +1,139 @@
+package views
+
+import "github.com/highclip/two-feet/app/internal/store"
+
+// PostComposer is the posting form and what was typed into it. An empty Action draws nothing, for
+// people who can't post.
+type PostComposer struct {
+	Action       string
+	Kind         string
+	Text         string
+	Error        string
+	Placeholders []string
+}
+
+// PostView is what the author's own page for a post needs.
+type PostView struct {
+	Post       store.Post
+	Posted     string
+	HomeURL    string
+	ResolveURL string
+	StartURL   string
+}
+
+// defaultPlaceholder shows until the room has posted something of its own.
+const defaultPlaceholder = "our OTel collector drops spans under load on k8s"
+
+type kindOption struct {
+	Value string
+	Label string
+}
+
+var kindOptions = []kindOption{
+	{store.PostStuck, "Stuck on"},
+	{store.PostCurious, "Curious"},
+	{store.PostOffer, "Can help"},
+}
+
+// KindLabel is the words on a post's colored pill.
+func KindLabel(kind string) string {
+	for _, o := range kindOptions {
+		if o.Value == kind {
+			return o.Label
+		}
+	}
+	return ""
+}
+
+func firstPlaceholder(c PostComposer) string {
+	if len(c.Placeholders) > 0 {
+		return c.Placeholders[0]
+	}
+	return defaultPlaceholder
+}
+
+func placeholderJSON(c PostComposer) string {
+	s, err := templ.JSONString(c.Placeholders)
+	if err != nil || len(c.Placeholders) == 0 {
+		return "[]"
+	}
+	return s
+}
+
+// PostForm is the note you write a post on. Choosing a kind recolors it, with CSS alone.
+templ PostForm(p Page, c PostComposer) {
+	if c.Action != "" {
+		<form class="note" method="post" action={ templ.SafeURL(c.Action) }>
+			if c.Error != "" {
+				<p class="form-error" role="alert">{ c.Error }</p>
+			}
+			<fieldset class="kinds">
+				<legend class="sr-only">What kind of post is this?</legend>
+				for _, o := range kindOptions {
+					<label class="kind">
+						<input class="sr-only" type="radio" name="kind" value={ o.Value } checked?={ o.Value == c.Kind }/>
+						<span class="kind-label">{ o.Label }</span>
+					</label>
+				}
+			</fieldset>
+			<label class="field">
+				<span class="sr-only">Your post, in one line</span>
+				<textarea class="input note-text" name="text" rows="3" minlength="10" maxlength="280" required placeholder={ firstPlaceholder(c) } data-placeholders={ placeholderJSON(c) }>{ c.Text }</textarea>
+			</label>
+			<button class="button" type="submit">Post it</button>
+		</form>
+		<script defer src={ static(p, "composer.js") }></script>
+	}
+}
+
+// NewPost is the composer on a page of its own, which is also where a refused post comes back to.
+templ NewPost(p Page, c PostComposer, homeURL string) {
+	@Layout(p) {
+		<a class="back" href={ templ.SafeURL(homeURL) }>← Home</a>
+		<section class="intro">
+			<h1 class="title">What are you stuck on?</h1>
+		</section>
+		@PostForm(p, c)
+	}
+}
+
+// PostPage is the author's own view of a post. S6 adds the matches under it.
+templ PostPage(p Page, v PostView) {
+	@Layout(p) {
+		<a class="back" href={ templ.SafeURL(v.HomeURL) }>← Home</a>
+		<article class="card post">
+			<div class="post-head">
+				<span class={ "pill", "pill-" + v.Post.Kind }>{ KindLabel(v.Post.Kind) }</span>
+				<span class="post-meta">You · { v.Posted }</span>
+			</div>
+			<p class="post-text">{ v.Post.Text }</p>
+			if len(v.Post.Tags) > 0 {
+				<ul class="tags">
+					for _, tag := range v.Post.Tags {
+						<li class="tag">{ tag }</li>
+					}
+				</ul>
+			}
+		</article>
+		switch v.Post.Status {
+			case store.PostOpen:
+				<section class="empty">
+					<p class="empty-text">No one's on this yet. Start a space and let it find people.</p>
+					<a class="button button-action" href={ templ.SafeURL(v.StartURL) }>Start a space</a>
+				</section>
+				<form method="post" action={ templ.SafeURL(v.ResolveURL) }>
+					<button class="button button-quiet" type="submit">This is sorted</button>
+				</form>
+			case store.PostResolved:
+				<section class="empty">
+					<p class="empty-text">Sorted. This post no longer shows up in anyone's matches.</p>
+					<a class="button" href={ templ.SafeURL(v.HomeURL) }>Post something else</a>
+				</section>
+			default:
+				<section class="empty">
+					<p class="empty-text">This post has expired, so it no longer shows up in matches.</p>
+					<a class="button" href={ templ.SafeURL(v.HomeURL) }>Post it again</a>
+				</section>
+		}
+	}
+}

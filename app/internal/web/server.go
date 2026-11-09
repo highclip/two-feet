@@ -47,6 +47,7 @@ type Server struct {
 	store     *store.Store
 	hub       *live.Hub
 	search    search.Indexer
+	sync      *search.Sync
 	limiter   *Limiter
 	authn     *auth.Authenticator
 	log       *slog.Logger
@@ -60,6 +61,7 @@ type Server struct {
 func New(d Deps) *Server {
 	return &Server{
 		store: d.Store, hub: d.Hub, search: d.Search, limiter: d.Limiter, authn: d.Auth, log: d.Log,
+		sync:    search.NewSync(d.Store, d.Search, d.Log),
 		version: d.Version, eventSlug: d.EventSlug, clerkKey: d.ClerkKey, ready: d.Ready,
 	}
 }

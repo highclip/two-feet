@@ -20,6 +20,13 @@ const migrateLockID = 7202611
 // Postgres from infra/local/compose.yaml and DATABASE_URL from the environment.
 func Tx(t *testing.T) *store.Store {
 	t.Helper()
+	s, _ := TxDB(t)
+	return s
+}
+
+// TxDB is Tx plus the transaction itself, for setting up rows no store method writes yet.
+func TxDB(t *testing.T) (*store.Store, pgx.Tx) {
+	t.Helper()
 	ctx := context.Background()
 	url := os.Getenv("DATABASE_URL")
 	require.NotEmpty(t, url, "DATABASE_URL must point at the local Postgres")
@@ -37,5 +44,5 @@ func Tx(t *testing.T) *store.Store {
 	tx, err := pool.Begin(ctx)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = tx.Rollback(ctx) })
-	return store.New(tx)
+	return store.New(tx), tx
 }

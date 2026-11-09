@@ -105,6 +105,7 @@ func (s *Server) onboardingSubmit(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
+	s.sync.Person(r.Context(), person.ID)
 	http.Redirect(w, r, form.Return, http.StatusSeeOther)
 }
 
@@ -125,6 +126,7 @@ func (s *Server) setDiscoverable(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
+	s.sync.Person(r.Context(), person.ID)
 	http.Redirect(w, r, "/e/"+event.Slug, http.StatusSeeOther)
 }
 

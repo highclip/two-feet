@@ -1,4 +1,4 @@
-// Package search indexes posts, spaces and sponsors in Elasticsearch. S5 supplies the real indexer.
+// Package search indexes posts, spaces, sponsors and people in Elasticsearch and finds them again.
 package search
 
 import (
@@ -6,8 +6,17 @@ import (
 	"time"
 )
 
-// Doc is one searchable document: an open post, an upcoming space or a sponsor. OwnerID lets
-// matching leave out an asker's own posts and spaces.
+// Document types, as stored in the index's type field.
+const (
+	TypePost    = "post"
+	TypeSpace   = "space"
+	TypeSponsor = "sponsor"
+	TypePerson  = "person"
+)
+
+// Doc is one searchable document: an open post, an upcoming space, a sponsor or a discoverable
+// person. OwnerID lets matching leave out an asker's own posts and spaces. Only spaces and sponsors
+// ever carry a ZoneID, so the index can't say where a person is.
 type Doc struct {
 	Type      string
 	ID        string

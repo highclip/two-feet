@@ -1,0 +1,86 @@
+package views
+
+import "fmt"
+
+// QR is a code drawn as one SVG path, Size modules wide, with no quiet zone of its own.
+type QR struct {
+	Path string
+	Size int
+}
+
+// CodeSign is one spot's printed sign.
+type CodeSign struct {
+	Spot string
+	QR   QR
+}
+
+// CodeSheet is everything the organizer prints.
+type CodeSheet struct {
+	HomeURL  string
+	Signs    []CodeSign
+	Sticker  QR
+	Stickers int
+}
+
+func qrViewBox(size int) string {
+	return fmt.Sprintf("-4 -4 %d %d", size+8, size+8)
+}
+
+// qrSVG draws a code with the four-module quiet zone scanners expect.
+templ qrSVG(class string, code QR) {
+	<svg class={ class } viewBox={ qrViewBox(code.Size) } xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR code" shape-rendering="crispEdges">
+		<path d={ code.Path } fill="currentColor"></path>
+	</svg>
+}
+
+// CodesPage is its own document: nothing live runs on a sheet of paper. On screen the signs are
+// previews; codes.css gives them their real size when printing.
+templ CodesPage(p Page, sheet CodeSheet) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ p.Title }</title>
+			<link rel="stylesheet" href={ static(p, "tokens.css") }/>
+			<link rel="stylesheet" href={ static(p, "app.css") }/>
+			<link rel="stylesheet" href={ static(p, "codes.css") }/>
+			<script defer src={ static(p, "codes.js") }></script>
+		</head>
+		<body>
+			<main class="page codes">
+				<header class="top codes-screen">
+					<div class="brand"><span class="wordmark">Two Feet</span></div>
+					if p.Initial != "" {
+						<span class="avatar" aria-hidden="true">{ p.Initial }</span>
+					}
+				</header>
+				<section class="intro codes-screen">
+					<h1 class="title">QR codes</h1>
+					<p class="lede">One letter page for each spot, then a sheet of badge stickers. Print at 100% on letter paper.</p>
+				</section>
+				<button class="button codes-screen" type="button" data-print>Print</button>
+				<p class="eyebrow codes-screen">Spot signs</p>
+				for _, sign := range sheet.Signs {
+					<section class="sign" data-sign>
+						<p class="wordmark sign-brand">Two Feet</p>
+						<h2 class="sign-name">{ sign.Spot }</h2>
+						@qrSVG("sign-qr", sign.QR)
+						<p class="sign-text">Open space here. Scan to see what's on or start one.</p>
+					</section>
+				}
+				<p class="eyebrow codes-screen">Badge stickers</p>
+				<section class="stickers">
+					for range sheet.Stickers {
+						<div class="sticker" data-sticker>
+							@qrSVG("sticker-qr", sheet.Sticker)
+							<p class="wordmark sticker-brand">Two Feet</p>
+							<p class="sticker-text">Stuck on something? Scan.</p>
+						</div>
+					}
+				</section>
+				<a class="back codes-screen" href={ templ.SafeURL(sheet.HomeURL) }>Back to home</a>
+			</main>
+		</body>
+	</html>
+}

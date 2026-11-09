@@ -47,14 +47,36 @@ templ Onboarding(p Page, form OnboardingForm) {
 	}
 }
 
-// Landing is the visitor's view of an event until S11 builds the full page.
-templ Landing(p Page, signInURL string) {
+// LandingView is what the public landing page links to.
+type LandingView struct {
+	EventName string
+	SignInURL string
+	WallURL   string
+}
+
+// Landing is the visitor's view of an event: the pitch, and the way in.
+templ Landing(p Page, v LandingView) {
 	@Layout(p) {
 		<section class="intro">
+			<p class="eyebrow">{ v.EventName }</p>
 			<h1 class="title">What are you stuck on?</h1>
-			<p class="lede">Post a problem in one line. Two Feet points you at the people, hallway conversations and sponsor booths that can help, close to where you're standing.</p>
+			<p class="lede">Open spaces used to happen once a day, on a wall of sticky notes. Two Feet makes them happen all day, from what people are stuck on right now.</p>
+			<p class="lede">Post a problem in one line, and it points you at the people, the hallway conversations and the sponsor booths that can help, close to where you're standing.</p>
 		</section>
-		<a class="button" href={ templ.SafeURL(signInURL) }>Sign in with your email</a>
+		<section class="space-card space-card-stuck">
+			<span class="pill pill-stuck">Stuck on</span>
+			<p class="note-status">Our collector drops spans under load.</p>
+		</section>
+		<section class="space-card space-card-curious">
+			<span class="pill pill-curious">Curious</span>
+			<p class="note-status">Who's running Nomad and Kubernetes side by side?</p>
+		</section>
+		<section class="space-card space-card-offer">
+			<span class="pill pill-offer">Can help</span>
+			<p class="note-status">Happy to compare notes on tail sampling.</p>
+		</section>
+		<a class="button" href={ templ.SafeURL(v.SignInURL) }>Sign in with your email</a>
+		<a class="button button-quiet" href={ templ.SafeURL(v.WallURL) }>See the Wall</a>
 	}
 }
 

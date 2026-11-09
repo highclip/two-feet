@@ -24,6 +24,7 @@
   padding: 6px;
   background: var(--card);
   border: 1px solid var(--line);
+  border-radius: var(--radius-button);
   text-align: center;
 }
 .sticker-brand { font-size: var(--text-sm); }

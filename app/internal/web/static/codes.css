@@ -1,0 +1,66 @@
+/* The organizer's print sheet. On screen the signs are previews that fit the phone; @media print
+   gives them their real size. Colors and shapes come from tokens.css. */
+.sign {
+  display: flex; flex-direction: column; align-items: center; gap: var(--gap);
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+.sign p, .sticker p { margin: 0; }
+.sign-name {
+  margin: 0;
+  font-family: var(--font-title); font-weight: 800; font-size: var(--text-2xl);
+  line-height: 1.02; letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.sign-qr, .sticker-qr { display: block; width: 100%; height: auto; color: var(--ink); }
+.sign-text { font-size: var(--text-md); }
+
+.stickers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sticker {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button);
+  text-align: center;
+}
+.sticker-brand { font-size: var(--text-sm); }
+.sticker-text { font-size: var(--text-xs); line-height: 1.2; }
+
+@page { size: letter; margin: 0; }
+
+@media print {
+  body { background: var(--card); }
+  .codes-screen { display: none; }
+  .page.codes { display: block; max-width: none; min-height: 0; margin: 0; padding: 0; }
+
+  .sign {
+    width: 8.5in; height: 11in;
+    justify-content: center; gap: 0.3in;
+    padding: 0.4in 0.75in;
+    border: 0; border-radius: 0;
+    overflow: hidden;
+    break-after: page;
+  }
+  .sign-brand { font-size: 22pt; }
+  .sign-name { font-size: 48pt; }
+  /* 16 cm with its quiet zone leaves the code itself over 12 cm at any size a spot URL encodes to. */
+  .sign-qr { flex: none; width: 16cm; height: 16cm; }
+  .sign-text { font-size: 20pt; }
+
+  .stickers {
+    width: 8.5in; height: 11in;
+    grid-template-columns: repeat(3, 2in);
+    grid-auto-rows: 2in;
+    gap: 0.5in 0.25in;
+    justify-content: center; align-content: center;
+    overflow: hidden;
+  }
+  .sticker { justify-content: center; padding: 0.08in; }
+  .sticker-qr { flex: none; width: 1.4in; height: 1.4in; }
+  .sticker-brand { font-size: 11pt; }
+  .sticker-text { font-size: 8pt; }
+}

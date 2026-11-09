@@ -126,7 +126,7 @@ func readSignupForm(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func (s *Server) joinSpace(w http.ResponseWriter, r *http.Request) {
-	ctx, span := telemetry.Start(r.Context(), "space.join")
+	ctx, span := telemetry.Start(r.Context(), "signup")
 	defer span.End()
 	r = r.WithContext(ctx)
 

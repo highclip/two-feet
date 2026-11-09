@@ -1,0 +1,8 @@
+{
+  "name": "two-feet-e2e",
+  "private": true,
+  "devDependencies": {
+    "@clerk/testing": "^1.13.0",
+    "@playwright/test": "1.52.0"
+  }
+}

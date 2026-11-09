@@ -1,0 +1,120 @@
+package views
+
+import "github.com/highclip/two-feet/app/internal/store"
+
+// OnboardingForm is the first-sign-in form and what was typed into it.
+type OnboardingForm struct {
+	Action      string
+	Return      string
+	DisplayName string
+	Tags        string
+	Error       string
+}
+
+templ SignIn(p Page, returnTo string) {
+	@Layout(p) {
+		<section class="intro">
+			<h1 class="title">Sign in</h1>
+			<p class="lede">We'll email you a code. No password.</p>
+		</section>
+		<div id="clerk-sign-in" class="clerk-mount" data-return={ returnTo }>
+			<div class="card clerk-placeholder" role="status" aria-label="Loading sign-in"></div>
+		</div>
+	}
+}
+
+templ Onboarding(p Page, form OnboardingForm) {
+	@Layout(p) {
+		<section class="intro">
+			<h1 class="title">What should people call you?</h1>
+			<p class="lede">That's all we need. Your name shows on the spaces you join.</p>
+		</section>
+		<form class="card form" method="post" action={ templ.SafeURL(form.Action) }>
+			<input type="hidden" name="return" value={ form.Return }/>
+			if form.Error != "" {
+				<p class="form-error" role="alert">{ form.Error }</p>
+			}
+			<label class="field">
+				<span class="field-label">Your name</span>
+				<input class="input" type="text" name="display_name" value={ form.DisplayName } maxlength="40" required autocomplete="given-name" autofocus/>
+			</label>
+			<label class="field">
+				<span class="field-label">Up to 3 tags, with commas</span>
+				<input class="input" type="text" name="tags" value={ form.Tags } placeholder="otel, kubernetes, go" autocapitalize="none"/>
+			</label>
+			<button class="button" type="submit">Continue</button>
+		</form>
+	}
+}
+
+// Landing is the visitor's view of an event until S11 builds the full page.
+templ Landing(p Page, signInURL string) {
+	@Layout(p) {
+		<section class="intro">
+			<h1 class="title">What are you stuck on?</h1>
+			<p class="lede">Post a problem in one line. Two Feet points you at the people, hallway conversations and sponsor booths that can help, close to where you're standing.</p>
+		</section>
+		<a class="button" href={ templ.SafeURL(signInURL) }>Sign in with your email</a>
+	}
+}
+
+// Home is the signed-in home screen until S8 builds the near-me feed.
+templ Home(p Page, person store.Person, startURL, discoverableURL string) {
+	@Layout(p) {
+		<section class="intro">
+			<h1 class="title">Hi, { person.DisplayName }</h1>
+			if len(person.Tags) > 0 {
+				<ul class="tags">
+					for _, tag := range person.Tags {
+						<li class="tag">{ tag }</li>
+					}
+				</ul>
+			}
+		</section>
+		<section class="empty">
+			<p class="empty-text">Nothing here yet. Whoever comes are the right people. Start one.</p>
+			<a class="button button-action" href={ templ.SafeURL(startURL) }>Start a space</a>
+		</section>
+		@DiscoverableToggle(discoverableURL, person.Discoverable)
+	}
+}
+
+func boolAttr(v bool) string {
+	if v {
+		return "true"
+	}
+	return "false"
+}
+
+// DiscoverableToggle lets someone opt out of person matches. It posts the opposite of the current
+// setting, so it needs no script.
+templ DiscoverableToggle(action string, discoverable bool) {
+	<form method="post" action={ templ.SafeURL(action) }>
+		<input type="hidden" name="discoverable" value={ boolAttr(!discoverable) }/>
+		<button class="toggle" type="submit" role="switch" aria-checked={ boolAttr(!discoverable) }>
+			<span>Don't show me in matches</span>
+			<span class="toggle-track"><span class="toggle-thumb"></span></span>
+		</button>
+	</form>
+}
+
+// SpotPlaceholder names the spot a code points at until S2 builds the real spot page.
+templ SpotPlaceholder(p Page, spot store.Spot, signedIn bool, signInURL, startURL string) {
+	@Layout(p) {
+		<section class="intro">
+			<span class="eyebrow">This spot</span>
+			<h1 class="title">{ spot.Name }</h1>
+			if spot.Where != "" {
+				<p class="lede">{ spot.Where }</p>
+			}
+		</section>
+		<section class="empty">
+			<p class="empty-text">Nothing here yet. Whoever comes are the right people. Start one.</p>
+			if signedIn {
+				<a class="button button-action" href={ templ.SafeURL(startURL) }>Start a space here</a>
+			} else {
+				<a class="button" href={ templ.SafeURL(signInURL) }>Sign in to start one</a>
+			}
+		</section>
+	}
+}

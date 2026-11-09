@@ -505,6 +505,7 @@ func (s *Server) spaceSeats(w http.ResponseWriter, r *http.Request) {
 	if code := r.URL.Query().Get("spot"); viewer == nil && code != "" {
 		v.SignInURL = auth.SignInURL(spotURL(e.Slug, code))
 	}
+	v.OnSpotBoard = fromSpotPage(r, e)
 	s.render(w, r, http.StatusOK, views.SpaceSeats(v))
 }
 

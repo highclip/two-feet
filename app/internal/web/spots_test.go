@@ -126,8 +126,9 @@ func TestS2_SpotPageShowsNameWhereNowAndNextTwoTodayWithCountsAndJoin(t *testing
 	assert.Len(t, regexp.MustCompile(`action="[^"]*/join"`).FindAllString(body, -1), 3, "one Join form per space")
 	assert.Contains(t, text, "Join · 3 seats left")
 	assert.Contains(t, text, "Dana", "signed-in people see hosts")
-	assert.Contains(t, body, `class="spot-board" hx-get="`+spotBoardPath(spot)+`" hx-trigger="sse:spaces-changed" hx-sync="this:queue last"`, "a board refetch waits for a join's answer")
-	assert.Contains(t, body, `hx-sync="closest .spot-board:queue last"`, "a join holds off the board swap")
+	assert.Contains(t, body, `class="spot-board" hx-get="`+spotBoardPath(spot)+`" hx-trigger="sse:spaces-changed" hx-sync="this:queue all"`, "board refetches take turns and none is thrown away")
+	assert.Contains(t, body, `hx-sync="closest .spot-board:queue all"`, "seats refetches share the board's queue")
+	assert.Contains(t, body, `hx-sync="closest .spot-board:replace"`, "a join aborts a refetch in flight")
 }
 
 func TestNextHereRowPutsThePillAndHostOnOneLineAndTheCountOnItsOwn(t *testing.T) {

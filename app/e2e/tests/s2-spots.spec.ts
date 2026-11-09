@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 import { setupClerkTestingToken } from '@clerk/testing/playwright';
-import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { type Browser, type BrowserContext, expect, type Page, type Route, test } from '@playwright/test';
 
 import { deleteClerkUser, enterEmailAndCode, testEmail } from '../helpers/signin';
 
@@ -140,8 +140,23 @@ test.describe('S2 spot pages', () => {
       await expect(status).toHaveCount(1); // the swap doesn't bring back the hidden copy
       await ben.page.screenshot({ path: testInfo.outputPath('happening-now.png'), fullPage: true });
       expect(ben.page.url()).toContain('spot=');
+      // The leave's own live refetch has to finish first, or it would be queued behind the held board.
+      const leaveRefetched = ben.page.waitForResponse((r) => r.url().includes('/seats?spot='));
       await card.getByRole('button', { name: 'Leave', exact: true }).click();
       await expect(card.getByRole('button', { name: /^Join/ })).toBeVisible();
+      await leaveRefetched;
+
+      // A Join tapped while a board refetch is pending wins, even when that refetch answers afterwards.
+      const held: Route[] = [];
+      await ben.page.route('**/board', (route) => { held.push(route); });
+      const boardRequested = ben.page.waitForRequest((r) => r.url().endsWith('/board'));
+      await ben.page.evaluate(() => document.querySelector('.spot-board')?.dispatchEvent(new Event('sse:spaces-changed')));
+      await boardRequested;
+      await card.getByRole('button', { name: /^Join/ }).click();
+      await Promise.all(held.map((route) => route.continue().catch(() => undefined)));
+      await ben.page.unroute('**/board');
+      await expect(card.getByText("You're in!")).toBeVisible();
+      await expect(card.getByText('2 of 5 going')).toBeVisible();
     } finally {
       await ana.page.goto(underWayUrl);
       await ana.page.getByRole('button', { name: 'Cancel space' }).click();

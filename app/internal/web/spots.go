@@ -156,6 +156,13 @@ func (s *Server) boardView(ctx context.Context, e store.Event, spot store.Spot, 
 	return board, nil
 }
 
+// fromSpotPage reports whether an htmx request came from a spot page, so the seats it gets back can
+// sit inside that page's board. It only picks a sync attribute, so a forged header changes nothing.
+func fromSpotPage(r *http.Request, e store.Event) bool {
+	page, err := url.Parse(r.Header.Get("HX-Current-URL"))
+	return err == nil && page.Path == eventURL(e.Slug) && page.Query().Get("spot") != ""
+}
+
 // spotSpaceView is a space as this spot page shows it. A visitor's Join signs them in and brings
 // them back here, so they're checked in, and the live refetch has to keep doing that.
 func (s *Server) spotSpaceView(ctx context.Context, e store.Event, spot store.Spot, sp store.Space, viewer *store.Person, now time.Time) (views.SpaceView, error) {
@@ -164,6 +171,7 @@ func (s *Server) spotSpaceView(ctx context.Context, e store.Event, spot store.Sp
 		return views.SpaceView{}, err
 	}
 	v.Now = now
+	v.OnSpotBoard = true
 	v.SeatsURL += "?spot=" + url.QueryEscape(spot.QRSlug)
 	if viewer == nil {
 		v.SignInURL = auth.SignInURL(spotURL(e.Slug, spot.QRSlug))

@@ -59,7 +59,13 @@
       "Bash(SIZE=1920x1080 scripts/shoot.sh:*)",
       "Bash(THEME=dark scripts/shoot.sh:*)",
       "Bash(curl -s https://twofeet.highclip.dev/healthz)",
-      "mcp__dash0__*"
+      "mcp__dash0__*",
+      "mcp__radar-cloud__list_clusters",
+      "mcp__radar-cloud__get_dashboard",
+      "mcp__radar-cloud__issues",
+      "mcp__radar-cloud__get_changes",
+      "mcp__radar-cloud__get_events",
+      "mcp__radar-cloud__get_resource"
     ],
     "deny": [
       "Bash(git push --force:*)",

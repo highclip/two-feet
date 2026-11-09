@@ -103,8 +103,8 @@ templ SpotPage(p Page, v SpotView) {
 			<a class="button button-quiet" href={ templ.SafeURL(v.SignInURL) }>Sign in to check in</a>
 		}
 		// hx-sync makes this refetch and the now card's requests take turns, so a join's form isn't
-		// swapped out while its answer is on the way.
-		<div class="spot-board" hx-get={ v.Board.URL } hx-trigger="sse:spaces-changed" hx-sync="this:queue last">
+		// swapped out while its answer is on the way. Joins and leaves go first (actionSync).
+		<div class="spot-board" hx-get={ v.Board.URL } hx-trigger="sse:spaces-changed" hx-sync="this:queue all">
 			@SpotBoardBody(v.Board)
 		</div>
 	}
@@ -167,7 +167,7 @@ templ spotNow(v SpaceView) {
 		@spaceHost(v)
 		// hx-sync holds a live refetch until a join or leave has its answer, as on the space page (S6).
 		// It queues on the board, whose own refetch would otherwise swap out the form mid-request.
-		<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID } hx-sync="closest .spot-board:queue last">
+		<div class="note-live" hx-get={ v.SeatsURL } hx-trigger={ "sse:space-" + v.Space.ID } hx-sync="closest .spot-board:queue all">
 			@SpaceSeats(v)
 		</div>
 	</article>

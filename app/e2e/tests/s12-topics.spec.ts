@@ -36,7 +36,7 @@ test.describe('S12 topics from online', () => {
   test('tapping a suggestion fills in the title, and it stays editable', async () => {
     await page.goto('/e/cnh/spaces/new');
     const title = page.getByLabel("What's it about?");
-    await expect(page.locator('.suggestion').first()).toContainText(COUNT);
+    await expect(page.locator('.suggestion').nth(1)).toContainText(COUNT); // the first is the KubeCon lead
     await expect(page.getByText(SOURDOUGH)).toHaveCount(0);
 
     await page.getByRole('button', { name: new RegExp(SAMPLING) }).click();

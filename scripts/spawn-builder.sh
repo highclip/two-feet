@@ -56,6 +56,13 @@ if [[ ! -d $wt ]]; then
 fi
 scripts/slice-db.sh create "$slice"
 
+# Two builders in one worktree would overwrite each other's work.
+for pid in $(pgrep -f '[c]laude -p --agent builder' || true); do
+  if [[ $(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p') == "$wt" ]]; then
+    echo "a builder is already running in $wt (pid $pid)"; exit 0
+  fi
+done
+
 agent="builder-$slice"
 prompt="Build slice $slice ($title) from spec/spec.yaml. Follow CLAUDE.md and the builder instructions."
 if [[ ${2:-} == --fix ]]; then

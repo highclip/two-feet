@@ -21,6 +21,7 @@ import (
 	"github.com/highclip/two-feet/app/internal/live"
 	"github.com/highclip/two-feet/app/internal/search"
 	"github.com/highclip/two-feet/app/internal/store"
+	"github.com/highclip/two-feet/app/internal/telemetry"
 	"github.com/highclip/two-feet/app/internal/web/views"
 )
 
@@ -100,7 +101,7 @@ func (s *Server) Handler() http.Handler {
 
 	// Refuses cross-site state changes using Sec-Fetch-Site and Origin (spec.security).
 	sameOrigin := http.NewCrossOriginProtection()
-	return securityHeaders(sameOrigin.Handler(s.authn.Middleware(mux)))
+	return telemetry.HTTP(securityHeaders(sameOrigin.Handler(s.authn.Middleware(telemetry.Route(mux)))))
 }
 
 func securityHeaders(next http.Handler) http.Handler {

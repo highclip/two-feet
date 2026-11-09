@@ -114,7 +114,7 @@ func TestS2_SpotPageShowsNameWhereNowAndNextTwoTodayWithCountsAndJoin(t *testing
 	text := visible(body)
 
 	assert.Contains(t, text, "Kitchen counter")
-	assert.Contains(t, text, "The tall table by the coffee machine")
+	assert.Contains(t, text, "The counter along the north wall")
 	assert.Contains(t, text, "Happening right now")
 	assert.Contains(t, text, "Happening now · until 12:20")
 	assert.Contains(t, text, "First one next")

@@ -72,7 +72,7 @@ test.describe('S2 spot pages', () => {
     const visitor = await visitorContext.newPage();
     await visitor.goto(spotPath);
     await expect(visitor.getByRole('heading', { level: 1 })).toContainText('Corner couches');
-    await expect(visitor.getByText('The couches around the low table')).toBeVisible();
+    await expect(visitor.getByText('The couches in the southwest corner')).toBeVisible();
     await expect(visitor.getByText("You're at")).toHaveCount(0);
     await expect(visitor.getByText(/people in the/)).toHaveCount(0);
     await liveConnected(visitor);

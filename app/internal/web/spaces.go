@@ -45,6 +45,7 @@ func (s *Server) registerSpaces(mux *http.ServeMux) {
 	mux.Handle("POST /e/{slug}/spaces", auth.RequirePerson(http.HandlerFunc(s.createSpace)))
 	mux.HandleFunc("GET /e/{slug}/spaces/{space}", s.spacePage)
 	mux.HandleFunc("GET /e/{slug}/spaces/{space}/seats", s.spaceSeats)
+	mux.HandleFunc("GET /e/{slug}/spaces/{space}/seat-count", s.spaceSeatCount)
 	mux.Handle("GET /e/{slug}/spaces/{space}/edit", auth.RequirePerson(http.HandlerFunc(s.editSpaceForm)))
 	mux.Handle("POST /e/{slug}/spaces/{space}/edit", auth.RequirePerson(http.HandlerFunc(s.updateSpace)))
 	mux.Handle("POST /e/{slug}/spaces/{space}/cancel", auth.RequirePerson(http.HandlerFunc(s.cancelSpace)))
@@ -497,6 +498,20 @@ func (s *Server) spaceSeats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, http.StatusOK, views.SpaceSeats(v))
+}
+
+// spaceSeatCount is the counts-only fragment for cards that show a space away from its own page. It
+// carries no names, like what publishSpaceChanged sends, so it's as public as that is (D17).
+func (s *Server) spaceSeatCount(w http.ResponseWriter, r *http.Request) {
+	e, ok := s.event(w, r)
+	if !ok {
+		return
+	}
+	sp, ok := s.spaceForRequest(w, r, e)
+	if !ok {
+		return
+	}
+	s.render(w, r, http.StatusOK, views.SeatCount(sp.Going, sp.Capacity, sp.Waitlist, sp.Status == store.SpaceCancelled))
 }
 
 func (s *Server) cancelledRefusal(w http.ResponseWriter, r *http.Request, e store.Event) {

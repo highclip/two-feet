@@ -21,9 +21,7 @@ import (
 const (
 	// matchTimeout bounds a search, so a cluster that has stopped answering costs a short wait and
 	// then the "still looking" note instead of a hung fragment.
-	matchTimeout = 3 * time.Second
-	// joinableFor is how long after its start a space can still be joined (D5).
-	joinableFor    = 10 * time.Minute
+	matchTimeout   = 3 * time.Second
 	startsSoonMins = 5
 	maxSearchQuery = 200
 )
@@ -78,7 +76,7 @@ func (s *Server) matchablePost(w http.ResponseWriter, r *http.Request) (store.Ev
 
 // matchPost runs the search under a span and a deadline.
 func (s *Server) matchPost(ctx context.Context, person store.Person, post store.Post) (search.Results, error) {
-	ctx, span := telemetry.Start(ctx, "match.post")
+	ctx, span := telemetry.Start(ctx, "match")
 	defer span.End()
 	ctx, cancel := context.WithTimeout(ctx, matchTimeout)
 	defer cancel()
@@ -194,7 +192,6 @@ func (s *Server) cardsFor(event store.Event, tint, startURL, startText string) f
 
 func fillSpace(c *views.MatchCard, event store.Event, m search.Match, tint string) {
 	sp := m.Space
-	now := time.Now()
 	c.Title, c.Eyebrow = sp.Title, "Space · "+sp.SpotName
 	c.PostKind = sp.Kind
 	if c.PostKind == "" {
@@ -213,16 +210,18 @@ func fillSpace(c *views.MatchCard, event store.Event, m search.Match, tint strin
 	c.SpaceID, c.Going, c.Capacity, c.Waitlist = sp.ID, sp.Going, sp.Capacity, sp.Waitlist
 
 	page := spaceURL(event.Slug, sp.Slug)
+	c.SeatCountURL = page + "/seat-count"
 	switch {
 	case sp.SignupStatus == store.SignupGoing:
 		c.SpaceURL, c.SpaceText = page, "You're going"
 	case sp.SignupStatus == store.SignupWaitlist:
 		c.SpaceURL, c.SpaceText = page, "You're on the waitlist"
-	case now.After(sp.StartsAt.Add(joinableFor)):
+	case !sp.Joinable(time.Now()):
 		c.SpaceURL, c.SpaceText = page, "See the space"
 	default:
 		c.JoinURL, c.JoinLabel = page+"/join", "Join"
-		if sp.Going >= sp.Capacity {
+		// A waitlist means seats are spoken for, even if one has just come free.
+		if sp.Going >= sp.Capacity || sp.Waitlist > 0 {
 			c.JoinLabel = "Join the waitlist"
 		}
 	}
@@ -269,7 +268,7 @@ func (s *Server) searchPage(w http.ResponseWriter, r *http.Request) {
 		StartURL: spacesURL(event.Slug) + "/new",
 	}
 	if v.Query != "" {
-		ctx, span := telemetry.Start(r.Context(), "match.search")
+		ctx, span := telemetry.Start(r.Context(), "match")
 		ctx, cancel := context.WithTimeout(ctx, matchTimeout)
 		results, err := s.matcher.Find(ctx, person, v.Query, time.Now())
 		cancel()

@@ -352,6 +352,38 @@ func TestS6_ASpaceStartedOverTenMinutesAgoOffersNoJoin(t *testing.T) {
 	assert.NotContains(t, card, "/join")
 }
 
+func TestS6_AWaitlistMakesAMatchCardOfferTheWaitlist(t *testing.T) {
+	finder := &fakeFinder{}
+	f := newMatchFixture(t, finder)
+	_, postID := f.askerPost(t, "user_asker", "Sam")
+	host := f.onboard(t, "user_host", "Hana")
+	waiting := f.onboard(t, "user_waiting", "Wren")
+	sp := f.makeSpace(t, host.ID, "Long table", "Collector tuning", 6*time.Minute, 8)
+	storetest.Exec(t, f.store, `INSERT INTO signup (space_id, person_id, status) VALUES ($1, $2, 'waitlist')`, sp.ID, waiting.ID)
+	finder.hits = []search.Hit{spaceHit(sp)}
+
+	assert.Contains(t, cards(f.matchesHTML(t, "user_asker", postID))["space:"+sp.ID], "Join the waitlist")
+}
+
+func TestS6_AMatchCardsSeatCountCatchesUpAfterAGap(t *testing.T) {
+	finder := &fakeFinder{}
+	f := newMatchFixture(t, finder)
+	_, postID := f.askerPost(t, "user_asker", "Sam")
+	host := f.onboard(t, "user_host", "Hana")
+	sp := f.makeSpace(t, host.ID, "Long table", "Collector tuning", 6*time.Minute, 8)
+	finder.hits = []search.Hit{spaceHit(sp)}
+	url := "/e/cnh/spaces/" + sp.Slug + "/seat-count"
+
+	card := cards(f.matchesHTML(t, "user_asker", postID))["space:"+sp.ID]
+	assert.Contains(t, card, `hx-get="`+url+`"`)
+	assert.Contains(t, card, `hx-trigger="sse:space-`+sp.ID+`"`)
+
+	w := f.get(url)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "1 of 8 going")
+	assert.NotContains(t, w.Body.String(), "Hana", "D17: counts only, for anyone")
+}
+
 func TestS6_NoMatchesNamesOneNextActionWithAButton(t *testing.T) {
 	f := newMatchFixture(t, &fakeFinder{})
 	_, postID := f.askerPost(t, "user_asker", "Sam")

@@ -26,10 +26,11 @@ type MatchCard struct {
 	StartsSoon bool
 	Happening  bool
 
-	SpaceID  string
-	Going    int
-	Capacity int
-	Waitlist int
+	SpaceID      string
+	SeatCountURL string
+	Going        int
+	Capacity     int
+	Waitlist     int
 
 	JoinURL   string
 	JoinLabel string
@@ -152,7 +153,7 @@ templ MatchNote(c MatchCard, deal int) {
 			</p>
 		}
 		if c.SpaceID != "" {
-			<div class="seat-row match-seats" sse-swap={ "space-" + c.SpaceID }>
+			<div class="seat-row match-seats" hx-get={ c.SeatCountURL } hx-trigger={ "sse:space-" + c.SpaceID }>
 				@SeatCount(c.Going, c.Capacity, c.Waitlist, false)
 			</div>
 		}

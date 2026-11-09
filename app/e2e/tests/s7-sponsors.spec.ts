@@ -31,6 +31,8 @@ test.describe('S7 sponsors', () => {
     await expect(page.getByRole('status')).toContainText('Saved');
     await expect(page.getByLabel('What you solve')).toHaveValue(text);
 
+    // Sizes come from tokens.css, which waits on its font @import; measure once it has applied.
+    await page.waitForLoadState('load');
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(390);
     for (const target of [page.getByRole('button', { name: 'Save' }), page.getByRole('link', { name: 'Back to home' })]) {

@@ -23,8 +23,8 @@ const (
 	// matchTimeout bounds a search, so a cluster that has stopped answering costs a short wait and
 	// then the "still looking" note instead of a hung fragment.
 	matchTimeout = 3 * time.Second
-	// joinWindow is how long after its start a space can still be joined (D5).
-	joinWindow     = 10 * time.Minute
+	// joinableFor is how long after its start a space can still be joined (D5).
+	joinableFor    = 10 * time.Minute
 	startsSoonMins = 5
 	maxSearchQuery = 200
 )
@@ -219,7 +219,7 @@ func fillSpace(c *views.MatchCard, event store.Event, m search.Match, tint strin
 		c.SpaceURL, c.SpaceText = page, "You're going"
 	case sp.SignupStatus == store.SignupWaitlist:
 		c.SpaceURL, c.SpaceText = page, "You're on the waitlist"
-	case now.After(sp.StartsAt.Add(joinWindow)):
+	case now.After(sp.StartsAt.Add(joinableFor)):
 		c.SpaceURL, c.SpaceText = page, "See the space"
 	default:
 		c.JoinURL, c.JoinLabel = page+"/join", "Join"
@@ -278,6 +278,7 @@ func (s *Server) searchPage(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			s.log.Error("search", "err", err)
 			v.Failed = true
+			v.Retry = v.Action + "?q=" + url.QueryEscape(v.Query)
 		} else {
 			card := s.cardsFor(event, "", v.StartURL, "Start a space")
 			v.Groups = append(v.Groups, group("Spaces", results.Spaces, card)...)

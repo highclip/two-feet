@@ -246,6 +246,7 @@ type SearchView struct {
 	StartURL string
 	Groups   []SearchGroup
 	Failed   bool
+	Retry    string
 }
 
 // SearchPage is the search box and what it found, grouped by kind.
@@ -260,7 +261,7 @@ templ SearchPage(p Page, v SearchView) {
 		if v.Failed {
 			<section class="empty">
 				<p class="empty-text">Search isn't answering right now. Try again in a moment.</p>
-				<a class="button" href={ templ.SafeURL(v.Action + "?q=" + v.Query) }>Try again</a>
+				<a class="button" href={ templ.SafeURL(v.Retry) }>Try again</a>
 			</section>
 		} else if v.Query != "" && len(v.Groups) == 0 {
 			<section class="empty">

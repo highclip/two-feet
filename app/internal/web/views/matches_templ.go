@@ -914,6 +914,7 @@ type SearchView struct {
 	StartURL string
 	Groups   []SearchGroup
 	Failed   bool
+	Retry    string
 }
 
 // SearchPage is the search box and what it found, grouped by kind.
@@ -975,7 +976,7 @@ func SearchPage(p Page, v SearchView) templ.Component {
 			var templ_7745c5c3_Var49 string
 			templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(v.Query)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/matches.templ`, Line: 257, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/matches.templ`, Line: 258, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 			if templ_7745c5c3_Err != nil {
@@ -990,7 +991,7 @@ func SearchPage(p Page, v SearchView) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var50 templ.SafeURL = templ.SafeURL(v.Action + "?q=" + v.Query)
+				var templ_7745c5c3_Var50 templ.SafeURL = templ.SafeURL(v.Retry)
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var50)))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -1022,7 +1023,7 @@ func SearchPage(p Page, v SearchView) templ.Component {
 				var templ_7745c5c3_Var52 string
 				templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(g.Heading)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/matches.templ`, Line: 273, Col: 40}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/matches.templ`, Line: 274, Col: 40}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 				if templ_7745c5c3_Err != nil {
@@ -1050,7 +1051,7 @@ func SearchPage(p Page, v SearchView) templ.Component {
 			var templ_7745c5c3_Var53 string
 			templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(static(p, "countdown.js"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/matches.templ`, Line: 279, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/views/matches.templ`, Line: 280, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 			if templ_7745c5c3_Err != nil {

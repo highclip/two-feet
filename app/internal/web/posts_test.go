@@ -141,6 +141,11 @@ func TestS5_PostKeepsItsExtractedTags(t *testing.T) {
 	assert.Contains(t, saved.Tags, "otel-collector")
 	assert.Contains(t, saved.Tags, "kubernetes")
 	assert.Contains(t, saved.Tags, "sampling")
+
+	denver, err := time.LoadLocation("America/Denver")
+	require.NoError(t, err)
+	assert.Contains(t, f.get(path, as("user_poster")).Body.String(),
+		"You · "+saved.CreatedAt.In(denver).Format("3:04 PM"), "the time it was posted, in the venue's timezone")
 }
 
 func TestS5_PostContainingHTMLOrScriptShowsAsText(t *testing.T) {

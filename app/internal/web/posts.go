@@ -146,7 +146,7 @@ func (s *Server) createPost(w http.ResponseWriter, r *http.Request) {
 	allowed, retryAt := s.limiter.Allow(person.ID, postAction, postLimit, postWindow)
 	if !allowed {
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(time.Until(retryAt).Seconds()))))
-		form.Error = "That's 5 posts in 10 minutes. You can post again at " + clock(event, retryAt) + "."
+		form.Error = "That's 5 posts in 10 minutes. You can post again at " + clock(event, roundUpToMinute(retryAt)) + "."
 		s.renderComposer(w, r, event, http.StatusTooManyRequests, form)
 		return
 	}
@@ -180,11 +180,16 @@ func validatePost(kind, raw string) (text, problem string) {
 	return text, ""
 }
 
-// clock formats a time as the event's local time, rounded up so it's never too early.
-func clock(event store.Event, t time.Time) string {
+// roundUpToMinute keeps a "try again at" time from being earlier than the real one.
+func roundUpToMinute(t time.Time) time.Time {
 	if rounded := t.Truncate(time.Minute); !rounded.Equal(t) {
-		t = rounded.Add(time.Minute)
+		return rounded.Add(time.Minute)
 	}
+	return t
+}
+
+// clock formats a time as the event's local time.
+func clock(event store.Event, t time.Time) string {
 	if loc, err := time.LoadLocation(event.Timezone); err == nil {
 		t = t.In(loc)
 	}

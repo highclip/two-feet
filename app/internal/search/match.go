@@ -334,7 +334,7 @@ func (h *hydration) sponsors(ctx context.Context) ([]Match, error) {
 		m := Match{
 			Kind: TypeSponsor, TargetID: row.Sponsor.ID, Score: hit.Score,
 			Reasons: reasons,
-			Sponsor:&SponsorMatch{ID: row.Sponsor.ID, Name: row.Sponsor.Name, Solves: row.Sponsor.Solves, Booth: row.Booth},
+			Sponsor: &SponsorMatch{ID: row.Sponsor.ID, Name: row.Sponsor.Name, Solves: row.Sponsor.Solves, Booth: row.Booth},
 		}
 		if row.Booth != nil {
 			m.WalkMinutes = h.walk(row.Booth.ZoneID)

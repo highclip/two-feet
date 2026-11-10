@@ -99,6 +99,30 @@ body {
 .toggle[aria-checked="true"] .toggle-track { background: var(--ink); justify-content: flex-end; }
 .segmented { margin: 0; padding: 0; border: 0; }
 .segmented .field-label { padding: 0; margin-bottom: 4px; }
+.suggestions { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.suggestion {
+  display: flex; flex-direction: column; gap: 2px;
+  width: 100%; min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--curious-tint);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.suggestion[aria-pressed="true"] { background: var(--curious); border: 2px solid var(--ink); }
+.suggestion-title { font-family: var(--font-title); font-weight: 800; overflow-wrap: anywhere; }
+.suggestion-meta { font-size: var(--text-sm); font-weight: 700; color: var(--ink); }
+.form-details { display: contents; }
+.form-details[hidden], .quick-start[hidden] { display: none; }
+.quick-start { display: flex; align-items: center; justify-content: space-between; gap: var(--gap); padding: 12px; border-radius: var(--radius-button); background: var(--board); }
+.quick-where, .quick-when { margin: 0; }
+.quick-where { font-weight: 700; }
+.quick-when { font-size: var(--text-sm); color: var(--ink-soft); }
+.quick-change { flex: none; min-height: var(--tap); padding: 0 4px; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+
 .segments { display: flex; gap: 6px; }
 .segment { flex: 1; }
 .segment input { position: absolute; opacity: 0; }

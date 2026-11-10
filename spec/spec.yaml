@@ -350,6 +350,25 @@ slices:
       - given a printed sign, then its QR encodes the spot URL with no session or personal data in it
       - given a non-organizer, when they open the codes page, then they get 403
 
+  - id: S12
+    title: Topics from online
+    depends_on: [S3, S6, S9]
+    scope: >
+      Suggest spaces from what people are discussing online, as Kelsey Hightower suggested at the event.
+      A background job fetches recent cloud native stories from the public Hacker News search API, keeps
+      only those that share a vocabulary tag, and ranks them by how many open posts in the room relate to
+      them, using the existing matcher. The Wall shows them as a strip, and the Start a space form offers
+      them as suggestions. No new dependencies, no new secrets, and the list lives in memory only.
+    acceptance:
+      - given a successful fetch, then the Wall shows at most 5 topics, most related posts first, each with its source and how many posts in the room relate to it
+      - given the Start a space form, then the same topics appear as suggestions, and tapping one fills in the title, which stays editable
+      - given a topic, then its text is plain, escaped and cut to 80 characters, and a story sharing no vocabulary tag is left out
+      - given the fetch fails or returns nothing, then the last good list stays and no page or request is slowed or fails
+      - given no list has ever loaded, then the strip and the suggestions are absent, with no empty box
+      - given the job runs, then it fetches at startup and every 15 minutes, with a 5 second timeout, in the background only
+      - given the tests, then the source is faked, and none reach the network
+      - given the strip, then it shows no person names and no post text from the room
+
 # ── the one flow that must always work ─────────────────────────────────────
 demo_path:
   flow: "Scan table → sign in → post a problem → see a space, a person and a sponsor with reasons → join → Wall updates"

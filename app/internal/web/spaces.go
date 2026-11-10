@@ -202,13 +202,14 @@ func (s *Server) spotOptions(ctx context.Context, e store.Event) ([]views.SpotOp
 	return options, spots, nil
 }
 
-func newSpaceBlank(e store.Event) views.SpaceForm {
+func (s *Server) newSpaceBlank(e store.Event) views.SpaceForm {
 	return views.SpaceForm{
-		Action:  spacesURL(e.Slug),
-		Heading: "Start a space",
-		Lede:    "Whoever comes are the right people.",
-		Submit:  "Start this space",
-		Minutes: "30",
+		Action:      spacesURL(e.Slug),
+		Heading:     "Start a space",
+		Lede:        "Whoever comes are the right people.",
+		Submit:      "Start this space",
+		Minutes:     "30",
+		Suggestions: s.topicViews(),
 	}
 }
 
@@ -228,7 +229,7 @@ func (s *Server) newSpaceForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	loc := eventLocation(e)
-	form := newSpaceBlank(e)
+	form := s.newSpaceBlank(e)
 	form.Spots = options
 	form.SpotID = r.URL.Query().Get("spot")
 	starts := time.Now().Truncate(15 * time.Minute).Add(15 * time.Minute)
@@ -239,6 +240,7 @@ func (s *Server) newSpaceForm(w http.ResponseWriter, r *http.Request) {
 	if minutes := r.URL.Query().Get("minutes"); minutes == "15" || minutes == "30" || minutes == "45" {
 		form.Minutes = minutes
 	}
+	s.offerQuickStart(r.Context(), e, &form, starts)
 	if post := r.URL.Query().Get("post"); uuidShape.MatchString(post) {
 		summary, err := s.store.PostForSpace(r.Context(), post, time.Now())
 		switch {
@@ -367,7 +369,7 @@ func (s *Server) createSpace(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, err)
 		return
 	}
-	form := newSpaceBlank(e)
+	form := s.newSpaceBlank(e)
 	if !s.readSpaceForm(w, r, &form) {
 		return
 	}

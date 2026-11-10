@@ -47,6 +47,8 @@ type fixture struct {
 	tags  *fakeTags
 	meta  map[string]auth.Metadata
 	at    time.Time // what the spot pages take to be now; zero means the real time
+
+	topics *fakeTopics
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -59,12 +61,14 @@ func newFixture(t *testing.T) *fixture {
 	index := &spaceIndexer{}
 	tags := &fakeTags{}
 	meta := map[string]auth.Metadata{}
-	f := &fixture{store: s, hub: hub, index: index, tags: tags, meta: meta}
+	topics := &fakeTopics{}
+	f := &fixture{store: s, hub: hub, index: index, tags: tags, meta: meta, topics: topics}
 	f.srv = web.New(web.Deps{
 		Store:     s,
 		Hub:       hub,
 		Search:    index,
 		Tags:      tags,
+		Topics:    topics,
 		Limiter:   web.NewLimiter(),
 		Auth:      auth.New(s, fakeClerk{meta: meta}, log),
 		Log:       log,

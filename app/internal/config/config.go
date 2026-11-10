@@ -19,6 +19,7 @@ type Config struct {
 	ElasticIndexPrefix  string
 	ClerkPublishableKey string
 	ClerkSecretKey      string
+	TopicsSourceURL     string // optional; the Playwright run points it at a local fake, and empty means the public API
 }
 
 // Load reads the server's configuration. It reports every missing variable at once.
@@ -40,6 +41,7 @@ func Load() (Config, error) {
 		ElasticIndexPrefix:  os.Getenv("ELASTIC_INDEX_PREFIX"),
 		ClerkPublishableKey: require("CLERK_PUBLISHABLE_KEY"),
 		ClerkSecretKey:      require("CLERK_SECRET_KEY"),
+		TopicsSourceURL:     os.Getenv("TOPICS_SOURCE_URL"),
 	}
 	port := require("PORT")
 	if len(missing) > 0 {

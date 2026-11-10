@@ -19,6 +19,7 @@ type WallBoard struct {
 	StartURL string
 	Dense    bool // too many rows for two-line titles
 	Tags     []WallTag
+	Topics   []Topic
 	Posts    []WallPost
 }
 
@@ -203,6 +204,19 @@ templ WallBoardContents(b WallBoard) {
 					<li class="wall-tag">{ t.Tag } <b>{ strconv.Itoa(t.Count) }</b></li>
 				}
 			</ul>
+		</section>
+	}
+	if len(b.Topics) > 0 {
+		<section class="wall-topics" aria-label="KubeCon and online">
+			<span class="wall-label wall-topics-label">KubeCon and online</span>
+			<ol class="wall-topic-list">
+				for _, t := range b.Topics {
+					<li class="wall-topic">
+						<span class="wall-topic-title">{ t.Title }</span>
+						<span class="wall-topic-meta">{ t.Line() }</span>
+					</li>
+				}
+			</ol>
 		</section>
 	}
 	<footer class="wall-foot">

@@ -179,3 +179,10 @@ func TestS12_TheWallShowsAtMostThreeTopics(t *testing.T) {
 
 	assert.Equal(t, 3, strings.Count(topicStrip(t, f.wallBody(t, wallPath)), "wall-topic-title"))
 }
+
+func TestTheBusyWallShowsTopicsInPlaceOfTheTagsRow(t *testing.T) {
+	f := newFixture(t)
+	f.topics.list = someTopics
+
+	assert.NotContains(t, f.wallBody(t, wallPath), `class="wall-tags"`, "eleven rows need the height for their titles")
+}

@@ -100,7 +100,12 @@ html, body { margin: 0; height: 100%; }
   line-clamp: 2;
   overflow: hidden;
 }
-.wall-grid-dense .wall-note-title { -webkit-line-clamp: 1; line-clamp: 1; }
+/* Eleven rows leave a card too short to stack a title over its count, so they share one line. */
+.wall-grid-dense .wall-note { flex-direction: row; align-items: center; gap: 10px; padding-block: 2px; }
+.wall-grid-dense .wall-note-title { display: block; flex: 1; min-width: 0; font-size: 28px; line-height: 1.15; white-space: nowrap; text-overflow: ellipsis; }
+.wall-grid-dense .wall-note-foot { flex: none; }
+.wall-grid-dense .wall-dots { display: none; }
+.wall-grid-dense .wall-chip { position: static; flex: none; padding: 2px 8px; font-size: 15px; }
 
 .wall-note-foot { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
 .wall-dots { display: flex; gap: 4px; }

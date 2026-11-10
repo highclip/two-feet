@@ -163,6 +163,14 @@ func TestS1_NewPersonSubmittingNameAndTagsLandsOnHome(t *testing.T) {
 	assert.Contains(t, home.Body.String(), "Priya")
 }
 
+func TestS14_HomeOffersSignOut(t *testing.T) {
+	f := newFixture(t)
+	f.onboard(t, "user_out", "Priya")
+
+	assert.Contains(t, f.get("/e/cnh", as("user_out")).Body.String(), "data-sign-out")
+	assert.NotContains(t, f.get("/e/cnh").Body.String(), "data-sign-out")
+}
+
 func TestS1_OnboardingAcceptsOneToFortyCharsAndUpToThreeTags(t *testing.T) {
 	cases := []struct {
 		name, displayName, tags string

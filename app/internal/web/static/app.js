@@ -165,6 +165,11 @@
 
     var change = e.target.closest("[data-quick-change]");
     if (change) showFormDetails(change.form, true);
+
+    // Clerk owns the session, so signing out happens here and not on the server.
+    if (e.target.closest("[data-sign-out]") && window.Clerk && window.Clerk.loaded) {
+      window.Clerk.signOut().then(function () { location.href = "/"; });
+    }
   });
 
   document.addEventListener("htmx:responseError", function (e) {

@@ -61,6 +61,7 @@ body {
 .textarea { min-height: 72px; padding: 10px 12px; line-height: 1.4; resize: vertical; }
 .form-error, .form-saved { margin: 0; font-weight: 700; }
 .link-row { display: flex; align-items: center; min-height: var(--tap); color: var(--ink); }
+.sign-out { padding: 0; border: 0; background: none; font: inherit; text-decoration: underline; cursor: pointer; }
 .button {
   display: flex; align-items: center; justify-content: center;
   min-height: 50px;

@@ -565,7 +565,7 @@ func WallBoardContents(b WallBoard) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if len(b.Tags) > 0 {
+		if len(b.Tags) > 0 && !(b.Dense && len(b.Topics) > 0) {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<section class=\"wall-tags\" aria-label=\"What the room is stuck on\"><span class=\"wall-label\">What the room is stuck on</span><ul class=\"wall-tag-list\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

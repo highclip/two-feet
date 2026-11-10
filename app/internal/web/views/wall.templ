@@ -196,7 +196,7 @@ templ WallBoardContents(b WallBoard) {
 			</div>
 		}
 	</div>
-	if len(b.Tags) > 0 {
+	if len(b.Tags) > 0 && !(b.Dense && len(b.Topics) > 0) {
 		<section class="wall-tags" aria-label="What the room is stuck on">
 			<span class="wall-label">What the room is stuck on</span>
 			<ul class="wall-tag-list">
